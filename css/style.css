@@ -225,6 +225,7 @@ body {
   z-index: 1;
   width: 90%;
   max-width: 640px;
+  max-height: 80vh;
   background: #fff;
   border: 1px solid #ccc;
   border-radius: 6px;
@@ -262,8 +263,8 @@ body {
 
 .modal-editor-wrap {
   flex: 1;
-  min-height: 320px;
-  overflow: hidden;
+  min-height: 200px;
+  overflow: auto;
 }
 
 .modal-editor-wrap .CodeMirror {

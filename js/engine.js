@@ -13,12 +13,12 @@ export const DEFAULT_MAX_TICKS = 100;
 /**
  * Create a new server object.
  */
-export function createServer(id) {
+export function createServer(id, name) {
     return {
         id,
-        name: `S${id}`,
+        name: name || `S${id}`,
         code: `function onUp() {}\nfunction onTimer(tick) {}\nfunction onMessage(message) {}`,
-        crashIntervals: [], // [[downTick, upTick|null], …]
+        crashIntervals: [],
     };
 }
 
@@ -100,9 +100,9 @@ export class Engine {
     /**
      * Add a server, returns its id.
      */
-    addServer() {
+    addServer(name) {
         const id = this.servers.length;
-        this.servers.push(createServer(id));
+        this.servers.push(createServer(id, name));
         return id;
     }
 
@@ -253,6 +253,9 @@ export class Engine {
      * Add a message, applying any user overrides.
      */
     _addMessage(messages, outgoing, prng) {
+        // Ignore messages to non-existent servers
+        if (!this.servers.find(s => s.id === outgoing.to)) return;
+
         const key = Engine.messageKey(outgoing.from, outgoing.to, outgoing.sendTick);
 
         // Check if this message already exists (duplicate send in same tick)

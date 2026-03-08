@@ -1,0 +1,19 @@
+{
+  "nodes": 5,
+  "seed": 42,
+  "ticks": 60,
+  "names": [
+    "Leader",
+    "Node-1",
+    "Node-2",
+    "Node-3",
+    "Node-4"
+  ],
+  "servers": [
+    {
+      "onUp": "function onUp() {\n  let s = loadState();\n  if (!s.term) {\n    s = {\n      role: 'follower', term: 0, votedFor: null,\n      votes: 0, heartbeat: -1, hbSent: 0,\n      timeout: 10 + serverId * 4,\n      leader: null, commitIdx: 0,\n      log: []\n    };\n  } else {\n    s.role = 'follower';\n    s.votedFor = null;\n    s.votes = 0;\n    s.heartbeat = -1;\n  }\n  dumpState(s);\n}",
+      "onTimer": "function onTimer(tick) {\n  let s = loadState();\n  s.tick = tick;\n  if (s.heartbeat < 0) s.heartbeat = tick;\n\n  if (s.role === 'leader') {\n    if (tick - s.hbSent >= 5) {\n      for (const id of allServerIds) {\n        if (id !== serverId) {\n          sendMessage(id, {\n            type: 'append', term: s.term,\n            leader: serverId, ci: s.commitIdx,\n            entries: s.log.slice(s.commitIdx)\n          });\n        }\n      }\n      s.hbSent = tick;\n    }\n  } else {\n    if (tick - s.heartbeat >= s.timeout) {\n      s.role = 'candidate';\n      s.term++;\n      s.votedFor = serverId;\n      s.votes = 1;\n      s.heartbeat = tick;\n      for (const id of allServerIds) {\n        if (id !== serverId) {\n          sendMessage(id, {\n            type: 'reqVote', term: s.term,\n            cand: serverId, logLen: s.log.length\n          });\n        }\n      }\n    }\n  }\n  dumpState(s);\n}",
+      "onMessage": "function onMessage(message) {\n  let s = loadState();\n  const m = message.payload;\n\n  if (m.term > s.term) {\n    s.term = m.term;\n    s.role = 'follower';\n    s.votedFor = null;\n    s.votes = 0;\n  }\n\n  if (m.type === 'reqVote') {\n    let ok = false;\n    if (m.term >= s.term && (s.votedFor === null || s.votedFor === m.cand)) {\n      if (m.logLen >= s.log.length) {\n        ok = true;\n        s.votedFor = m.cand;\n        s.heartbeat = s.tick;\n      }\n    }\n    sendMessage(message.from, { type: 'vote', term: s.term, ok: ok });\n  }\n\n  if (m.type === 'vote' && s.role === 'candidate' && m.term === s.term && m.ok) {\n    s.votes++;\n    const majority = Math.floor(allServerIds.length / 2) + 1;\n    if (s.votes >= majority) {\n      s.role = 'leader';\n      s.leader = serverId;\n      s.hbSent = 0;\n    }\n  }\n\n  if (m.type === 'append') {\n    if (m.term >= s.term) {\n      s.role = 'follower';\n      s.leader = m.leader;\n      s.heartbeat = s.tick;\n      if (m.entries && m.entries.length > 0) {\n        for (const e of m.entries) {\n          if (s.log.length < m.ci + m.entries.length) s.log.push(e);\n        }\n      }\n      s.commitIdx = Math.min(m.ci, s.log.length);\n      sendMessage(message.from, { type: 'appendOk', term: s.term, ok: true });\n    }\n  }\n\n  dumpState(s);\n}"
+    }
+  ]
+}
