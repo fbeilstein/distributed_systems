@@ -1,0 +1,308 @@
+/**
+ * timeline.js
+ * Renders the space-time diagram on an HTML5 Canvas.
+ * Server tracks, message arrows, crash zones, tick grid, and tooltip.
+ */
+
+export const PIXELS_PER_TICK = 16;
+export const TRACK_HEIGHT = 80;
+export const TRACK_PADDING_TOP = 50;
+export const LABEL_WIDTH = 60;
+const ARROWHEAD_SIZE = 7;
+const HANDLE_RADIUS = 5;
+
+export class Timeline {
+    constructor(canvas, tooltipEl) {
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+        this.tooltipEl = tooltipEl;
+        this.engine = null;
+        this.maxTicks = 100;
+        this.scrubberTick = 0;
+        this.hoveredMessage = null;
+    }
+
+    setEngine(engine) {
+        this.engine = engine;
+        this.maxTicks = engine.maxTicks;
+        this.resize();
+    }
+
+    resize() {
+        if (!this.engine) return;
+        const numServers = this.engine.servers.length;
+        const width = LABEL_WIDTH + (this.maxTicks + 2) * PIXELS_PER_TICK;
+        const height = TRACK_PADDING_TOP + numServers * TRACK_HEIGHT + 40;
+        this.canvas.width = width;
+        this.canvas.height = height;
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
+    }
+
+    tickToX(tick) {
+        return LABEL_WIDTH + tick * PIXELS_PER_TICK;
+    }
+
+    xToTick(x) {
+        return Math.round((x - LABEL_WIDTH) / PIXELS_PER_TICK);
+    }
+
+    serverToY(serverId) {
+        return TRACK_PADDING_TOP + serverId * TRACK_HEIGHT + TRACK_HEIGHT / 2;
+    }
+
+    yToServer(y) {
+        const idx = Math.round((y - TRACK_PADDING_TOP - TRACK_HEIGHT / 2) / TRACK_HEIGHT);
+        if (idx < 0 || idx >= this.engine.servers.length) return -1;
+        return idx;
+    }
+
+    draw() {
+        if (!this.engine) return;
+        const ctx = this.ctx;
+        const { servers, messages } = this.engine;
+
+        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this._drawTickGrid(ctx);
+        this._drawTracks(ctx, servers);
+        this._drawMessages(ctx, messages);
+        this._drawScrubber(ctx);
+    }
+
+    _drawTickGrid(ctx) {
+        ctx.save();
+        ctx.strokeStyle = '#e0e0e0';
+        ctx.lineWidth = 0.5;
+        ctx.fillStyle = '#999';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+
+        for (let t = 0; t <= this.maxTicks; t += 5) {
+            const x = this.tickToX(t);
+            ctx.beginPath();
+            ctx.moveTo(x, TRACK_PADDING_TOP - 15);
+            ctx.lineTo(x, this.canvas.height);
+            ctx.stroke();
+            ctx.fillText(t.toString(), x, TRACK_PADDING_TOP - 20);
+        }
+        ctx.restore();
+    }
+
+    _drawTracks(ctx, servers) {
+        ctx.save();
+        for (const server of servers) {
+            const y = this.serverToY(server.id);
+
+            // Label
+            ctx.fillStyle = '#333';
+            ctx.font = 'bold 12px monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText(server.name, LABEL_WIDTH - 10, y + 4);
+
+            // Track line — draw per-segment to handle crash zones
+            let lastTick = 0;
+            const intervals = [...server.crashIntervals].sort((a, b) => a[0] - b[0]);
+
+            for (const [down, up] of intervals) {
+                // Draw normal segment before crash
+                if (lastTick < down) {
+                    this._drawTrackSegment(ctx, lastTick, down, y, false);
+                }
+                // Draw crash segment
+                const end = up !== null ? up : this.maxTicks + 1;
+                this._drawTrackSegment(ctx, down, end, y, true);
+                lastTick = end;
+            }
+            // Draw remaining normal segment
+            if (lastTick <= this.maxTicks) {
+                this._drawTrackSegment(ctx, lastTick, this.maxTicks + 1, y, false);
+            }
+        }
+        ctx.restore();
+    }
+
+    _drawTrackSegment(ctx, fromTick, toTick, y, isCrashed) {
+        const x1 = this.tickToX(fromTick);
+        const x2 = this.tickToX(toTick);
+
+        if (isCrashed) {
+            // Crashed zone background
+            ctx.fillStyle = 'rgba(200, 200, 200, 0.15)';
+            ctx.fillRect(x1, y - TRACK_HEIGHT / 2 + 5, x2 - x1, TRACK_HEIGHT - 10);
+
+            ctx.strokeStyle = '#bbb';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+        } else {
+            ctx.strokeStyle = '#888';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([]);
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(x1, y);
+        ctx.lineTo(x2, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    _drawMessages(ctx, messages) {
+        ctx.save();
+        for (const msg of messages) {
+            const x1 = this.tickToX(msg.sendTick);
+            const y1 = this.serverToY(msg.from);
+            const x2 = this.tickToX(msg.arrivalTick);
+            const y2 = this.serverToY(msg.to);
+
+            const isHovered = this.hoveredMessage && this.hoveredMessage.id === msg.id;
+
+            if (msg.lost) {
+                ctx.strokeStyle = '#cc4444';
+                ctx.fillStyle = '#cc4444';
+                ctx.lineWidth = isHovered ? 2 : 1;
+                ctx.setLineDash([4, 3]);
+                ctx.globalAlpha = 0.5;
+            } else {
+                ctx.strokeStyle = '#444';
+                ctx.fillStyle = '#444';
+                ctx.lineWidth = isHovered ? 2.5 : 1.5;
+                ctx.setLineDash([]);
+                ctx.globalAlpha = 1;
+            }
+
+            // Arrow line
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            // Arrowhead
+            if (!msg.lost) {
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                ctx.beginPath();
+                ctx.moveTo(x2, y2);
+                ctx.lineTo(
+                    x2 - ARROWHEAD_SIZE * Math.cos(angle - Math.PI / 6),
+                    y2 - ARROWHEAD_SIZE * Math.sin(angle - Math.PI / 6)
+                );
+                ctx.lineTo(
+                    x2 - ARROWHEAD_SIZE * Math.cos(angle + Math.PI / 6),
+                    y2 - ARROWHEAD_SIZE * Math.sin(angle + Math.PI / 6)
+                );
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            // Draggable handle (circle at arrowhead)
+            ctx.globalAlpha = isHovered ? 0.9 : 0.5;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.arc(x2, y2, HANDLE_RADIUS, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.globalAlpha = 1;
+            ctx.setLineDash([]);
+        }
+        ctx.restore();
+    }
+
+    _drawScrubber(ctx) {
+        const x = this.tickToX(this.scrubberTick);
+        ctx.save();
+        ctx.strokeStyle = '#2a7a8a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x, TRACK_PADDING_TOP - 15);
+        ctx.lineTo(x, this.canvas.height);
+        ctx.stroke();
+
+        // Scrubber handle (triangle at top)
+        ctx.fillStyle = '#2a7a8a';
+        ctx.beginPath();
+        ctx.moveTo(x - 8, TRACK_PADDING_TOP - 20);
+        ctx.lineTo(x + 8, TRACK_PADDING_TOP - 20);
+        ctx.lineTo(x, TRACK_PADDING_TOP - 10);
+        ctx.closePath();
+        ctx.fill();
+
+        // Tick label
+        ctx.fillStyle = '#2a7a8a';
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`t=${this.scrubberTick}`, x, TRACK_PADDING_TOP - 25);
+        ctx.restore();
+    }
+
+    /**
+     * Hit-test: which message's arrowhead is near (x, y)?
+     */
+    hitTestArrowhead(x, y) {
+        if (!this.engine) return null;
+        for (const msg of this.engine.messages) {
+            const ax = this.tickToX(msg.arrivalTick);
+            const ay = this.serverToY(msg.to);
+            const dx = x - ax;
+            const dy = y - ay;
+            if (dx * dx + dy * dy <= (HANDLE_RADIUS + 4) ** 2) {
+                return msg;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Hit-test: which message's body line is near (x, y)?
+     */
+    hitTestArrowBody(x, y) {
+        if (!this.engine) return null;
+        for (const msg of this.engine.messages) {
+            const x1 = this.tickToX(msg.sendTick);
+            const y1 = this.serverToY(msg.from);
+            const x2 = this.tickToX(msg.arrivalTick);
+            const y2 = this.serverToY(msg.to);
+            const dist = pointToSegmentDist(x, y, x1, y1, x2, y2);
+            if (dist < 6) return msg;
+        }
+        return null;
+    }
+
+    /**
+     * Is the scrubber handle near (x, y)?
+     */
+    hitTestScrubber(x, y) {
+        const sx = this.tickToX(this.scrubberTick);
+        return Math.abs(x - sx) < 12;
+    }
+
+    /**
+     * Show tooltip for a message near (pageX, pageY).
+     */
+    showTooltip(msg, pageX, pageY) {
+        if (!this.tooltipEl) return;
+        this.tooltipEl.style.display = 'block';
+        this.tooltipEl.style.left = (pageX + 12) + 'px';
+        this.tooltipEl.style.top = (pageY - 10) + 'px';
+        this.tooltipEl.innerHTML = `
+      <strong>${this.engine.servers[msg.from]?.name} → ${this.engine.servers[msg.to]?.name}</strong><br>
+      Send: t=${msg.sendTick} &nbsp; Arrive: t=${msg.arrivalTick}<br>
+      ${msg.lost ? '<span style="color:#c44">LOST</span><br>' : ''}
+      <code>${JSON.stringify(msg.payload)}</code>
+    `;
+    }
+
+    hideTooltip() {
+        if (this.tooltipEl) this.tooltipEl.style.display = 'none';
+    }
+}
+
+/** Point-to-line-segment distance */
+function pointToSegmentDist(px, py, x1, y1, x2, y2) {
+    const A = px - x1, B = py - y1, C = x2 - x1, D = y2 - y1;
+    const dot = A * C + B * D;
+    const lenSq = C * C + D * D;
+    let t = lenSq > 0 ? dot / lenSq : -1;
+    t = Math.max(0, Math.min(1, t));
+    const nx = x1 + t * C, ny = y1 + t * D;
+    return Math.sqrt((px - nx) ** 2 + (py - ny) ** 2);
+}

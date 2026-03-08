@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive Distributed Systems Sandbox — explore consensus algorithms with a visual space-time diagram">
+  <title>Distributed Systems Sandbox</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Toolbar -->
+  <header id="toolbar">
+    <h1>Distributed Systems Sandbox</h1>
+    <div class="toolbar-controls">
+      <span id="seed-display" class="toolbar-info">Seed: 42</span>
+      <span id="tick-display" class="toolbar-info">Tick: 0</span>
+      <button id="btn-add-server" title="Add Server">+ Server</button>
+      <button id="btn-remove-server" title="Remove Server">− Server</button>
+    </div>
+  </header>
+
+  <!-- Top Half: Timeline Canvas -->
+  <section id="timeline-container">
+    <canvas id="timeline-canvas"></canvas>
+    <div id="tooltip" class="tooltip"></div>
+  </section>
+
+  <!-- Bottom Half: State Inspector -->
+  <section id="state-inspector"></section>
+
+  <!-- Code Editor Modal -->
+  <div id="code-editor-modal" class="modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">Code Editor</span>
+        <button class="modal-cancel" title="Close">✕</button>
+      </div>
+      <textarea class="modal-textarea" spellcheck="false"></textarea>
+      <div class="modal-footer">
+        <span class="modal-error"></span>
+        <button class="modal-save">Save &amp; Run</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
