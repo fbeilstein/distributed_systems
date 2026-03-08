@@ -1,13 +1,13 @@
 /**
  * state-inspector.js
- * Renders server state cards in the bottom half of the UI.
+ * Renders server state cards in the bottom half as key-value tables.
  */
 
 export class StateInspector {
     constructor(containerEl, engine, onEditCode) {
         this.container = containerEl;
         this.engine = engine;
-        this.onEditCode = onEditCode; // callback(serverId)
+        this.onEditCode = onEditCode;
         this.currentTick = 0;
     }
 
@@ -17,7 +17,7 @@ export class StateInspector {
     }
 
     render() {
-        const state = this.engine.getStateAtTick(this.currentTick);
+        const simState = this.engine.getStateAtTick(this.currentTick);
         this.container.innerHTML = '';
 
         for (const server of this.engine.servers) {
@@ -30,14 +30,48 @@ export class StateInspector {
             header.textContent = server.name;
             card.appendChild(header);
 
-            const body = document.createElement('pre');
+            const body = document.createElement('div');
             body.className = 'state-card-body';
-            const serverState = state ? state.serverStates[server.id] : {};
-            body.textContent = JSON.stringify(serverState || {}, null, 2);
 
-            // Highlight errors
+            const serverState = simState ? simState.serverStates[server.id] : {};
+            const entries = Object.entries(serverState || {}).filter(
+                ([k]) => k !== '__error__'
+            );
+
+            if (entries.length === 0) {
+                const empty = document.createElement('span');
+                empty.className = 'state-empty';
+                empty.textContent = '(empty)';
+                body.appendChild(empty);
+            } else {
+                const table = document.createElement('table');
+                table.className = 'state-table';
+                for (const [key, value] of entries) {
+                    const tr = document.createElement('tr');
+
+                    const tdKey = document.createElement('td');
+                    tdKey.className = 'state-key';
+                    tdKey.textContent = key;
+
+                    const tdVal = document.createElement('td');
+                    tdVal.className = 'state-val';
+                    tdVal.textContent = typeof value === 'object'
+                        ? JSON.stringify(value)
+                        : String(value);
+
+                    tr.appendChild(tdKey);
+                    tr.appendChild(tdVal);
+                    table.appendChild(tr);
+                }
+                body.appendChild(table);
+            }
+
+            // Show error if present
             if (serverState && serverState.__error__) {
-                body.classList.add('has-error');
+                const errEl = document.createElement('div');
+                errEl.className = 'state-error';
+                errEl.textContent = serverState.__error__;
+                body.appendChild(errEl);
             }
 
             card.appendChild(body);

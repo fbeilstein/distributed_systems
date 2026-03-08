@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Interactive Distributed Systems Sandbox — explore consensus algorithms with a visual space-time diagram">
+  <meta name="description"
+    content="Interactive Distributed Systems Sandbox — explore consensus algorithms with a visual space-time diagram">
   <title>Distributed Systems Sandbox</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
   <!-- Toolbar -->
   <header id="toolbar">
@@ -36,7 +40,9 @@
         <span class="modal-title">Code Editor</span>
         <button class="modal-cancel" title="Close">✕</button>
       </div>
-      <textarea class="modal-textarea" spellcheck="false"></textarea>
+      <div class="modal-editor-wrap">
+        <div id="cm-editor"></div>
+      </div>
       <div class="modal-footer">
         <span class="modal-error"></span>
         <button class="modal-save">Save &amp; Run</button>
@@ -44,6 +50,9 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
   <script type="module" src="js/main.js"></script>
 </body>
+
 </html>

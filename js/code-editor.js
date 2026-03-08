@@ -1,6 +1,6 @@
 /**
  * code-editor.js
- * Modal code editor for per-server code editing.
+ * Modal code editor for per-server code editing, using CodeMirror 5.
  */
 
 const DEFAULT_CODE = `function onUp() {
@@ -23,38 +23,35 @@ export class CodeEditor {
     constructor(modalEl, engine, onCodeSaved) {
         this.modal = modalEl;
         this.engine = engine;
-        this.onCodeSaved = onCodeSaved; // callback()
+        this.onCodeSaved = onCodeSaved;
         this.currentServerId = null;
 
         this.overlay = modalEl.querySelector('.modal-overlay');
         this.titleEl = modalEl.querySelector('.modal-title');
-        this.textarea = modalEl.querySelector('.modal-textarea');
+        this.editorWrap = modalEl.querySelector('#cm-editor');
         this.errorEl = modalEl.querySelector('.modal-error');
         this.saveBtn = modalEl.querySelector('.modal-save');
         this.cancelBtn = modalEl.querySelector('.modal-cancel');
 
+        // Initialize CodeMirror
+        this.cm = CodeMirror(this.editorWrap, {
+            mode: 'javascript',
+            lineNumbers: true,
+            tabSize: 2,
+            indentWithTabs: false,
+            lineWrapping: false,
+            viewportMargin: Infinity,
+        });
+
+        // Ctrl+S / Cmd+S to save
+        this.cm.setOption('extraKeys', {
+            'Ctrl-S': () => this._save(),
+            'Cmd-S': () => this._save(),
+        });
+
         this.saveBtn.addEventListener('click', () => this._save());
         this.cancelBtn.addEventListener('click', () => this.close());
         this.overlay.addEventListener('click', () => this.close());
-
-        // Ctrl+S / Cmd+S to save
-        this.textarea.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-                e.preventDefault();
-                this._save();
-            }
-            // Tab inserts spaces
-            if (e.key === 'Tab') {
-                e.preventDefault();
-                const start = this.textarea.selectionStart;
-                const end = this.textarea.selectionEnd;
-                this.textarea.value =
-                    this.textarea.value.substring(0, start) +
-                    '  ' +
-                    this.textarea.value.substring(end);
-                this.textarea.selectionStart = this.textarea.selectionEnd = start + 2;
-            }
-        });
     }
 
     open(serverId) {
@@ -63,10 +60,15 @@ export class CodeEditor {
         if (!server) return;
 
         this.titleEl.textContent = `Code Editor — ${server.name}`;
-        this.textarea.value = server.code || DEFAULT_CODE;
         this.errorEl.textContent = '';
         this.modal.classList.add('open');
-        this.textarea.focus();
+
+        // Set value and refresh after modal is visible
+        setTimeout(() => {
+            this.cm.setValue(server.code || DEFAULT_CODE);
+            this.cm.refresh();
+            this.cm.focus();
+        }, 50);
     }
 
     close() {
@@ -76,7 +78,7 @@ export class CodeEditor {
 
     _save() {
         if (this.currentServerId === null) return;
-        const code = this.textarea.value;
+        const code = this.cm.getValue();
 
         // Basic syntax check
         try {
