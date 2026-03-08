@@ -4,12 +4,14 @@
  * Server tracks, message arrows, crash zones, tick grid, and tooltip.
  */
 
-export const PIXELS_PER_TICK = 16;
+export const DEFAULT_PIXELS_PER_TICK = 16;
 export const TRACK_HEIGHT = 80;
 export const TRACK_PADDING_TOP = 50;
 export const LABEL_WIDTH = 60;
 const ARROWHEAD_SIZE = 7;
 const HANDLE_RADIUS = 5;
+const MIN_SCALE = 4;
+const MAX_SCALE = 64;
 
 export class Timeline {
     constructor(canvas, tooltipEl) {
@@ -20,6 +22,28 @@ export class Timeline {
         this.maxTicks = 100;
         this.scrubberTick = 0;
         this.hoveredMessage = null;
+        this.scale = DEFAULT_PIXELS_PER_TICK;
+
+        // Shift+scroll to zoom
+        this.canvas.addEventListener('wheel', (e) => {
+            if (!e.shiftKey) return;
+            e.preventDefault();
+            const container = this.canvas.parentElement;
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            // Tick under cursor before zoom
+            const tickUnderCursor = (mouseX + container.scrollLeft - LABEL_WIDTH) / this.scale;
+
+            const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+            this.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, this.scale * factor));
+
+            this.resize();
+            this.draw();
+
+            // Restore scroll so tick under cursor stays in place
+            const newX = tickUnderCursor * this.scale + LABEL_WIDTH;
+            container.scrollLeft = newX - mouseX;
+        }, { passive: false });
     }
 
     setEngine(engine) {
@@ -31,7 +55,7 @@ export class Timeline {
     resize() {
         if (!this.engine) return;
         const numServers = this.engine.servers.length;
-        const width = LABEL_WIDTH + (this.maxTicks + 2) * PIXELS_PER_TICK;
+        const width = LABEL_WIDTH + (this.maxTicks + 2) * this.scale;
         const height = TRACK_PADDING_TOP + numServers * TRACK_HEIGHT + 40;
         this.canvas.width = width;
         this.canvas.height = height;
@@ -40,11 +64,11 @@ export class Timeline {
     }
 
     tickToX(tick) {
-        return LABEL_WIDTH + tick * PIXELS_PER_TICK;
+        return LABEL_WIDTH + tick * this.scale;
     }
 
     xToTick(x) {
-        return Math.round((x - LABEL_WIDTH) / PIXELS_PER_TICK);
+        return Math.round((x - LABEL_WIDTH) / this.scale);
     }
 
     serverToY(serverId) {

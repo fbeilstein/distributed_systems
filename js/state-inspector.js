@@ -25,9 +25,19 @@ export class StateInspector {
             card.className = 'state-card';
             card.dataset.serverId = server.id;
 
+            // Header with editable name
             const header = document.createElement('div');
             header.className = 'state-card-header';
-            header.textContent = server.name;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'state-card-name';
+            nameSpan.textContent = server.name;
+            nameSpan.title = 'Click to rename';
+            nameSpan.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._startRename(nameSpan, server);
+            });
+            header.appendChild(nameSpan);
             card.appendChild(header);
 
             const body = document.createElement('div');
@@ -76,12 +86,45 @@ export class StateInspector {
 
             card.appendChild(body);
 
-            // Double-click → open code editor
-            card.addEventListener('dblclick', () => {
+            // Double-click body → open code editor
+            body.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
                 this.onEditCode(server.id);
             });
 
             this.container.appendChild(card);
         }
+    }
+
+    _startRename(nameSpan, server) {
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'state-card-name-input';
+        input.value = server.name;
+        nameSpan.replaceWith(input);
+        input.focus();
+        input.select();
+
+        const commit = () => {
+            const newName = input.value.trim() || server.name;
+            server.name = newName;
+            const span = document.createElement('span');
+            span.className = 'state-card-name';
+            span.textContent = newName;
+            span.title = 'Click to rename';
+            span.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._startRename(span, server);
+            });
+            input.replaceWith(span);
+            // Redraw timeline to update track labels
+            if (this.onRedraw) this.onRedraw();
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') { input.value = server.name; commit(); }
+        });
+        input.addEventListener('blur', commit);
     }
 }

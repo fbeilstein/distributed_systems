@@ -152,6 +152,26 @@ body {
   border-radius: 4px 4px 0 0;
 }
 
+.state-card-name {
+  cursor: pointer;
+}
+
+.state-card-name:hover {
+  color: #2a7a8a;
+}
+
+.state-card-name-input {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 2px;
+  padding: 0 4px;
+  width: 100%;
+  outline: none;
+}
+
 .state-card-body {
   padding: 6px 0;
   font-size: 11px;

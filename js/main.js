@@ -115,6 +115,7 @@ async function init() {
     const stateInspector = new StateInspector(inspectorEl, engine, (serverId) => {
         codeEditor.open(serverId);
     });
+    stateInspector.onRedraw = () => { timeline.draw(); };
 
     const codeEditor = new CodeEditor(modalEl, engine, () => {
         engine.recompute();
