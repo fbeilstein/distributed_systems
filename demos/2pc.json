@@ -1,0 +1,23 @@
+{
+    "nodes": 4,
+    "seed": 42,
+    "ticks": 80,
+    "names": [
+        "Coordinator",
+        "DB-1",
+        "DB-2",
+        "DB-3"
+    ],
+    "servers": [
+        {
+            "onUp": "function onUp() {\n  let s = loadState();\n  if (!s.phase) {\n    s = { phase: 'idle', txId: 0, votes: {}, acks: {},\n          committed: 0, aborted: 0 };\n  }\n  dumpState(s);\n}",
+            "onTimer": "function onTimer(tick) {\n  let s = loadState();\n  s.tick = tick;\n\n  // Start a new transaction every 25 ticks\n  if (s.phase === 'idle' && tick > 0 && tick % 25 === 0) {\n    s.txId++;\n    s.phase = 'prepare';\n    s.votes = {};\n    s.acks = {};\n    for (const id of allServerIds) {\n      if (id !== serverId) {\n        sendMessage(id, {\n          type: 'PREPARE', txId: s.txId,\n          data: 'write_X=' + s.txId\n        });\n      }\n    }\n  }\n\n  // Timeout: if still in prepare/commit after 12 ticks, abort\n  if (s.phase === 'prepare' && s.phaseStart && tick - s.phaseStart > 12) {\n    s.phase = 'abort';\n    for (const id of allServerIds) {\n      if (id !== serverId) {\n        sendMessage(id, { type: 'ABORT', txId: s.txId });\n      }\n    }\n    s.aborted++;\n    s.phase = 'idle';\n  }\n\n  if (s.phase === 'prepare') {\n    s.phaseStart = s.phaseStart || tick;\n  }\n\n  dumpState(s);\n}",
+            "onMessage": "function onMessage(message) {\n  let s = loadState();\n  const m = message.payload;\n\n  if (m.type === 'VOTE_COMMIT' && s.phase === 'prepare') {\n    s.votes[message.from] = 'yes';\n    // Check if all participants voted\n    const expected = allServerIds.filter(id => id !== serverId);\n    const allVoted = expected.every(id => s.votes[id] !== undefined);\n    if (allVoted) {\n      const allYes = expected.every(id => s.votes[id] === 'yes');\n      if (allYes) {\n        s.phase = 'committed';\n        for (const id of expected) {\n          sendMessage(id, { type: 'COMMIT', txId: s.txId });\n        }\n        s.committed++;\n      } else {\n        s.phase = 'aborted';\n        for (const id of expected) {\n          sendMessage(id, { type: 'ABORT', txId: s.txId });\n        }\n        s.aborted++;\n      }\n      s.phaseStart = null;\n      s.phase = 'idle';\n    }\n  }\n\n  if (m.type === 'VOTE_ABORT' && s.phase === 'prepare') {\n    s.votes[message.from] = 'no';\n    // Immediately abort\n    s.phase = 'aborted';\n    const expected = allServerIds.filter(id => id !== serverId);\n    for (const id of expected) {\n      sendMessage(id, { type: 'ABORT', txId: s.txId });\n    }\n    s.aborted++;\n    s.phaseStart = null;\n    s.phase = 'idle';\n  }\n\n  if (m.type === 'ACK') {\n    s.acks[message.from] = m.txId;\n  }\n\n  dumpState(s);\n}"
+        },
+        {
+            "onUp": "function onUp() {\n  let s = loadState();\n  if (!s.status) {\n    s = { status: 'ready', data: null,\n          pendingTx: null, history: [] };\n  }\n  dumpState(s);\n}",
+            "onTimer": "function onTimer(tick) {\n  let s = loadState();\n  s.tick = tick;\n  dumpState(s);\n}",
+            "onMessage": "function onMessage(message) {\n  let s = loadState();\n  const m = message.payload;\n\n  if (m.type === 'PREPARE') {\n    s.status = 'voting';\n    s.pendingTx = m.txId;\n    s.pendingData = m.data;\n    // Vote YES (simulate: always agree)\n    sendMessage(message.from, {\n      type: 'VOTE_COMMIT', txId: m.txId\n    });\n    s.status = 'voted_yes';\n  }\n\n  if (m.type === 'COMMIT' && s.pendingTx === m.txId) {\n    s.data = s.pendingData;\n    s.history.push('TX' + m.txId + ':commit');\n    s.pendingTx = null;\n    s.pendingData = null;\n    s.status = 'ready';\n    sendMessage(message.from, {\n      type: 'ACK', txId: m.txId\n    });\n  }\n\n  if (m.type === 'ABORT' && s.pendingTx === m.txId) {\n    s.history.push('TX' + m.txId + ':abort');\n    s.pendingTx = null;\n    s.pendingData = null;\n    s.status = 'ready';\n    sendMessage(message.from, {\n      type: 'ACK', txId: m.txId\n    });\n  }\n\n  dumpState(s);\n}"
+        }
+    ]
+}
