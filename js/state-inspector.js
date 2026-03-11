@@ -112,9 +112,7 @@ export class StateInspector {
 
                     const tdVal = document.createElement('td');
                     tdVal.className = 'state-val';
-                    tdVal.textContent = typeof value === 'object'
-                        ? JSON.stringify(value)
-                        : String(value);
+                    tdVal.appendChild(this._formatValue(value));
 
                     tr.appendChild(tdKey);
                     tr.appendChild(tdVal);
@@ -279,6 +277,56 @@ export class StateInspector {
             console.error('Failed to render FSM graph:', err);
             // Ignore render failures visually so as not to break the inspector
         }
+    }
+
+    /**
+     * Recursively formats a value into a DOM node.
+     * Objects/Arrays become collapsible <details> blocks.
+     */
+    _formatValue(val) {
+        if (val === null) return document.createTextNode('null');
+        if (typeof val !== 'object') return document.createTextNode(String(val));
+
+        const isArray = Array.isArray(val);
+        const keys = Object.keys(val);
+        if (keys.length === 0) {
+            return document.createTextNode(isArray ? '[]' : '{}');
+        }
+
+        const details = document.createElement('details');
+
+        const summary = document.createElement('summary');
+        summary.style.cursor = 'pointer';
+        summary.style.userSelect = 'none';
+        summary.style.color = '#64b5f6';
+        summary.textContent = isArray ? `Array(${keys.length})` : `Object {${keys.length}}`;
+        details.appendChild(summary);
+
+        const container = document.createElement('div');
+        container.style.paddingLeft = '12px';
+        container.style.borderLeft = '1px dashed #555';
+        container.style.marginTop = '2px';
+        container.style.marginBottom = '2px';
+
+        for (const k of keys) {
+            const row = document.createElement('div');
+            row.style.display = 'flex';
+            row.style.alignItems = 'flex-start';
+            row.style.gap = '4px';
+
+            const keySpan = document.createElement('span');
+            keySpan.style.color = '#ffb74d';
+            keySpan.textContent = isArray ? `[${k}]:` : `${k}:`;
+
+            const valNode = this._formatValue(val[k]);
+
+            row.appendChild(keySpan);
+            row.appendChild(valNode);
+            container.appendChild(row);
+        }
+
+        details.appendChild(container);
+        return details;
     }
 
     /** Pick white or dark text based on background luminance. */
