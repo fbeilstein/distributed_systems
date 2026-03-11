@@ -33,11 +33,18 @@ export function executeHandler(handlerName, code, context, arg) {
             sendTick: context.tick,
         });
     };
+    // Stateless deterministic hash based on tick and serverId
     const getRandom = (min, max) => {
-        if (context.prng) {
-            return context.prng.nextInt(min, max);
-        }
-        return Math.floor(Math.random() * (max - min + 1) + min);
+        const seedBase = context.prng ? context.prng.seed : 42;
+        // Create a unique deterministic pseudo-seed for this exact moment
+        let h = seedBase ^ context.tick ^ (context.serverId * 0x9E3779B9);
+
+        // Simple Mulberry32 hash to scramble the bits
+        h = Math.imul(h ^ (h >>> 15), 1 | h);
+        h ^= h + Math.imul(h ^ (h >>> 7), 61 | h);
+        const floatVal = ((h ^ (h >>> 14)) >>> 0) / 4294967296;
+
+        return Math.floor(floatVal * (max - min + 1) + min);
     };
 
     try {
