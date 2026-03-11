@@ -32,7 +32,30 @@ async function loadConfig(url) {
     try {
         const resp = await fetch(url);
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        return JSON.parse(await resp.text());
+        const config = JSON.parse(await resp.text());
+
+        // Resolve external codeFiles
+        if (config.servers && Array.isArray(config.servers)) {
+            const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+
+            // Fetch all codeFiles in parallel
+            const fetchPromises = config.servers.map(async (sc) => {
+                if (sc.codeFile) {
+                    const codeUrl = baseUrl + sc.codeFile;
+                    try {
+                        const codeResp = await fetch(codeUrl);
+                        if (!codeResp.ok) throw new Error(`HTTP ${codeResp.status}`);
+                        sc.code = await codeResp.text();
+                    } catch (e) {
+                        console.error(`Failed to load code from ${codeUrl}:`, e);
+                        sc.code = `// Failed to load external code: ${sc.codeFile}\n`;
+                    }
+                }
+            });
+            await Promise.all(fetchPromises);
+        }
+
+        return config;
     } catch (e) {
         console.error('Failed to load config:', e);
         return null;
@@ -46,12 +69,16 @@ function applyConfig(engine, config) {
         for (let i = 0; i < engine.servers.length; i++) {
             const sc = config.servers[Math.min(i, config.servers.length - 1)];
             let code = '';
-            if (sc.onUp) code += sc.onUp + '\n\n';
-            else code += 'function onUp() {}\n\n';
-            if (sc.onTimer) code += sc.onTimer + '\n\n';
-            else code += 'function onTimer(tick) {}\n\n';
-            if (sc.onMessage) code += sc.onMessage + '\n\n';
-            else code += 'function onMessage(message) {}\n\n';
+            if (sc.code !== undefined) {
+                code = sc.code;
+            } else {
+                if (sc.onUp) code += sc.onUp + '\n\n';
+                else code += 'function onUp() {}\n\n';
+                if (sc.onTimer) code += sc.onTimer + '\n\n';
+                else code += 'function onTimer(tick) {}\n\n';
+                if (sc.onMessage) code += sc.onMessage + '\n\n';
+                else code += 'function onMessage(message) {}\n\n';
+            }
             engine.servers[i].code = code;
         }
     }
