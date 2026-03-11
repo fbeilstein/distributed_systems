@@ -1,16 +1,19 @@
 // Coordinator FSM
 function onUp() {
-    const fsm = new Automat({
-        initial: 'idle',
-        states: {
-            idle: { on: { START: 'prepare' }, color: '#8bc34a' },
-            prepare: { on: { ALL_SENT: 'collecting' }, color: '#ffc107' },
-            collecting: { on: { ALL_VOTED: 'committing', TIMEOUT: 'aborting', ANY_ABORT: 'aborting' }, color: '#ff9800' },
-            committing: { on: { DONE: 'idle' }, color: '#2196f3' },
-            aborting: { on: { DONE: 'idle' }, color: '#f44336' },
-        }
-    });
-    dumpState({ fsm: fsm.serialize(), txId: 0, outbox: [], votes: {} });
+    let s = loadState();
+    if (Object.keys(s).length === 0) {
+        const fsm = new Automat({
+            initial: 'idle',
+            states: {
+                idle: { on: { START: 'prepare' }, color: '#8bc34a' },
+                prepare: { on: { ALL_SENT: 'collecting' }, color: '#ffc107' },
+                collecting: { on: { ALL_VOTED: 'committing', TIMEOUT: 'aborting', ANY_ABORT: 'aborting' }, color: '#ff9800' },
+                committing: { on: { DONE: 'idle' }, color: '#2196f3' },
+                aborting: { on: { DONE: 'idle' }, color: '#f44336' },
+            }
+        });
+        dumpState({ fsm: fsm.serialize(), txId: 0, outbox: [], votes: {}, history: [] });
+    }
 }
 
 function onTimer(tick) {
@@ -72,6 +75,7 @@ function onMessage(message) {
 
         if (m.type === 'VOTE_ABORT') {
             fsm.transition('ANY_ABORT');
+            s.history.push('TX' + s.txId + ':abort');
             s.outbox = expected.map(id => ({ to: id, msg: { type: 'ABORT', txId: s.txId } }));
         } else {
             const allVoted = expected.every(id => s.votes[id] !== undefined);
@@ -79,9 +83,18 @@ function onMessage(message) {
                 const allCommit = expected.every(id => s.votes[id] === 'commit');
                 if (allCommit) {
                     fsm.transition('ALL_VOTED');
+                    s.history.push('TX' + s.txId + ':commit');
                     s.outbox = expected.map(id => ({ to: id, msg: { type: 'COMMIT', txId: s.txId } }));
                 }
             }
+        }
+    }
+
+    if (m.type === 'DECISION_REQUEST') {
+        if (s.history.includes('TX' + m.txId + ':commit')) {
+            sendMessage(message.from, { type: 'COMMIT', txId: m.txId });
+        } else if (s.history.includes('TX' + m.txId + ':abort')) {
+            sendMessage(message.from, { type: 'ABORT', txId: m.txId });
         }
     }
 

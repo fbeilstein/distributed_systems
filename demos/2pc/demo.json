@@ -1,7 +1,7 @@
 {
     "nodes": 4,
     "seed": 42,
-    "ticks": 120,
+    "ticks": 115,
     "names": [
         "Coordinator",
         "DB-1",

@@ -1,14 +1,17 @@
 // Cohort FSM
 function onUp() {
-    const fsm = new Automat({
-        initial: 'ready',
-        states: {
-            ready: { on: { VOTE_COMMIT: 'voted_commit', VOTE_ABORT: 'voted_abort' }, color: '#b2dfdb' },
-            voted_commit: { on: { COMMIT: 'ready', ABORT: 'ready' }, color: '#4db6ac' },
-            voted_abort: { on: { ABORT: 'ready' }, color: '#ef9a9a' },
-        }
-    });
-    dumpState({ fsm: fsm.serialize(), data: null, pendingTx: null, history: [] });
+    let s = loadState();
+    if (Object.keys(s).length === 0) {
+        const fsm = new Automat({
+            initial: 'ready',
+            states: {
+                ready: { on: { VOTE_COMMIT: 'voted_commit', VOTE_ABORT: 'voted_abort' }, color: '#b2dfdb' },
+                voted_commit: { on: { COMMIT: 'ready', ABORT: 'ready' }, color: '#4db6ac' },
+                voted_abort: { on: { ABORT: 'ready' }, color: '#ef9a9a' },
+            }
+        });
+        dumpState({ fsm: fsm.serialize(), data: null, pendingTx: null, history: [] });
+    }
 }
 
 function onTimer(tick) {
@@ -19,7 +22,7 @@ function onTimer(tick) {
     const fsm = Automat.deserialize(s.fsm);
     if ((fsm.state === 'voted_commit' || fsm.state === 'voted_abort') && s.voteTick && (tick - s.voteTick > 15)) {
         s.voteTick = tick; // Reset to avoid spamming
-        const peers = allServerIds.filter(id => id !== serverId && id !== 0); // Exclude self and coordinator
+        const peers = allServerIds.filter(id => id !== serverId); // Ask everyone, including coordinator
         for (const peer of peers) {
             sendMessage(peer, { type: 'DECISION_REQUEST', txId: s.pendingTx });
         }
