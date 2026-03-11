@@ -5,7 +5,7 @@ function onUp() {
         states: {
             idle: { on: { START: 'prepare' }, color: '#8bc34a' },
             prepare: { on: { ALL_SENT: 'collecting' }, color: '#ffc107' },
-            collecting: { on: { ALL_VOTED: 'committing', TIMEOUT: 'aborting' }, color: '#ff9800' },
+            collecting: { on: { ALL_VOTED: 'committing', TIMEOUT: 'aborting', ANY_ABORT: 'aborting' }, color: '#ff9800' },
             committing: { on: { DONE: 'idle' }, color: '#2196f3' },
             aborting: { on: { DONE: 'idle' }, color: '#f44336' },
         }
@@ -69,16 +69,18 @@ function onMessage(message) {
         if (m.type === 'VOTE_ABORT') s.votes[message.from] = 'abort';
 
         const expected = allServerIds.filter(id => id !== serverId);
-        const allVoted = expected.every(id => s.votes[id] !== undefined);
 
-        if (allVoted) {
-            const allCommit = expected.every(id => s.votes[id] === 'commit');
-            if (allCommit) {
-                fsm.transition('ALL_VOTED');
-                s.outbox = expected.map(id => ({ to: id, msg: { type: 'COMMIT', txId: s.txId } }));
-            } else {
-                fsm.transition('TIMEOUT'); // transition to aborting
-                s.outbox = expected.map(id => ({ to: id, msg: { type: 'ABORT', txId: s.txId } }));
+        if (m.type === 'VOTE_ABORT') {
+            fsm.transition('ANY_ABORT');
+            s.outbox = expected.map(id => ({ to: id, msg: { type: 'ABORT', txId: s.txId } }));
+        } else {
+            const allVoted = expected.every(id => s.votes[id] !== undefined);
+            if (allVoted) {
+                const allCommit = expected.every(id => s.votes[id] === 'commit');
+                if (allCommit) {
+                    fsm.transition('ALL_VOTED');
+                    s.outbox = expected.map(id => ({ to: id, msg: { type: 'COMMIT', txId: s.txId } }));
+                }
             }
         }
     }

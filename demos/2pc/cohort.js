@@ -14,6 +14,17 @@ function onUp() {
 function onTimer(tick) {
     let s = loadState();
     s.tick = tick;
+
+    // Check if we are blocked waiting for the coordinator's decision
+    const fsm = Automat.deserialize(s.fsm);
+    if ((fsm.state === 'voted_commit' || fsm.state === 'voted_abort') && s.voteTick && (tick - s.voteTick > 15)) {
+        s.voteTick = tick; // Reset to avoid spamming
+        const peers = allServerIds.filter(id => id !== serverId && id !== 0); // Exclude self and coordinator
+        for (const peer of peers) {
+            sendMessage(peer, { type: 'DECISION_REQUEST', txId: s.pendingTx });
+        }
+    }
+
     dumpState(s);
 }
 
@@ -25,6 +36,7 @@ function onMessage(message) {
     if (m.type === 'PREPARE') {
         s.pendingTx = m.txId;
         s.pendingData = m.data;
+        s.voteTick = s.tick;
 
         // DB-2 (serverId 2) rejects even data values for demo purposes
         if (serverId === 2 && typeof m.data === 'number' && m.data % 2 === 0) {
@@ -33,6 +45,14 @@ function onMessage(message) {
         } else {
             if (fsm.can('VOTE_COMMIT')) fsm.transition('VOTE_COMMIT');
             sendMessage(message.from, { type: 'VOTE_COMMIT', txId: m.txId });
+        }
+    }
+
+    if (m.type === 'DECISION_REQUEST') {
+        if (s.history.includes('TX' + m.txId + ':commit')) {
+            sendMessage(message.from, { type: 'COMMIT', txId: m.txId, peer: true });
+        } else if (s.history.includes('TX' + m.txId + ':abort')) {
+            sendMessage(message.from, { type: 'ABORT', txId: m.txId, peer: true });
         }
     }
 
