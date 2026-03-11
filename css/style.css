@@ -150,6 +150,22 @@ body {
   background: #f5f5f5;
   border-bottom: 1px solid #eee;
   border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.state-badge {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 10px;
+  color: white;
+  /* Dynamically overridden in JS */
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .state-card-name {

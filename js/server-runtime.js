@@ -2,7 +2,10 @@
  * server-runtime.js
  * Executes user-provided JS functions (onUp, onTimer, onMessage) in a controlled scope.
  * Provides the API: loadState(), dumpState(state), sendMessage(target, payload).
+ * Also injects the Automat FSM class for demos that use state machines.
  */
+
+import { AUTOMAT_SOURCE } from './automat.js';
 
 /**
  * Run a server handler function in a sandboxed scope.
@@ -32,8 +35,9 @@ export function executeHandler(handlerName, code, context, arg) {
     };
 
     try {
-        // Wrap user code to extract the named function and call it
+        // Wrap user code: inject Automat class, then user functions, then call handler
         const wrappedCode = `
+      ${AUTOMAT_SOURCE}
       ${code}
       if (typeof ${handlerName} === 'function') {
         ${handlerName}(${arg !== undefined ? '__arg__' : ''});
@@ -53,3 +57,4 @@ export function executeHandler(handlerName, code, context, arg) {
 
     return { state: currentState, outbox, error };
 }
+

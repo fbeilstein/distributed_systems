@@ -38,15 +38,35 @@ export class StateInspector {
                 this._startRename(nameSpan, server);
             });
             header.appendChild(nameSpan);
+
+            // FSM state badge (if Automat is used)
+            const serverState = simState ? simState.serverStates[server.id] : {};
+            if (serverState && serverState.fsm && serverState.fsm.state) {
+                const badge = document.createElement('span');
+                badge.className = 'state-badge';
+                badge.textContent = serverState.fsm.state;
+                const badgeColor = (serverState.fsm.colors && serverState.fsm.colors[serverState.fsm.state])
+                    || '#78909c';
+                badge.style.backgroundColor = badgeColor;
+                // Use dark text on light backgrounds, light text on dark
+                badge.style.color = this._contrastColor(badgeColor);
+                header.appendChild(badge);
+            }
+
             card.appendChild(header);
 
             const body = document.createElement('div');
             body.className = 'state-card-body';
 
-            const serverState = simState ? simState.serverStates[server.id] : {};
             const entries = Object.entries(serverState || {}).filter(
-                ([k]) => k !== '__error__'
+                ([k]) => k !== '__error__' && k !== 'fsm'
             );
+
+            // Show fsm.state as a readable entry (the badge shows it too, but
+            // keep it in the table for scrubber context)
+            if (serverState && serverState.fsm) {
+                entries.unshift(['state', serverState.fsm.state]);
+            }
 
             if (entries.length === 0) {
                 const empty = document.createElement('span');
@@ -126,5 +146,15 @@ export class StateInspector {
             if (e.key === 'Escape') { input.value = server.name; commit(); }
         });
         input.addEventListener('blur', commit);
+    }
+
+    /** Pick white or dark text based on background luminance. */
+    _contrastColor(hex) {
+        const c = hex.replace('#', '');
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        return luminance > 0.55 ? '#222' : '#fff';
     }
 }

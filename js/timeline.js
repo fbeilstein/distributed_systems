@@ -8,6 +8,8 @@ export const DEFAULT_PIXELS_PER_TICK = 16;
 export const TRACK_HEIGHT = 80;
 export const TRACK_PADDING_TOP = 50;
 export const LABEL_WIDTH = 60;
+const STATE_BAND_HEIGHT = 14;
+const STATE_BAND_OFFSET = 22; // below the track line
 const ARROWHEAD_SIZE = 7;
 const HANDLE_RADIUS = 5;
 const MIN_SCALE = 4;
@@ -90,6 +92,7 @@ export class Timeline {
 
         this._drawTickGrid(ctx);
         this._drawTracks(ctx, servers);
+        this._drawStateBands(ctx, servers);
         this._drawMessages(ctx, messages);
         this._drawScrubber(ctx);
     }
@@ -169,6 +172,101 @@ export class Timeline {
         ctx.lineTo(x2, y);
         ctx.stroke();
         ctx.setLineDash([]);
+    }
+
+    _drawStateBands(ctx, servers) {
+        if (!this.engine || this.engine.history.length === 0) return;
+        ctx.save();
+
+        const fallbackPalette = [
+            '#90a4ae', '#78909c', '#607d8b', '#546e7a',
+            '#b0bec5', '#8d99ae', '#6b7b8d',
+        ];
+
+        for (const server of servers) {
+            const y = this.serverToY(server.id) + STATE_BAND_OFFSET;
+
+            // Collect runs of the same FSM state
+            const runs = [];
+            let currentRun = null;
+
+            for (let tick = 0; tick < this.engine.history.length; tick++) {
+                const snapshot = this.engine.history[tick];
+                const sState = snapshot.serverStates[server.id];
+                const fsmData = sState && sState.fsm;
+                const fsmState = fsmData ? fsmData.state : null;
+
+                if (fsmState === null) {
+                    // No FSM state at this tick — close current run
+                    if (currentRun) {
+                        runs.push(currentRun);
+                        currentRun = null;
+                    }
+                    continue;
+                }
+
+                if (currentRun && currentRun.state === fsmState) {
+                    currentRun.endTick = tick;
+                } else {
+                    if (currentRun) runs.push(currentRun);
+                    currentRun = {
+                        state: fsmState,
+                        startTick: tick,
+                        endTick: tick,
+                        colors: fsmData.colors || {},
+                    };
+                }
+            }
+            if (currentRun) runs.push(currentRun);
+
+            // Draw each run
+            let fallbackIdx = 0;
+            const assignedFallbacks = {};
+
+            for (const run of runs) {
+                const x1 = this.tickToX(run.startTick);
+                const x2 = this.tickToX(run.endTick + 1);
+
+                // Get color: author-defined or fallback
+                let color = run.colors[run.state];
+                if (!color) {
+                    if (!assignedFallbacks[run.state]) {
+                        assignedFallbacks[run.state] = fallbackPalette[fallbackIdx % fallbackPalette.length];
+                        fallbackIdx++;
+                    }
+                    color = assignedFallbacks[run.state];
+                }
+
+                // Band rectangle
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.35;
+                ctx.fillRect(x1, y, x2 - x1, STATE_BAND_HEIGHT);
+
+                // Border
+                ctx.globalAlpha = 0.6;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x1, y, x2 - x1, STATE_BAND_HEIGHT);
+
+                // Label (only if run spans enough pixels)
+                const spanPx = x2 - x1;
+                if (spanPx > 24) {
+                    ctx.globalAlpha = 0.85;
+                    ctx.fillStyle = '#333';
+                    ctx.font = '9px monospace';
+                    ctx.textAlign = 'left';
+                    const label = run.state;
+                    const maxChars = Math.floor(spanPx / 6) - 1;
+                    const clipped = label.length > maxChars
+                        ? label.slice(0, Math.max(1, maxChars - 1)) + '…'
+                        : label;
+                    ctx.fillText(clipped, x1 + 3, y + STATE_BAND_HEIGHT - 3);
+                }
+            }
+        }
+
+        ctx.globalAlpha = 1;
+        ctx.restore();
     }
 
     _drawMessages(ctx, messages) {
