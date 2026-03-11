@@ -18,12 +18,24 @@ export class StateInspector {
 
     render() {
         const simState = this.engine.getStateAtTick(this.currentTick);
+
+        // Preserve user-resized widths
+        const savedWidths = {};
+        for (const card of this.container.querySelectorAll('.state-card')) {
+            if (card.style.width) {
+                savedWidths[card.dataset.serverId] = card.style.width;
+            }
+        }
+
         this.container.innerHTML = '';
 
         for (const server of this.engine.servers) {
             const card = document.createElement('div');
             card.className = 'state-card';
             card.dataset.serverId = server.id;
+            if (savedWidths[server.id]) {
+                card.style.width = savedWidths[server.id];
+            }
 
             // Header with editable name
             const header = document.createElement('div');

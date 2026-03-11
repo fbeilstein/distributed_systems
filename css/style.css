@@ -129,12 +129,13 @@ body {
 .state-card {
   flex: 0 0 auto;
   min-width: 180px;
-  max-width: 260px;
   background: #fff;
   border: 1px solid #ddd;
   border-radius: 4px;
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s;
+  resize: horizontal;
+  overflow: hidden;
 }
 
 .state-card:hover {
