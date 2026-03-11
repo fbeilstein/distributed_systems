@@ -1,0 +1,33 @@
+{
+    "nodes": 6,
+    "seed": 927,
+    "ticks": 160,
+    "names": [
+        "DB-1",
+        "DB-2",
+        "DB-3",
+        "DB-4",
+        "DB-5",
+        "Client"
+    ],
+    "servers": [
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "client.js"
+        }
+    ]
+}

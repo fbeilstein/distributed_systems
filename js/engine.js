@@ -180,6 +180,7 @@ export class Engine {
                         tick,
                         state: currentState,
                         allServerIds,
+                        prng
                     });
                     serverStates.set(server.id, result.state);
                     if (result.error) {
@@ -199,6 +200,7 @@ export class Engine {
                         tick,
                         state: serverStates.get(server.id),
                         allServerIds,
+                        prng
                     }, tick);
                     serverStates.set(server.id, result.state);
                     if (result.error) {
@@ -219,6 +221,7 @@ export class Engine {
                         tick,
                         state: serverStates.get(server.id),
                         allServerIds,
+                        prng
                     }, { from: msg.from, payload: msg.payload });
                     serverStates.set(server.id, result.state);
                     if (result.error) {

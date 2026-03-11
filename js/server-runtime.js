@@ -11,7 +11,7 @@ import { AUTOMAT_SOURCE } from './automat.js';
  * Run a server handler function in a sandboxed scope.
  * @param {string} handlerName - 'onUp', 'onTimer', or 'onMessage'
  * @param {string} code - The user-provided function body string
- * @param {object} context - { serverId, tick, state, outbox, allServerIds }
+ * @param {object} context - { serverId, tick, state, outbox, allServerIds, prng }
  * @param {*} arg - argument passed to the handler (tick for onTimer, message for onMessage)
  * @returns {{ state: object, outbox: Array, error: string|null }}
  */
@@ -33,6 +33,12 @@ export function executeHandler(handlerName, code, context, arg) {
             sendTick: context.tick,
         });
     };
+    const getRandom = (min, max) => {
+        if (context.prng) {
+            return context.prng.nextInt(min, max);
+        }
+        return Math.floor(Math.random() * (max - min + 1) + min);
+    };
 
     try {
         // Wrap user code: inject Automat class, then user functions, then call handler
@@ -45,12 +51,12 @@ export function executeHandler(handlerName, code, context, arg) {
     `;
 
         const fn = new Function(
-            'loadState', 'dumpState', 'sendMessage',
+            'loadState', 'dumpState', 'sendMessage', 'getRandom',
             'serverId', 'allServerIds', '__arg__',
             wrappedCode
         );
 
-        fn(loadState, dumpState, sendMessage, context.serverId, context.allServerIds, arg);
+        fn(loadState, dumpState, sendMessage, getRandom, context.serverId, context.allServerIds, arg);
     } catch (e) {
         error = e.message || String(e);
     }
