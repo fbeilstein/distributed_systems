@@ -4,5 +4,5 @@
 
 ## Demos
 
-* [2 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/2pc.json)
+* [2 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/2pc/demo.json)
 * [RAFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/raft.json)
