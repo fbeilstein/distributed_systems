@@ -1,44 +1,43 @@
-**Two-Phase Commit**
+**Three-Phase Commit**
 
-2PC executes in two phases. During the first phase, the decided value is distributed, and votes are collected. During the second phase, nodes just flip the switch, making the results of the first phase visible.
-
-
-2PC assumes the presence of a **leader** (coordinator) that holds the state, collects votes, and is a primary point of reference for the agreement round. The rest of the nodes are called **cohorts** -- usually partitions that operate over disjoint datasets. 
+In a situation where coordinator fails, remaining sites are bound to first select new coordinator. This new coordinator checks status of the protocol from the remaining sites. If the coordinator had decided to commit, at least one of other ‘k’ sites that it informed will be up and will ensure that commit decision is respected. The new coordinator restarts third phase of protocol if any of rest sites knew that old coordinator intended to commit transaction. Otherwise, new coordinator aborts the transaction.
 
 
-The coordinator can be 
-* node that received a request to execute the transaction
-* picked at random
-* by leader-election algorithm
-* assigned manually
-* fixed throughout the lifetime of the system
-* transferred to another participant for reliability or performance
+The three-phase commit (3PC) protocol adds an extra step, and timeouts on both sides that can allow cohorts to proceed with either commit or abort in the event of coordinator failure, depending on the system state. 
+
+3PC assumes a synchronous model and that communication failures are not possible.
 
 
-**Execution**
-* **Prepare** The coordinator notifies cohorts about the new transaction by sending a **propose message**. Cohorts make a decision on whether or not they can commit the part of the transaction that applies to them. Then they send coordinator the vote "commit/abort".
-* **Commit/abort** Operations within a transaction can change state across different partitions (each represented by a cohort). If even 1 votes for abort -> abort all message. If all commit -> commit all message.
+* **Propose** The coordinator sends out a proposed value and collects the votes.
+* **Prepare** The coordinator notifies cohorts about the vote results. If the vote has passed and all cohorts have decided to commit, the coordinator sends a Prepare message, instructing them to prepare to commit. Otherwise, an Abort message is sent and the round completes.
+* **Commit** Cohorts are notified by the coordinator to commit the transaction.
 
 
-During each step the coordinator and cohorts have to write the results of each operation to durable storage to be able to reconstruct the state and recover in case of local failures, and be able to forward and replay results for other participants.
+Propose phase crash or timeout (coordinator or cohort) -> abort transaction.
+
+Prepare phase crash or timeout (coordinator or cohort) -> abort transaction.
+
+Commit phase crash or timeout (coordinator or cohort) -> commit transaction.
 
 
-In the context of database systems, each 2PC round is usually responsible for a single transaction. During the prepare phase, transaction contents (operations, identifiers, and other metadata) are transferred from the coordinator to the cohorts. The transaction is executed by the cohorts locally and is left in a **partially committed state** (sometimes called **precommitted**), making it ready for the coordinator to finalize execution during the next phase by either committing or aborting it. By the time the transaction commits, its contents are already stored durably on all other nodes.
+**Coordinator Failures in 3PC**
 
 
-**Coordinator Failures in 2PC**
+All state transitions are coordinated, and cohorts can’t move on to the next phase until everyone is done with the previous one: the coordinator has to wait for the replicas to continue. Cohorts can eventually abort the transaction if they do not hear from the coordinator before the timeout, if they didn’t move past the prepare phase.
 
 
-* coordinator made decision, but link to particular node failed -> node requests decision from peers. Replicating commit decisions is safe since it’s always unanimous: the whole point of 2PC is to either commit or abort on all sites, and commit on one cohort implies that all other cohorts have to commit.
-* coordinator collects votes and fails -> wait for coordinator recovery or choose new coordinator and revote
+As we discussed previously, 2PC cannot recover from coordinator failures, and
+cohorts may get stuck in a nondeterministic state until the coordinator comes back. 3PC avoids blocking the processes in this case and allows cohorts to proceed with a deterministic decision.
 
-Many databases use 2PC: MySQL, PostgreSQL, MongoDB, etc. 
+**Problem:** new coordinator does not know the state of the DB on failed node and must wait for its recovery before proceeding commit or not. In 3PC **no** node changes its DB until **every** node is notified on expected commit.
 
+The worst-case scenario for the 3PC is a network partition: some nodes successfully move to the prepared state, and now can proceed with commit after the timeout. Some can’t communicate with the coordinator, and will abort
+after the timeout. This results in a split brain: some nodes proceed with a commit and some abort, all according to the protocol, leaving participants in an inconsistent and contradictory state
 
-(+) simple (easy to reason about, implement, and debug)
+(+) particularly solves the problem with 2PC blocking
 
-(+) low overhead (message complexity and the number of round-trips of the protocol are low)
+(-) larger message overhead
 
-(-) needs proper recovery mechanisms
+(-) introduces potential contradictions
 
-(-) A two-phase commit protocol cannot dependably recover from a failure of **both** the coordinator and a cohort member during the Commit phase. If both the coordinator and a cohort member failed, it is possible that the failed cohort member was the first to be notified, and had actually done the commit.
+(-) does not work well in the presence of network partitions. This might be the primary reason 3PC is not widely used in practice.

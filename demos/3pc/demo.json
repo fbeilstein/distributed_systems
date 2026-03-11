@@ -1,0 +1,25 @@
+{
+    "nodes": 4,
+    "seed": 42,
+    "ticks": 115,
+    "names": [
+        "Coordinator",
+        "DB-1",
+        "DB-2",
+        "DB-3"
+    ],
+    "servers": [
+        {
+            "codeFile": "coordinator.js"
+        },
+        {
+            "codeFile": "cohort.js"
+        },
+        {
+            "codeFile": "cohort.js"
+        },
+        {
+            "codeFile": "cohort.js"
+        }
+    ]
+}

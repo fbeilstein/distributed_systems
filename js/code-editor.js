@@ -39,7 +39,7 @@ export class CodeEditor {
             lineNumbers: true,
             tabSize: 2,
             indentWithTabs: false,
-            lineWrapping: false,
+            lineWrapping: true,
             viewportMargin: Infinity,
         });
 
