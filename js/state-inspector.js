@@ -9,6 +9,7 @@ export class StateInspector {
         this.engine = engine;
         this.onEditCode = onEditCode;
         this.currentTick = 0;
+        this.svgCache = new Map(); // serverId -> { graphString, svgElement }
     }
 
     update(tick) {
@@ -41,6 +42,14 @@ export class StateInspector {
             const header = document.createElement('div');
             header.className = 'state-card-header';
 
+            const headerInfo = document.createElement('div');
+            headerInfo.className = 'state-card-header-info';
+            headerInfo.style.display = 'flex';
+            headerInfo.style.flexDirection = 'column';
+            headerInfo.style.alignItems = 'flex-start';
+            headerInfo.style.justifyContent = 'center';
+            headerInfo.style.gap = '4px';
+
             const nameSpan = document.createElement('span');
             nameSpan.className = 'state-card-name';
             nameSpan.textContent = server.name;
@@ -49,7 +58,7 @@ export class StateInspector {
                 e.stopPropagation();
                 this._startRename(nameSpan, server);
             });
-            header.appendChild(nameSpan);
+            headerInfo.appendChild(nameSpan);
 
             // FSM state badge (if Automat is used)
             const serverState = simState ? simState.serverStates[server.id] : {};
@@ -60,9 +69,15 @@ export class StateInspector {
                 const badgeColor = (serverState.fsm.colors && serverState.fsm.colors[serverState.fsm.state])
                     || '#78909c';
                 badge.style.backgroundColor = badgeColor;
-                // Use dark text on light backgrounds, light text on dark
                 badge.style.color = this._contrastColor(badgeColor);
-                header.appendChild(badge);
+                headerInfo.appendChild(badge);
+            }
+
+            header.appendChild(headerInfo);
+
+            // Render FSM Graph directly into the header if available
+            if (serverState && serverState.fsm && serverState.fsm.graph) {
+                this._renderFsmGraphToCard(server.id, serverState.fsm, header);
             }
 
             card.appendChild(header);
@@ -158,6 +173,112 @@ export class StateInspector {
             if (e.key === 'Escape') { input.value = server.name; commit(); }
         });
         input.addEventListener('blur', commit);
+    }
+
+    async _renderFsmGraphToCard(serverId, fsm, bodyElement) {
+        if (!fsm || !fsm.graph) return;
+
+        // Generate the Mermaid definition entirely in the inspector
+        // using the serialized fsm state, avoiding any sandbox eval issues
+        let graphDefinition = 'stateDiagram-v2\n';
+        graphDefinition += '  direction LR\n';
+
+        const drawnEdges = new Set();
+        for (const [fromState, transitions] of Object.entries(fsm.graph)) {
+            if (Object.keys(transitions).length === 0) {
+                graphDefinition += `  ${fromState}\n`;
+            }
+            for (const [event, targetState] of Object.entries(transitions)) {
+                const edgeKey = `${fromState}->${targetState}`;
+                if (!drawnEdges.has(edgeKey)) {
+                    graphDefinition += `  ${fromState} --> ${targetState}\n`;
+                    drawnEdges.add(edgeKey);
+                }
+            }
+        }
+
+        if (fsm.colors) {
+            for (const [state, color] of Object.entries(fsm.colors)) {
+                const textColor = this._contrastColor(color);
+                graphDefinition += `  classDef ${state} fill:${color},color:${textColor},stroke:#333,stroke-width:2px\n`;
+                graphDefinition += `  class ${state} ${state}\n`;
+            }
+        }
+
+        const graphContainer = document.createElement('div');
+        graphContainer.className = 'fsm-graph-container';
+        // Add minimal compact styling for the embedded graph container in the header
+        graphContainer.style.flexGrow = '1';
+        graphContainer.style.flexShrink = '1';
+        graphContainer.style.minWidth = '0';
+        graphContainer.style.overflow = 'hidden';
+        graphContainer.style.marginLeft = '10px';
+        graphContainer.style.height = '64px'; // Increased height to fill the 72px header
+        graphContainer.style.display = 'flex';
+        graphContainer.style.justifyContent = 'flex-end';
+        graphContainer.style.alignItems = 'center';
+
+        try {
+            let svgContent = '';
+
+            // Check cache to avoid re-rendering the same graph definition every tick
+            const cached = this.svgCache.get(serverId);
+            if (cached && cached.graphString === graphDefinition) {
+                // Return a clone to avoid detaching from previous tick's discarded DOM
+                svgContent = cached.svgString;
+            } else {
+                // Generate new SVG via Mermaid
+                const id = `mermaid-${serverId}-${Date.now()}`;
+                const { svg } = await mermaid.render(id, graphDefinition);
+                svgContent = svg;
+                this.svgCache.set(serverId, { graphString: graphDefinition, svgString: svg });
+            }
+
+            // Inject the SVG
+            graphContainer.innerHTML = svgContent;
+
+            // The SVG now exists in the DOM container. We want to highlight the CURRENT state.
+            // Mermaid adds CSS classes corresponding to the class definitions we generated.
+            // We can highlight the active node by darkening/muting the non-active nodes.
+            const svgEl = graphContainer.querySelector('svg');
+            if (svgEl) {
+                // Override default mermaid absolute sizing
+                svgEl.removeAttribute('height');
+                svgEl.removeAttribute('width');
+                svgEl.style.maxWidth = '100%';
+                svgEl.style.maxHeight = '100%';
+                svgEl.style.width = 'auto';
+                svgEl.style.height = 'auto';
+
+                // Mute non-active nodes
+                const nodes = svgEl.querySelectorAll('.node');
+                nodes.forEach(node => {
+                    const isCurrentState = node.classList.contains(fsm.state);
+                    if (!isCurrentState) {
+                        node.style.opacity = '0.3'; // Dim inactive nodes significantly
+                    } else {
+                        node.style.opacity = '1.0';
+                        // Add a thick border stroke to pop the active state
+                        const rect = node.querySelector('rect, circle, polygon, path');
+                        if (rect) {
+                            rect.style.strokeWidth = '4px';
+                            rect.style.stroke = '#fff';
+                        }
+                    }
+                });
+
+                // Mute arrows
+                const edges = svgEl.querySelectorAll('.edgePath');
+                edges.forEach(edge => {
+                    edge.style.opacity = '0.3';
+                });
+            }
+
+            bodyElement.appendChild(graphContainer);
+        } catch (err) {
+            console.error('Failed to render FSM graph:', err);
+            // Ignore render failures visually so as not to break the inspector
+        }
     }
 
     /** Pick white or dark text based on background luminance. */

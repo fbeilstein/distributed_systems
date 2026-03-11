@@ -21,6 +21,7 @@ const PARAM_TICKS = params.has('ticks') ? parseInt(params.get('ticks'), 10) : nu
 const canvas = document.getElementById('timeline-canvas');
 const tooltipEl = document.getElementById('tooltip');
 const inspectorEl = document.getElementById('state-inspector');
+const resizerEl = document.getElementById('resizer');
 const modalEl = document.getElementById('code-editor-modal');
 const addBtn = document.getElementById('btn-add-server');
 const removeBtn = document.getElementById('btn-remove-server');
@@ -61,6 +62,43 @@ async function loadConfig(url) {
         return null;
     }
 }
+
+// --- Horizontal Resizer Splitter Logic ---
+let isResizing = false;
+
+resizerEl.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    resizerEl.classList.add('dragging');
+    document.body.style.userSelect = 'none'; // Prevent text selection while dragging
+    document.body.style.cursor = 'row-resize';
+});
+
+document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    // Calculate new height: from bottom of screen to mouse Y
+    // Subtract a little padding so the cursor stays on the bar
+    const newHeight = window.innerHeight - e.clientY - 3;
+
+    // Bounds checking
+    const minHeight = 120; // Match CSS min-height
+    const maxHeight = window.innerHeight * 0.8; // Don't let it consume the entire screen
+    const clampedHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+
+    inspectorEl.style.height = `${clampedHeight}px`;
+});
+
+document.addEventListener('mouseup', () => {
+    if (isResizing) {
+        isResizing = false;
+        resizerEl.classList.remove('dragging');
+        document.body.style.userSelect = '';
+        document.body.style.cursor = '';
+
+        // Changing flex sizes means the timeline canvas bounds changed.
+        // Trigger a redraw on the Timeline component by dispatching a native resize event.
+        window.dispatchEvent(new Event('resize'));
+    }
+});
 
 // --- Apply config to engine ---
 function applyConfig(engine, config) {

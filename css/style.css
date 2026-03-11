@@ -115,6 +115,22 @@ body {
   word-break: break-all;
 }
 
+/* --- Resizer Bar --- */
+#resizer {
+  flex: 0 0 6px;
+  background: #eee;
+  cursor: row-resize;
+  border-top: 1px solid #ddd;
+  border-bottom: 1px solid #ddd;
+  transition: background 0.1s;
+  z-index: 10;
+}
+
+#resizer:hover,
+#resizer.dragging {
+  background: #ccc;
+}
+
 /* --- State Inspector --- */
 #state-inspector {
   flex: 0 0 auto;
@@ -122,6 +138,7 @@ body {
   gap: 12px;
   padding: 12px 16px;
   overflow-x: auto;
+  overflow-y: hidden;
   background: #fafafa;
   min-height: 120px;
 }
@@ -136,6 +153,8 @@ body {
   transition: border-color 0.15s, box-shadow 0.15s;
   resize: horizontal;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .state-card:hover {
@@ -144,7 +163,7 @@ body {
 }
 
 .state-card-header {
-  padding: 6px 10px;
+  padding: 4px 6px;
   font-size: 12px;
   font-weight: 600;
   color: #555;
@@ -153,7 +172,10 @@ body {
   border-radius: 4px 4px 0 0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 6px;
+  height: 72px;
+  min-width: 0;
 }
 
 .state-badge {
@@ -194,7 +216,7 @@ body {
   font-size: 11px;
   line-height: 1.4;
   color: #333;
-  max-height: 200px;
+  flex: 1;
   overflow-y: auto;
 }
 
