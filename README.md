@@ -7,6 +7,7 @@
 ### Failure Detection Mechanisms
 
 * [Pings](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-pings/demo.json)
+* [Heartbeats](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-heartbeats/demo.json)
 * [Timeout-Free Failure Detector](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-timeout-free/demo.json)
 * [Outsourced Heartbeats](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-swim/demo.json)
 * Phi-Accrual Failure Detector (not implemented)
