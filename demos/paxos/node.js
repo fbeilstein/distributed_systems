@@ -60,7 +60,13 @@ function startProposal(s, fsm, ballot, value) {
     s.proposedValue = value;
     if (fsm.can('START_PROPOSAL')) fsm.transition('START_PROPOSAL');
     else if (fsm.can('RETRY')) fsm.transition('RETRY');
+
+    // Implicit self-promise
+    if (ballot > s.promisedBallot) {
+        s.promisedBallot = ballot;
+    }
     s.promises = {};
+    s.promises[serverId] = { ballot: s.acceptedBallot, value: s.acceptedValue };
     s.accepteds = {};
 }
 
@@ -73,7 +79,7 @@ function onTimer(tick) {
     if (serverId === 0 && tick === 10 && fsm.state === 'idle' && s.decided === null) {
         startProposal(s, fsm, 1, 'A');
         for (const id of allServerIds) {
-            s.outbox.push({ to: id, payload: { type: 'PREPARE', ballot: s.ballot, from: serverId } });
+            if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'PREPARE', ballot: s.ballot, from: serverId } });
         }
     }
 
@@ -81,7 +87,7 @@ function onTimer(tick) {
     if (serverId === 1 && tick === 10 && fsm.state === 'idle' && s.decided === null) {
         startProposal(s, fsm, 2, 'B');
         for (const id of allServerIds) {
-            s.outbox.push({ to: id, payload: { type: 'PREPARE', ballot: s.ballot, from: serverId } });
+            if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'PREPARE', ballot: s.ballot, from: serverId } });
         }
     }
 
@@ -98,7 +104,10 @@ function onMessage(message) {
     // --- ACCEPTOR logic ---
 
     if (m.type === 'PREPARE') {
-        if (m.ballot > s.promisedBallot) {
+        if (s.decided !== null) {
+            // Optimization: if already decided, just tell them the decision so they don't do useless work
+            s.outbox.push({ to: message.from, payload: { type: 'DECIDED', value: s.decided } });
+        } else if (m.ballot > s.promisedBallot) {
             s.promisedBallot = m.ballot;
             s.outbox.push({
                 to: message.from, payload: {
@@ -121,7 +130,9 @@ function onMessage(message) {
     }
 
     else if (m.type === 'ACCEPT') {
-        if (m.ballot >= s.promisedBallot) {
+        if (s.decided !== null) {
+            s.outbox.push({ to: message.from, payload: { type: 'DECIDED', value: s.decided } });
+        } else if (m.ballot >= s.promisedBallot) {
             s.promisedBallot = m.ballot;
             s.acceptedBallot = m.ballot;
             s.acceptedValue = m.value;
@@ -153,9 +164,18 @@ function onMessage(message) {
             }
 
             if (fsm.can('GOT_QUORUM_PROMISES')) fsm.transition('GOT_QUORUM_PROMISES');
+
+            // Implicit self-accept for Phase 2
+            if (s.ballot >= s.promisedBallot) {
+                s.promisedBallot = s.ballot;
+                s.acceptedBallot = s.ballot;
+                s.acceptedValue = valueToPropose;
+                s.accepteds[serverId] = true;
+            }
+
             // Move to Phase 2
             for (const id of allServerIds) {
-                s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: valueToPropose } });
+                if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: valueToPropose } });
             }
         }
     }
@@ -167,7 +187,7 @@ function onMessage(message) {
             const newBallot = m.promisedBallot + 1 + (serverId * 2);
             startProposal(s, fsm, newBallot, s.proposedValue);
             for (const id of allServerIds) {
-                s.outbox.push({ to: id, payload: { type: 'PREPARE', ballot: s.ballot, from: serverId } });
+                if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'PREPARE', ballot: s.ballot, from: serverId } });
             }
         }
     }
@@ -180,7 +200,7 @@ function onMessage(message) {
             s.decided = m.value;
             if (fsm.can('GOT_QUORUM_ACCEPTED')) fsm.transition('GOT_QUORUM_ACCEPTED');
             for (const id of allServerIds) {
-                s.outbox.push({ to: id, payload: { type: 'DECIDED', value: m.value } });
+                if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'DECIDED', value: m.value } });
             }
         }
     }

@@ -85,9 +85,14 @@ function onTimer(tick) {
         s.promises = {};
         s.accepteds = {};
         if (fsm.can('START_PREPARE')) fsm.transition('START_PREPARE');
+        // Implicit self-promise
+        s.promisedBallot = s.ballot;
+        s.stableLeader = serverId;
+        s.promises[serverId] = { ballot: s.acceptedBallot, value: s.acceptedValue };
+
         // Full Phase 1
         for (const id of allServerIds) {
-            s.outbox.push({ to: id, payload: { type: 'PREPARE', ballot: s.ballot, round: s.round } });
+            if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'PREPARE', ballot: s.ballot, round: s.round } });
         }
     }
 
@@ -97,9 +102,15 @@ function onTimer(tick) {
         s.proposedValue = 'cmd:set_x=2';
         s.accepteds = {};
         if (fsm.can('START_ACCEPT')) fsm.transition('START_ACCEPT');
+        // Implicit self-accept
+        s.promisedBallot = s.ballot;
+        s.acceptedBallot = s.ballot;
+        s.acceptedValue = s.proposedValue;
+        s.accepteds[serverId] = true;
+
         // Skip straight to Phase 2
         for (const id of allServerIds) {
-            s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: s.proposedValue, round: s.round } });
+            if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: s.proposedValue, round: s.round } });
         }
     }
 
@@ -108,8 +119,14 @@ function onTimer(tick) {
         s.proposedValue = 'cmd:set_x=3';
         s.accepteds = {};
         if (fsm.can('START_ACCEPT')) fsm.transition('START_ACCEPT');
+        // Implicit self-accept
+        s.promisedBallot = s.ballot;
+        s.acceptedBallot = s.ballot;
+        s.acceptedValue = s.proposedValue;
+        s.accepteds[serverId] = true;
+
         for (const id of allServerIds) {
-            s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: s.proposedValue, round: s.round } });
+            if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: s.proposedValue, round: s.round } });
         }
     }
 
@@ -177,9 +194,15 @@ function onMessage(message) {
             }
             if (fsm.can('GOT_QUORUM_PROMISES')) fsm.transition('GOT_QUORUM_PROMISES');
             s.accepteds = {};
+            // Implicit self-accept
+            s.promisedBallot = s.ballot;
+            s.acceptedBallot = s.ballot;
+            s.acceptedValue = valueToUse;
+            s.accepteds[serverId] = true;
+
             // Phase 2
             for (const id of allServerIds) {
-                s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: valueToUse, round: s.round } });
+                if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: valueToUse, round: s.round } });
             }
         }
     }
@@ -191,7 +214,7 @@ function onMessage(message) {
             if (!s.decided.includes(m.value)) s.decided.push(m.value);
             if (fsm.can('GOT_QUORUM_ACCEPTED')) fsm.transition('GOT_QUORUM_ACCEPTED');
             for (const id of allServerIds) {
-                s.outbox.push({ to: id, payload: { type: 'DECIDED', value: m.value, round: m.round } });
+                if (id !== serverId) s.outbox.push({ to: id, payload: { type: 'DECIDED', value: m.value, round: m.round } });
             }
         }
     }
