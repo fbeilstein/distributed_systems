@@ -1,0 +1,37 @@
+{
+    "nodes": 4,
+    "seed": 121,
+    "ticks": 100,
+    "names": [
+        "Coordinator",
+        "Replica-1",
+        "Replica-2",
+        "Replica-3"
+    ],
+    "servers": [
+        {
+            "codeFile": "coordinator.js"
+        },
+        {
+            "codeFile": "coordinator.js"
+        },
+        {
+            "codeFile": "coordinator.js"
+        },
+        {
+            "codeFile": "coordinator.js"
+        }
+    ],
+    "events": [
+        {
+            "type": "crash",
+            "server": 2,
+            "tick": 5
+        },
+        {
+            "type": "recover",
+            "server": 2,
+            "tick": 50
+        }
+    ]
+}

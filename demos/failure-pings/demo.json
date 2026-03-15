@@ -1,0 +1,37 @@
+{
+    "nodes": 4,
+    "seed": 11,
+    "ticks": 120,
+    "names": [
+        "Node-0",
+        "Node-1",
+        "Node-2",
+        "Node-3"
+    ],
+    "servers": [
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        }
+    ],
+    "events": [
+        {
+            "type": "crash",
+            "server": 2,
+            "tick": 50
+        },
+        {
+            "type": "recover",
+            "server": 2,
+            "tick": 90
+        }
+    ]
+}

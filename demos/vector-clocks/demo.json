@@ -1,0 +1,21 @@
+{
+    "nodes": 3,
+    "seed": 111,
+    "ticks": 80,
+    "names": [
+        "Node-0",
+        "Node-1",
+        "Node-2"
+    ],
+    "servers": [
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        }
+    ]
+}

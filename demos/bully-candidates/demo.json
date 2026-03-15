@@ -1,0 +1,36 @@
+{
+    "nodes": 5,
+    "seed": 88,
+    "ticks": 120,
+    "names": [
+        "Ordinary-0",
+        "Ordinary-1",
+        "Ordinary-2",
+        "Candidate-3",
+        "Candidate-4"
+    ],
+    "servers": [
+        {
+            "codeFile": "ordinary.js"
+        },
+        {
+            "codeFile": "ordinary.js"
+        },
+        {
+            "codeFile": "ordinary.js"
+        },
+        {
+            "codeFile": "candidate.js"
+        },
+        {
+            "codeFile": "candidate.js"
+        }
+    ],
+    "events": [
+        {
+            "type": "crash",
+            "server": 4,
+            "tick": 25
+        }
+    ]
+}
