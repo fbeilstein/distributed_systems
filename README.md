@@ -4,6 +4,43 @@
 
 ## Demos
 
+### Failure Detection Mechanisms
+
+* [Pings](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-pings/demo.json)
+* [Timeout-Free Failure Detector](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-timeout-free/demo.json)
+* [Outsourced Heartbeats](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-swim/demo.json)
+* Phi-Accrual Failure Detector (not implemented)
+* [Gossip Failure Detection](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-gossip/demo.json)
+* [FUSE (failure notification service)](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-fuse/demo.json)
+
+### Leader Election
+
+* [Bully Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/bully/demo.json)
+* [Next-In-Line Failover](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/bully-failover/demo.json)
+* [Candidate/Ordinary Optimization](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/bully-candidates/demo.json)
+* [Invitation Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/invitation/demo.json)
+* [Ring Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/ring-election/demo.json)
+
+### Replication and Consistency
+
+* [Vector Clocks](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/vector-clocks/demo.json)
+
+### Anti-Entropy and Dissemination
+
+* [Read Repair & Hinted Handoff](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy/demo.json)
+
+### Distributed Transactions
+
 * [2 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/2pc/demo.json)
 * [3 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/3pc/demo.json)
+* [Consistent Hashing](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/consistent-hashing/demo.json)
+
+### Consensus
+
+* [Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/paxos/demo.json)
+* [Multi-Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/multi-paxos/demo.json)
 * [RAFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/raft/demo.json)
+* [PBFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/pbft/demo.json)
+
+
+
