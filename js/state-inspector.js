@@ -10,6 +10,7 @@ export class StateInspector {
         this.onEditCode = onEditCode;
         this.currentTick = 0;
         this.svgCache = new Map(); // serverId -> { graphString, svgElement }
+        this.expandedPaths = new Set(); // Track expanded <details> paths
     }
 
     update(tick) {
@@ -112,7 +113,7 @@ export class StateInspector {
 
                     const tdVal = document.createElement('td');
                     tdVal.className = 'state-val';
-                    tdVal.appendChild(this._formatValue(value));
+                    tdVal.appendChild(this._formatValue(value, `${server.id}.${key}`));
 
                     tr.appendChild(tdKey);
                     tr.appendChild(tdVal);
@@ -283,7 +284,7 @@ export class StateInspector {
      * Recursively formats a value into a DOM node.
      * Objects/Arrays become collapsible <details> blocks.
      */
-    _formatValue(val) {
+    _formatValue(val, path = '') {
         if (val === null) return document.createTextNode('null');
         if (typeof val !== 'object') return document.createTextNode(String(val));
 
@@ -294,6 +295,20 @@ export class StateInspector {
         }
 
         const details = document.createElement('details');
+
+        // Restore open state
+        if (this.expandedPaths.has(path)) {
+            details.open = true;
+        }
+
+        // Listen for toggle to save open state
+        details.addEventListener('toggle', () => {
+            if (details.open) {
+                this.expandedPaths.add(path);
+            } else {
+                this.expandedPaths.delete(path);
+            }
+        });
 
         const summary = document.createElement('summary');
         summary.style.cursor = 'pointer';
@@ -318,7 +333,8 @@ export class StateInspector {
             keySpan.style.color = '#ffb74d';
             keySpan.textContent = isArray ? `[${k}]:` : `${k}:`;
 
-            const valNode = this._formatValue(val[k]);
+            const childPath = path ? `${path}.${k}` : k;
+            const valNode = this._formatValue(val[k], childPath);
 
             row.appendChild(keySpan);
             row.appendChild(valNode);
