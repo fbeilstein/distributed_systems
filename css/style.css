@@ -174,7 +174,7 @@ body {
   align-items: center;
   justify-content: flex-start;
   gap: 6px;
-  height: 72px;
+  min-height: 32px;
   min-width: 0;
 }
 
