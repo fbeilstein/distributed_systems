@@ -17,7 +17,27 @@ const QUORUM = 3;
 function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
+        let fsm;
+        if (serverId === 0) {
+            fsm = new Automat({
+                initial: 'follower',
+                states: {
+                    follower: { on: { START_PREPARE: 'preparing' }, color: '#cfd8dc' },
+                    preparing: { on: { GOT_QUORUM_PROMISES: 'accepting' }, color: '#ffb74d' },
+                    accepting: { on: { GOT_QUORUM_ACCEPTED: 'leader' }, color: '#64b5f6' },
+                    leader: { on: { START_ACCEPT: 'accepting' }, color: '#81c784' }
+                }
+            });
+        } else {
+            fsm = new Automat({
+                initial: 'follower',
+                states: {
+                    follower: { on: {}, color: '#cfd8dc' }
+                }
+            });
+        }
         dumpState({
+            fsm: fsm.serialize(),
             // Acceptor state
             promisedBallot: 0,
             acceptedBallot: 0,
@@ -25,7 +45,6 @@ function onUp() {
 
             // Proposer / Leader state (node 0 only)
             ballot: 0,
-            isLeader: false,
             stableLeader: -1,     // ID of the known stable leader (-1 = unknown)
             promises: {},
             accepteds: {},
@@ -34,15 +53,29 @@ function onUp() {
             log: [],              // Committed values
 
             decided: [],
+            outbox: [],
         });
+    }
+}
+
+function processOutbox(s) {
+    if (s.outbox && s.outbox.length > 0) {
+        const msg = s.outbox.shift();
+        sendMessage(msg.to, msg.payload);
     }
 }
 
 function onTimer(tick) {
     let s = loadState();
+    const fsm = Automat.deserialize(s.fsm);
     s.tick = tick;
 
-    if (serverId !== 0) { dumpState(s); return; }  // Only Node 0 proposes in this demo
+    if (serverId !== 0) {
+        s.fsm = fsm.serialize();
+        processOutbox(s);
+        dumpState(s);
+        return;
+    }  // Only Node 0 proposes in this demo
 
     // Round 1: Full Paxos at tick 5
     if (tick === 5 && s.round === 0) {
@@ -51,37 +84,43 @@ function onTimer(tick) {
         s.proposedValue = 'cmd:set_x=1';
         s.promises = {};
         s.accepteds = {};
+        if (fsm.can('START_PREPARE')) fsm.transition('START_PREPARE');
         // Full Phase 1
         for (const id of allServerIds) {
-            sendMessage(id, { type: 'PREPARE', ballot: s.ballot, round: s.round });
+            s.outbox.push({ to: id, payload: { type: 'PREPARE', ballot: s.ballot, round: s.round } });
         }
     }
 
     // Rounds 2 & 3: Fast Paxos (skip Prepare) at ticks 40 and 75
-    if (tick === 40 && s.isLeader && s.round === 1) {
+    if (tick === 40 && fsm.state === 'leader' && s.round === 1) {
         s.round = 2;
         s.proposedValue = 'cmd:set_x=2';
         s.accepteds = {};
+        if (fsm.can('START_ACCEPT')) fsm.transition('START_ACCEPT');
         // Skip straight to Phase 2
         for (const id of allServerIds) {
-            sendMessage(id, { type: 'ACCEPT', ballot: s.ballot, value: s.proposedValue, round: s.round });
+            s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: s.proposedValue, round: s.round } });
         }
     }
 
-    if (tick === 75 && s.isLeader && s.round === 2) {
+    if (tick === 75 && fsm.state === 'leader' && s.round === 2) {
         s.round = 3;
         s.proposedValue = 'cmd:set_x=3';
         s.accepteds = {};
+        if (fsm.can('START_ACCEPT')) fsm.transition('START_ACCEPT');
         for (const id of allServerIds) {
-            sendMessage(id, { type: 'ACCEPT', ballot: s.ballot, value: s.proposedValue, round: s.round });
+            s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: s.proposedValue, round: s.round } });
         }
     }
 
+    s.fsm = fsm.serialize();
+    processOutbox(s);
     dumpState(s);
 }
 
 function onMessage(message) {
     let s = loadState();
+    const fsm = Automat.deserialize(s.fsm);
     const m = message.payload;
 
     // --- ACCEPTOR ---
@@ -90,15 +129,17 @@ function onMessage(message) {
         if (m.ballot > s.promisedBallot) {
             s.promisedBallot = m.ballot;
             s.stableLeader = message.from;
-            sendMessage(message.from, {
-                type: 'PROMISE',
-                ballot: m.ballot,
-                acceptedBallot: s.acceptedBallot,
-                acceptedValue: s.acceptedValue,
-                round: m.round,
+            s.outbox.push({
+                to: message.from, payload: {
+                    type: 'PROMISE',
+                    ballot: m.ballot,
+                    acceptedBallot: s.acceptedBallot,
+                    acceptedValue: s.acceptedValue,
+                    round: m.round,
+                }
             });
         } else {
-            sendMessage(message.from, { type: 'NACK', ballot: m.ballot, promisedBallot: s.promisedBallot });
+            s.outbox.push({ to: message.from, payload: { type: 'NACK', ballot: m.ballot, promisedBallot: s.promisedBallot } });
         }
     }
 
@@ -108,9 +149,9 @@ function onMessage(message) {
             s.acceptedBallot = m.ballot;
             s.acceptedValue = m.value;
             s.stableLeader = message.from;
-            sendMessage(message.from, { type: 'ACCEPTED', ballot: m.ballot, value: m.value, round: m.round });
+            s.outbox.push({ to: message.from, payload: { type: 'ACCEPTED', ballot: m.ballot, value: m.value, round: m.round } });
         } else {
-            sendMessage(message.from, { type: 'NACK', ballot: m.ballot, promisedBallot: s.promisedBallot });
+            s.outbox.push({ to: message.from, payload: { type: 'NACK', ballot: m.ballot, promisedBallot: s.promisedBallot } });
         }
     }
 
@@ -124,7 +165,7 @@ function onMessage(message) {
     else if (m.type === 'PROMISE' && serverId === 0 && m.ballot === s.ballot) {
         s.promises[message.from] = { ballot: m.acceptedBallot, value: m.acceptedValue };
 
-        if (Object.keys(s.promises).length >= QUORUM) {
+        if (Object.keys(s.promises).length >= QUORUM && fsm.state === 'preparing') {
             // Got quorum — check if we need to adopt a previously accepted value
             let valueToUse = s.proposedValue;
             let highestBallot = 0;
@@ -134,11 +175,11 @@ function onMessage(message) {
                     valueToUse = p.value;
                 }
             }
-            s.isLeader = true;
+            if (fsm.can('GOT_QUORUM_PROMISES')) fsm.transition('GOT_QUORUM_PROMISES');
             s.accepteds = {};
             // Phase 2
             for (const id of allServerIds) {
-                sendMessage(id, { type: 'ACCEPT', ballot: s.ballot, value: valueToUse, round: s.round });
+                s.outbox.push({ to: id, payload: { type: 'ACCEPT', ballot: s.ballot, value: valueToUse, round: s.round } });
             }
         }
     }
@@ -146,13 +187,15 @@ function onMessage(message) {
     else if (m.type === 'ACCEPTED' && serverId === 0 && m.ballot === s.ballot) {
         s.accepteds[message.from] = true;
 
-        if (Object.keys(s.accepteds).length >= QUORUM) {
+        if (Object.keys(s.accepteds).length >= QUORUM && fsm.state === 'accepting') {
             if (!s.decided.includes(m.value)) s.decided.push(m.value);
+            if (fsm.can('GOT_QUORUM_ACCEPTED')) fsm.transition('GOT_QUORUM_ACCEPTED');
             for (const id of allServerIds) {
-                sendMessage(id, { type: 'DECIDED', value: m.value, round: m.round });
+                s.outbox.push({ to: id, payload: { type: 'DECIDED', value: m.value, round: m.round } });
             }
         }
     }
 
+    s.fsm = fsm.serialize();
     dumpState(s);
 }

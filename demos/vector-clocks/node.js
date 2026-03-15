@@ -20,6 +20,7 @@ function onUp() {
             vc,              // vector clock [c0, c1, c2]
             log: [],         // [{vc, event, tick}]
             data: null,
+            outbox: [],
         });
     }
 }
@@ -34,6 +35,13 @@ function merge_vc(local, remote) {
     return local.map((c, i) => Math.max(c, remote[i] !== undefined ? remote[i] : 0));
 }
 
+function processOutbox(s) {
+    if (s.outbox && s.outbox.length > 0) {
+        const msg = s.outbox.shift();
+        sendMessage(msg.to, msg.payload);
+    }
+}
+
 function onTimer(tick) {
     let s = loadState();
     s.tick = tick;
@@ -43,7 +51,7 @@ function onTimer(tick) {
         s.vc = tick_vc(s.vc, serverId);
         s.data = 'x=1';
         s.log.push({ vc: [...s.vc], event: 'write x=1', tick });
-        sendMessage(1, { type: 'UPDATE', data: s.data, vc: s.vc });
+        s.outbox.push({ to: 1, payload: { type: 'UPDATE', data: s.data, vc: s.vc } });
     }
 
     // Node 0: independent write at tick 20, send to Node 2
@@ -51,7 +59,7 @@ function onTimer(tick) {
         s.vc = tick_vc(s.vc, serverId);
         s.data = 'x=3';
         s.log.push({ vc: [...s.vc], event: 'write x=3', tick });
-        sendMessage(2, { type: 'UPDATE', data: s.data, vc: s.vc });
+        s.outbox.push({ to: 2, payload: { type: 'UPDATE', data: s.data, vc: s.vc } });
     }
 
     // Node 1: write at tick 15, send to Node 2
@@ -59,16 +67,17 @@ function onTimer(tick) {
         s.vc = tick_vc(s.vc, serverId);
         s.data = 'y=2';
         s.log.push({ vc: [...s.vc], event: 'write y=2', tick });
-        sendMessage(2, { type: 'UPDATE', data: s.data, vc: s.vc });
+        s.outbox.push({ to: 2, payload: { type: 'UPDATE', data: s.data, vc: s.vc } });
     }
 
     // Node 2: send a summary back to Node 0 at tick 50
     if (serverId === 2 && tick === 50) {
         s.vc = tick_vc(s.vc, serverId);
         s.log.push({ vc: [...s.vc], event: 'sync to Node-0', tick });
-        sendMessage(0, { type: 'SYNC', vc: s.vc });
+        s.outbox.push({ to: 0, payload: { type: 'SYNC', vc: s.vc } });
     }
 
+    processOutbox(s);
     dumpState(s);
 }
 
@@ -85,7 +94,7 @@ function onMessage(message) {
             s.data = m.data;
             s.log.push({ vc: [...s.vc], event: 'recv ' + m.data + ' from ' + message.from, tick: s.tick });
             // Reply with ACK carrying our updated VC
-            sendMessage(message.from, { type: 'ACK_VC', vc: s.vc });
+            s.outbox.push({ to: message.from, payload: { type: 'ACK_VC', vc: s.vc } });
         } else {
             s.log.push({ vc: [...s.vc], event: 'recv sync from ' + message.from, tick: s.tick });
         }

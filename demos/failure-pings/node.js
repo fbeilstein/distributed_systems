@@ -16,7 +16,7 @@ function onUp() {
                 peers[id] = { lastSeen: 0, status: 'alive' };
             }
         }
-        dumpState({ peers, status: 'alive' });
+        dumpState({ peers, status: 'alive', outbox: [] });
     } else {
         // On recovery, reset our own lastSeen so peers accept us again
         const s2 = loadState();
@@ -25,14 +25,22 @@ function onUp() {
     }
 }
 
+function processOutbox(s) {
+    if (s.outbox && s.outbox.length > 0) {
+        const msg = s.outbox.shift();
+        sendMessage(msg.to, msg.payload);
+    }
+}
+
 function onTimer(tick) {
     let s = loadState();
+    s.tick = tick;
 
     // Send pings to all peers periodically
     if (tick % PING_INTERVAL === 0) {
         for (const id of allServerIds) {
             if (id !== serverId) {
-                sendMessage(id, { type: 'PING', from: serverId, tick });
+                s.outbox.push({ to: id, payload: { type: 'PING', from: serverId, tick } });
             }
         }
     }
@@ -50,6 +58,7 @@ function onTimer(tick) {
         }
     }
 
+    processOutbox(s);
     dumpState(s);
 }
 
@@ -59,7 +68,7 @@ function onMessage(message) {
 
     if (m.type === 'PING') {
         // Reply with an ACK
-        sendMessage(message.from, { type: 'ACK', from: serverId });
+        s.outbox.push({ to: message.from, payload: { type: 'ACK', from: serverId } });
     }
 
     if (m.type === 'ACK') {

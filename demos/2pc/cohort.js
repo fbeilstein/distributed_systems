@@ -65,7 +65,6 @@ function onMessage(message) {
         s.history.push('TX' + m.txId + ':commit');
         s.pendingTx = null;
         s.pendingData = null;
-        sendMessage(message.from, { type: 'ACK', txId: m.txId });
     }
 
     if (m.type === 'ABORT' && s.pendingTx === m.txId && fsm.can('ABORT')) {
@@ -73,7 +72,6 @@ function onMessage(message) {
         s.history.push('TX' + m.txId + ':abort');
         s.pendingTx = null;
         s.pendingData = null;
-        sendMessage(message.from, { type: 'ACK', txId: m.txId });
     }
 
     s.fsm = fsm.serialize();

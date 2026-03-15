@@ -16,6 +16,13 @@ const TIMEOUT = 20;
 function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
+        const fsm = new Automat({
+            initial: 'healthy',
+            states: {
+                healthy: { on: { BLOW_FUSE: 'fused' }, color: '#81c784' },
+                fused: { color: '#e57373' }
+            }
+        });
         const peers = {};
         for (const id of allServerIds) {
             if (id !== serverId) {
@@ -23,18 +30,19 @@ function onUp() {
             }
         }
         dumpState({
+            fsm: fsm.serialize(),
             peers,
-            fuseBlown: false,   // true = we detected a failure, stop responding
         });
     }
 }
 
 function onTimer(tick) {
     let s = loadState();
+    const fsm = Automat.deserialize(s.fsm);
     s.tick = tick;
 
     // If fuse is blown, we are "silent" — don't send anything
-    if (s.fuseBlown) {
+    if (fsm.state === 'fused') {
         dumpState(s);
         return;
     }
@@ -62,21 +70,22 @@ function onTimer(tick) {
 
         // FUSE: if we just detected a new failure, blow the fuse
         if (p.status === 'failed' && !wasFailed) {
-            s.fuseBlown = true;
-            // No more messages from us
+            fsm.transition('BLOW_FUSE');
             break;
         }
     }
 
+    s.fsm = fsm.serialize();
     dumpState(s);
 }
 
 function onMessage(message) {
     let s = loadState();
+    const fsm = Automat.deserialize(s.fsm);
     const m = message.payload;
 
     // If fuse is blown, ignore all messages (we are "silent")
-    if (s.fuseBlown) {
+    if (fsm.state === 'fused') {
         dumpState(s);
         return;
     }

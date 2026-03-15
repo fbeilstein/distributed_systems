@@ -15,7 +15,15 @@ function onUp() {
             alive: allServerIds.reduce((acc, id) => { acc[id] = true; return acc; }, {}),
             lastPathFrom: {},   // { [fromId]: lastSeenTick }
             seenPaths: {},      // { [fromId]: latestPath[] }
+            outbox: [],
         });
+    }
+}
+
+function processOutbox(s) {
+    if (s.outbox && s.outbox.length > 0) {
+        const msg = s.outbox.shift();
+        sendMessage(msg.to, msg.payload);
     }
 }
 
@@ -28,7 +36,7 @@ function onTimer(tick) {
     if (tick % SEND_INTERVAL === serverId % SEND_INTERVAL) {
         const targets = allServerIds.filter(id => id !== serverId);
         for (const target of targets) {
-            sendMessage(target, { type: 'PATH', path: [serverId], origin: serverId });
+            s.outbox.push({ to: target, payload: { type: 'PATH', path: [serverId], origin: serverId } });
         }
     }
 
@@ -48,6 +56,7 @@ function onTimer(tick) {
         }
     }
 
+    processOutbox(s);
     dumpState(s);
 }
 
@@ -70,7 +79,7 @@ function onMessage(message) {
             // Forward to all peers not already in the path
             const remaining = allServerIds.filter(id => id !== serverId && !newPath.includes(id));
             for (const target of remaining) {
-                sendMessage(target, { type: 'PATH', path: newPath, origin });
+                s.outbox.push({ to: target, payload: { type: 'PATH', path: newPath, origin } });
             }
         }
     }

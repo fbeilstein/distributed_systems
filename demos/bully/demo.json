@@ -25,17 +25,5 @@
         {
             "codeFile": "node.js"
         }
-    ],
-    "events": [
-        {
-            "type": "crash",
-            "server": 4,
-            "tick": 20
-        },
-        {
-            "type": "recover",
-            "server": 4,
-            "tick": 80
-        }
     ]
 }

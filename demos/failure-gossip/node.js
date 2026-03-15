@@ -21,7 +21,15 @@ function onUp() {
         dumpState({
             members,
             round: 0,
+            outbox: [],
         });
+    }
+}
+
+function processOutbox(s) {
+    if (s.outbox && s.outbox.length > 0) {
+        const msg = s.outbox.shift();
+        sendMessage(msg.to, msg.payload);
     }
 }
 
@@ -42,7 +50,7 @@ function onTimer(tick) {
         const alive = allServerIds.filter(id => id !== serverId && s.members[id] && s.members[id].status !== 'failed');
         if (alive.length > 0) {
             const target = alive[getRandom(0, alive.length - 1)];
-            sendMessage(target, { type: 'GOSSIP', members: s.members });
+            s.outbox.push({ to: target, payload: { type: 'GOSSIP', members: s.members } });
         }
 
         // Check for failures: anyone whose heartbeat hasn't moved in enough rounds
@@ -61,6 +69,7 @@ function onTimer(tick) {
         }
     }
 
+    processOutbox(s);
     dumpState(s);
 }
 
@@ -84,7 +93,7 @@ function onMessage(message) {
             }
         }
         // Respond with our own gossip (anti-entropy exchange)
-        sendMessage(message.from, { type: 'GOSSIP_REPLY', members: s.members });
+        s.outbox.push({ to: message.from, payload: { type: 'GOSSIP_REPLY', members: s.members } });
     }
 
     if (m.type === 'GOSSIP_REPLY') {

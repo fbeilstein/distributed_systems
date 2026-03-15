@@ -25,12 +25,5 @@
         {
             "codeFile": "candidate.js"
         }
-    ],
-    "events": [
-        {
-            "type": "crash",
-            "server": 4,
-            "tick": 25
-        }
     ]
 }

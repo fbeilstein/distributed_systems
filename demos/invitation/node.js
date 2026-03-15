@@ -13,37 +13,57 @@ const INVITE_INTERVAL = 12;
 function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
+        const fsm = new Automat({
+            initial: 'leader',
+            states: {
+                leader: { on: { JOIN_GROUP: 'follower' }, color: '#81c784' },
+                follower: { on: { BECOME_LEADER: 'leader' }, color: '#cfd8dc' }
+            }
+        });
         dumpState({
+            fsm: fsm.serialize(),
             groupId: serverId,         // Group identified by leader's ID
             leader: serverId,          // Who we follow
             members: [serverId],       // Known members of our group
-            isLeader: true,
+            outbox: [],
         });
+    }
+}
+
+function processOutbox(s) {
+    if (s.outbox && s.outbox.length > 0) {
+        const msg = s.outbox.shift();
+        sendMessage(msg.to, msg.payload);
     }
 }
 
 function onTimer(tick) {
     let s = loadState();
+    const fsm = Automat.deserialize(s.fsm);
     s.tick = tick;
 
-    if (s.isLeader && tick % INVITE_INTERVAL === serverId % INVITE_INTERVAL) {
+    if (fsm.state === 'leader' && tick % INVITE_INTERVAL === serverId % INVITE_INTERVAL) {
         // Send INVITE to nodes not in our group
         const outsiders = allServerIds.filter(id => !s.members.includes(id));
         for (const id of outsiders) {
-            sendMessage(id, {
-                type: 'INVITE',
-                groupId: s.groupId,
-                leader: serverId,
-                members: s.members,
+            s.outbox.push({
+                to: id, payload: {
+                    type: 'INVITE',
+                    groupId: s.groupId,
+                    leader: serverId,
+                    members: s.members,
+                }
             });
         }
     }
 
+    processOutbox(s);
     dumpState(s);
 }
 
 function onMessage(message) {
     let s = loadState();
+    const fsm = Automat.deserialize(s.fsm);
     const m = message.payload;
 
     if (m.type === 'INVITE') {
@@ -54,37 +74,43 @@ function onMessage(message) {
 
         if (shouldJoin && m.leader !== s.leader) {
             // Join the other group
-            const wasLeader = s.isLeader;
+            const wasLeader = fsm.state === 'leader';
             s.groupId = m.groupId;
             s.leader = m.leader;
             s.members = [...new Set([...m.members, ...s.members])]; // merge member lists
-            s.isLeader = (serverId === m.leader);
+            if (serverId === m.leader) {
+                if (fsm.can('BECOME_LEADER')) fsm.transition('BECOME_LEADER');
+            } else {
+                if (fsm.can('JOIN_GROUP')) fsm.transition('JOIN_GROUP');
+            }
 
             // Notify our new leader that we joined
-            sendMessage(m.leader, { type: 'JOIN_ACK', from: serverId, members: s.members });
+            s.outbox.push({ to: m.leader, payload: { type: 'JOIN_ACK', from: serverId, members: s.members } });
 
             // If we were a leader of our old group, notify our old members
             if (wasLeader) {
                 const oldMembers = s.members.filter(id => id !== serverId && !m.members.includes(id));
                 for (const id of oldMembers) {
-                    sendMessage(id, { type: 'MERGE', newLeader: m.leader, groupId: m.groupId, members: s.members });
+                    s.outbox.push({ to: id, payload: { type: 'MERGE', newLeader: m.leader, groupId: m.groupId, members: s.members } });
                 }
             }
         } else if (!shouldJoin && m.leader !== s.leader) {
             // Our group wins — counter-invite
-            if (s.isLeader) {
-                sendMessage(m.leader, {
-                    type: 'INVITE',
-                    groupId: s.groupId,
-                    leader: serverId,
-                    members: s.members,
+            if (fsm.state === 'leader') {
+                s.outbox.push({
+                    to: m.leader, payload: {
+                        type: 'INVITE',
+                        groupId: s.groupId,
+                        leader: serverId,
+                        members: s.members,
+                    }
                 });
             }
         }
     }
 
     else if (m.type === 'JOIN_ACK') {
-        if (s.isLeader) {
+        if (fsm.state === 'leader') {
             // Add new member to our group
             if (!s.members.includes(m.from)) {
                 s.members.push(m.from);
@@ -100,9 +126,14 @@ function onMessage(message) {
         // Our old group leader is merging us into a new group
         s.leader = m.newLeader;
         s.groupId = m.groupId;
-        s.isLeader = (serverId === m.newLeader);
+        if (serverId === m.newLeader) {
+            if (fsm.can('BECOME_LEADER')) fsm.transition('BECOME_LEADER');
+        } else {
+            if (fsm.can('JOIN_GROUP')) fsm.transition('JOIN_GROUP');
+        }
         s.members = m.members || s.members;
     }
 
+    s.fsm = fsm.serialize();
     dumpState(s);
 }

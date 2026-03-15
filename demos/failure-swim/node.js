@@ -25,7 +25,15 @@ function onUp() {
             members,
             pendingPing: null,          // { target, sentTick, indirect: bool }
             pingQueue: [...allServerIds.filter(id => id !== serverId)],
+            outbox: [],
         });
+    }
+}
+
+function processOutbox(s) {
+    if (s.outbox && s.outbox.length > 0) {
+        const msg = s.outbox.shift();
+        sendMessage(msg.to, msg.payload);
     }
 }
 
@@ -77,7 +85,7 @@ function onTimer(tick) {
             s.pingQueue = allServerIds.filter(id => id !== serverId && s.members[id] && s.members[id].status !== 'failed');
         }
         if (target !== null) {
-            sendMessage(target, { type: 'PING', from: serverId, updates: piggyback(s) });
+            s.outbox.push({ to: target, payload: { type: 'PING', from: serverId, updates: piggyback(s) } });
             s.pendingPing = { target, sentTick: tick, indirect: false };
         }
     }
@@ -90,7 +98,7 @@ function onTimer(tick) {
         const others = allServerIds.filter(id => id !== serverId && id !== s.pendingPing.target && s.members[id] && s.members[id].status === 'alive');
         const helpers = others.slice(0, K_INDIRECT);
         for (const h of helpers) {
-            sendMessage(h, { type: 'PING_REQ', target: s.pendingPing.target, from: serverId, updates: piggyback(s) });
+            s.outbox.push({ to: h, payload: { type: 'PING_REQ', target: s.pendingPing.target, from: serverId, updates: piggyback(s) } });
         }
     }
 
@@ -104,6 +112,7 @@ function onTimer(tick) {
         s.pendingPing = null;
     }
 
+    processOutbox(s);
     dumpState(s);
 }
 
@@ -114,22 +123,22 @@ function onMessage(message) {
     applyGossip(s, m.updates);
 
     if (m.type === 'PING') {
-        sendMessage(message.from, { type: 'ACK', from: serverId, updates: piggyback(s) });
+        s.outbox.push({ to: message.from, payload: { type: 'ACK', from: serverId, updates: piggyback(s) } });
     }
 
     else if (m.type === 'PING_REQ') {
         // Try to ping the target on behalf of the requester
-        sendMessage(m.target, { type: 'PING_INDIRECT', requester: message.from, from: serverId, updates: piggyback(s) });
+        s.outbox.push({ to: m.target, payload: { type: 'PING_INDIRECT', requester: message.from, from: serverId, updates: piggyback(s) } });
     }
 
     else if (m.type === 'PING_INDIRECT') {
         // Respond both to the actual pinger and propagate back to requester
-        sendMessage(message.from, { type: 'ACK_INDIRECT', requester: m.requester, target: serverId, updates: piggyback(s) });
+        s.outbox.push({ to: message.from, payload: { type: 'ACK_INDIRECT', requester: m.requester, target: serverId, updates: piggyback(s) } });
     }
 
     else if (m.type === 'ACK_INDIRECT') {
         // Forward to original requester
-        sendMessage(m.requester, { type: 'ACK', from: m.target, indirect: true, updates: m.updates });
+        s.outbox.push({ to: m.requester, payload: { type: 'ACK', from: m.target, indirect: true, updates: m.updates } });
     }
 
     else if (m.type === 'ACK') {

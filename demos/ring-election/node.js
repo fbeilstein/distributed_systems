@@ -22,16 +22,27 @@ function nextNode(id) {
 function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
+        const fsm = new Automat({
+            initial: 'follower',
+            states: {
+                follower: { on: { START_ELECTION: 'candidate', NEW_COORD: 'follower' }, color: '#cfd8dc' },
+                candidate: { on: { WON_ELECTION: 'leader', NEW_COORD: 'follower' }, color: '#ffb74d' },
+                leader: { on: { BECOME_FOLLOWER: 'follower' }, color: '#81c784' }
+            }
+        });
         dumpState({
+            fsm: fsm.serialize(),
             leader: -1,
-            status: 'follower',
             electing: false,
             lastLeaderSeen: 0,
         });
     } else {
         const s2 = loadState();
+        const fsm = Automat.deserialize(s2.fsm);
+        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
+        else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
+        s2.fsm = fsm.serialize();
         s2.leader = -1;
-        s2.status = 'follower';
         s2.electing = false;
         s2.lastLeaderSeen = 0;
         dumpState(s2);
@@ -40,10 +51,11 @@ function onUp() {
 
 function onTimer(tick) {
     let s = loadState();
+    const fsm = Automat.deserialize(s.fsm);
     s.tick = tick;
 
     // Leader sends periodic heartbeats
-    if (s.status === 'leader') {
+    if (fsm.state === 'leader') {
         if (tick % HEARTBEAT_INTERVAL === 0) {
             for (const id of allServerIds) {
                 if (id !== serverId) {
@@ -58,23 +70,26 @@ function onTimer(tick) {
     // Follower: detect leader timeout and start election
     if (!s.electing && tick - s.lastLeaderSeen > RING_MSG_TIMEOUT && tick > 5) {
         s.electing = true;
-        s.status = 'candidate';
+        if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
         // Send our ID token to the next node in the ring
         const next = nextNode(serverId);
         sendMessage(next, { type: 'ELECTION', candidateId: serverId, initiator: serverId });
     }
 
+    s.fsm = fsm.serialize();
     dumpState(s);
 }
 
 function onMessage(message) {
     let s = loadState();
+    const fsm = Automat.deserialize(s.fsm);
     const m = message.payload;
 
     if (m.type === 'HEARTBEAT') {
         s.leader = m.leader;
         s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        s.status = 'follower';
+        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
+        else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
         s.electing = false;
     }
 
@@ -86,12 +101,13 @@ function onMessage(message) {
         if (candidateId === serverId) {
             // Token has made a full loop — we win!
             s.leader = serverId;
-            s.status = 'leader';
+            if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
             s.electing = false;
             // Broadcast ELECTED around the ring
             const next = nextNode(serverId);
             sendMessage(next, { type: 'ELECTED', leader: serverId });
         } else {
+            if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
             // Take the max (higher ID wins)
             if (serverId > candidateId) candidateId = serverId;
             // Forward to next node in ring
@@ -103,7 +119,12 @@ function onMessage(message) {
     else if (m.type === 'ELECTED') {
         const newLeader = m.leader;
         s.leader = newLeader;
-        s.status = newLeader === serverId ? 'leader' : 'follower';
+        if (newLeader === serverId) {
+            if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
+        } else {
+            if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
+            else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
+        }
         s.electing = false;
         s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
 
@@ -114,5 +135,6 @@ function onMessage(message) {
         }
     }
 
+    s.fsm = fsm.serialize();
     dumpState(s);
 }

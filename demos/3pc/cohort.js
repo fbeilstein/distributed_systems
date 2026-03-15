@@ -82,7 +82,6 @@ function onMessage(message) {
         s.history.push('TX' + m.txId + ':commit');
         s.pendingTx = null;
         s.pendingData = null;
-        sendMessage(message.from, { type: 'ACK_COMMIT', txId: m.txId });
     }
 
     if (m.type === 'ABORT' && s.pendingTx === m.txId) {

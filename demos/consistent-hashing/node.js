@@ -48,7 +48,7 @@ function onUp() {
     if (Object.keys(s).length === 0) {
         if (serverId === 4) {
             // Observer/controller node
-            dumpState({ role: 'observer', ringNodes: [], event: 'idle' });
+            dumpState({ role: 'observer', ringNodes: [], event: 'idle', outbox: [] });
         } else {
             // Regular node: compute own ring position
             const pos = nodeHash(serverId);
@@ -58,8 +58,16 @@ function onUp() {
                 ringNodes: [],  // will be populated via gossip
                 myRange: null,
                 keys: [],
+                outbox: [],
             });
         }
+    }
+}
+
+function processOutbox(s) {
+    if (s.outbox && s.outbox.length > 0) {
+        const msg = s.outbox.shift();
+        sendMessage(msg.to, msg.payload);
     }
 }
 
@@ -75,7 +83,7 @@ function onTimer(tick) {
             s.ringNodes = initialRing;
             s.event = 'initial_ring';
             for (const id of [0, 1, 2, 3]) {
-                sendMessage(id, { type: 'RING_UPDATE', nodes: initialRing });
+                s.outbox.push({ to: id, payload: { type: 'RING_UPDATE', nodes: initialRing } });
             }
         }
 
@@ -86,7 +94,7 @@ function onTimer(tick) {
             s.ringNodes = updatedRing;
             s.event = 'node_99_joined';
             for (const id of [0, 1, 2, 3]) {
-                sendMessage(id, { type: 'RING_UPDATE', nodes: updatedRing });
+                s.outbox.push({ to: id, payload: { type: 'RING_UPDATE', nodes: updatedRing } });
             }
         }
 
@@ -96,19 +104,21 @@ function onTimer(tick) {
             s.ringNodes = updatedRing;
             s.event = 'node_99_left';
             for (const id of [0, 1, 2, 3]) {
-                sendMessage(id, { type: 'RING_UPDATE', nodes: updatedRing });
+                s.outbox.push({ to: id, payload: { type: 'RING_UPDATE', nodes: updatedRing } });
             }
         }
 
+        processOutbox(s);
         dumpState(s);
         return;
     }
 
     // Regular node: announce self at tick 5
     if (tick === 5) {
-        sendMessage(4, { type: 'JOIN_ANNOUNCE', id: serverId, pos: s.pos });
+        s.outbox.push({ to: 4, payload: { type: 'JOIN_ANNOUNCE', id: serverId, pos: s.pos } });
     }
 
+    processOutbox(s);
     dumpState(s);
 }
 

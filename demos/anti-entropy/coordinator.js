@@ -22,6 +22,7 @@ function onUp() {
                 pendingWrites: {},  // { replicaId: {data, version} } — hinted handoff queue
                 quorum: 0,
                 readReplies: {},
+                outbox: [],
             });
         } else {
             // Replica
@@ -29,11 +30,23 @@ function onUp() {
                 role: 'replica',
                 version: 0,
                 data: null,
+                outbox: [],
             });
         }
     } else if (serverId !== 0) {
         // Replica recovered — signal coordinator
-        sendMessage(0, { type: 'RECOVERY_NOTICE', replicaId: serverId });
+        // We'll queue this on the next timer tick or manual if outbox initialized
+        let outbox = s.outbox || [];
+        outbox.push({ to: 0, payload: { type: 'RECOVERY_NOTICE', replicaId: serverId } });
+        s.outbox = outbox;
+        dumpState(s);
+    }
+}
+
+function processOutbox(s) {
+    if (s.outbox && s.outbox.length > 0) {
+        const msg = s.outbox.shift();
+        sendMessage(msg.to, msg.payload);
     }
 }
 
@@ -49,7 +62,7 @@ function onTimer(tick) {
             s.pendingWrites = {};
             const replicas = allServerIds.filter(id => id !== 0);
             for (const r of replicas) {
-                sendMessage(r, { type: 'WRITE', data: s.data, version: s.version });
+                s.outbox.push({ to: r, payload: { type: 'WRITE', data: s.data, version: s.version } });
             }
         }
 
@@ -58,7 +71,7 @@ function onTimer(tick) {
             s.readReplies = {};
             const replicas = allServerIds.filter(id => id !== 0);
             for (const r of replicas) {
-                sendMessage(r, { type: 'READ_REQUEST' });
+                s.outbox.push({ to: r, payload: { type: 'READ_REQUEST' } });
             }
         }
 
@@ -69,18 +82,19 @@ function onTimer(tick) {
             s.pendingWrites = {};
             const replicas = allServerIds.filter(id => id !== 0);
             for (const r of replicas) {
-                sendMessage(r, { type: 'WRITE', data: s.data, version: s.version });
+                s.outbox.push({ to: r, payload: { type: 'WRITE', data: s.data, version: s.version } });
             }
         }
 
         // Retry hinted handoff periodically
         if (tick % 15 === 0 && Object.keys(s.pendingWrites).length > 0) {
             for (const [rid, pending] of Object.entries(s.pendingWrites)) {
-                sendMessage(parseInt(rid), { type: 'WRITE', data: pending.data, version: pending.version, hinted: true });
+                s.outbox.push({ to: parseInt(rid), payload: { type: 'WRITE', data: pending.data, version: pending.version, hinted: true } });
             }
         }
     }
 
+    processOutbox(s);
     dumpState(s);
 }
 
@@ -119,7 +133,7 @@ function onMessage(message) {
                 // Read repair: fix stale replicas
                 for (const [rid, reply] of Object.entries(s.readReplies)) {
                     if (reply.version < latestVersion) {
-                        sendMessage(parseInt(rid), { type: 'REPAIR', data: latestData, version: latestVersion });
+                        s.outbox.push({ to: parseInt(rid), payload: { type: 'REPAIR', data: latestData, version: latestVersion } });
                     }
                 }
             }
@@ -129,7 +143,7 @@ function onMessage(message) {
             // Replica came back — deliver any pending hinted handoff
             if (s.pendingWrites[m.replicaId]) {
                 const pending = s.pendingWrites[m.replicaId];
-                sendMessage(m.replicaId, { type: 'WRITE', data: pending.data, version: pending.version, hinted: true });
+                s.outbox.push({ to: m.replicaId, payload: { type: 'WRITE', data: pending.data, version: pending.version, hinted: true } });
             }
         }
     }
@@ -141,11 +155,11 @@ function onMessage(message) {
                 s.version = m.version;
                 s.data = m.data;
             }
-            sendMessage(0, { type: 'WRITE_ACK', version: s.version });
+            s.outbox.push({ to: 0, payload: { type: 'WRITE_ACK', version: s.version } });
         }
 
         else if (m.type === 'READ_REQUEST') {
-            sendMessage(0, { type: 'READ_REPLY', version: s.version, data: s.data });
+            s.outbox.push({ to: 0, payload: { type: 'READ_REPLY', version: s.version, data: s.data } });
         }
     }
 
