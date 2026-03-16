@@ -1,21 +1,28 @@
-// Timeout-Free Failure Detector
-// Nodes pass an ever-growing "path" array between themselves.
-// A node is considered alive if its ID appears in paths that pass through this node.
-// Key insight: no strict timeouts — liveness is proven by path growth.
-// Demo: Node 2 crashes at tick 40. Path through it stops growing, detected by others.
+// Timeout-Free Failure Detector (Aguilera, Chen, Toueg 1997)
+// Corrected: multi-hop propagation + balanced counter logic.
 
-const SEND_INTERVAL = 40;  // Probe interval (very sparse for visual clarity)
+const DELAY_BETWEEN_PINGS = 15;
+const NUM_NODES = 4;
+const INITIATION_INTERVAL = DELAY_BETWEEN_PINGS * NUM_NODES;
+const SUSPICION_THRESHOLD = 2;
 
 function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
-        // alive: set of server IDs we believe are up
-        // path: the chain of nodes that forwarded the current probe
+        const initialCounters = {};
+        for (const id of allServerIds) {
+            // We only track progress of PEERS. Tracking s.counters[serverId] 
+            // is biased (we see ourselves more often than peers).
+            if (parseInt(id) !== serverId) {
+                initialCounters[id] = 0;
+            }
+        }
         dumpState({
             alive: allServerIds.reduce((acc, id) => { acc[id] = true; return acc; }, {}),
-            lastPathFrom: {},   // { [fromId]: lastSeenTick }
-            seenPaths: {},      // { [fromId]: latestPath[] }
+            counters: initialCounters,
+            seenParticipants: {},    // [msgId]: array of node IDs already processed for this msg
             outbox: [],
+            seqNum: 0
         });
     }
 }
@@ -29,27 +36,42 @@ function processOutbox(s) {
 
 function onTimer(tick) {
     let s = loadState();
-    s.tick = tick;
 
-    // Initiate a probe to a random target
-    // Staggered by serverId to ensure only one node initiates a path at a time
-    if (tick % SEND_INTERVAL === (serverId * 10) % SEND_INTERVAL) {
+    // 1. Staggered Initiation (0, 15, 30, 45...)
+    const isOurTurn = (tick % INITIATION_INTERVAL === (serverId * DELAY_BETWEEN_PINGS) % INITIATION_INTERVAL);
+
+    if (isOurTurn) {
+        s.seqNum++;
+        const msgId = `${serverId}-${s.seqNum}`;
+
+        // Track the participants we've processed for this heartbeat
+        if (!s.seenParticipants) s.seenParticipants = {};
+        s.seenParticipants[msgId] = [serverId];
+
+        // We do NOT increment a counter for ourselves here because 
+        // we use peer-to-peer comparison for suspicion.
+
+        const path = [serverId];
         const targets = allServerIds.filter(id => id !== serverId);
-        if (targets.length > 0) {
-            const target = targets[getRandom(0, targets.length - 1)];
-            s.outbox.push({ to: target, payload: { type: 'PATH', path: [serverId], origin: serverId } });
+        for (const target of targets) {
+            s.outbox.push({ to: target, payload: { type: 'HB', id: msgId, path: path } });
         }
     }
 
-    // Declare nodes failed if we haven't seen a path update from them in a while.
-    const DEAD_THRESHOLD = 80; // Fixed threshold for a slow sparse demo
-    for (const id of allServerIds) {
-        if (id === serverId) continue;
-        const lastSeen = s.lastPathFrom[id];
-        if (lastSeen === undefined) {
-            if (tick > DEAD_THRESHOLD + 5) s.alive[id] = false;
+    // 2. Balanced Failure Detection
+    // Suspect a peer if their counter lags significantly behind the MOST ACTIVE PEER.
+    let maxPeerCounter = 0;
+    for (const id in s.counters) {
+        if (s.counters[id] > maxPeerCounter) maxPeerCounter = s.counters[id];
+    }
+
+    for (const idStr in s.counters) {
+        const id = parseInt(idStr);
+        // We only judge peers against other peers.
+        if (maxPeerCounter - s.counters[id] >= SUSPICION_THRESHOLD) {
+            s.alive[id] = false;
         } else {
-            s.alive[id] = (tick - lastSeen) <= DEAD_THRESHOLD;
+            s.alive[id] = true;
         }
     }
 
@@ -60,23 +82,38 @@ function onTimer(tick) {
 function onMessage(message) {
     let s = loadState();
     const m = message.payload;
+    if (m.type !== 'HB') return;
 
-    if (m.type === 'PATH') {
-        const path = m.path;
-        const origin = m.origin;
+    if (!s.seenParticipants) s.seenParticipants = {};
+    if (!s.seenParticipants[m.id]) s.seenParticipants[m.id] = [];
 
-        s.lastPathFrom[origin] = s.tick !== undefined ? s.tick : 0;
-        s.alive[origin] = true;
-        s.seenPaths[origin] = path;
-
-        // Forward to ONE random peer not in path to curb outbox congestion
-        if (!path.includes(serverId)) {
-            const newPath = [...path, serverId];
-            const remaining = allServerIds.filter(id => id !== serverId && !newPath.includes(id));
-            if (remaining.length > 0) {
-                const target = remaining[getRandom(0, remaining.length - 1)];
-                s.outbox.push({ to: target, payload: { type: 'PATH', path: newPath, origin } });
+    let hasNewInfo = false;
+    for (const pid of m.path) {
+        // Increment counter if we see a "new" participant (or new heartbeat)
+        if (!s.seenParticipants[m.id].includes(pid)) {
+            s.seenParticipants[m.id].push(pid);
+            // We only maintain counters for PEERS.
+            if (pid !== serverId) {
+                s.counters[pid] = (s.counters[pid] || 0) + 1;
             }
+            hasNewInfo = true;
+        }
+    }
+
+    if (hasNewInfo) {
+        // Determine the extended path to forward
+        let newPath = [...m.path];
+        if (!newPath.includes(serverId)) {
+            newPath.push(serverId);
+            if (!s.seenParticipants[m.id].includes(serverId)) {
+                s.seenParticipants[m.id].push(serverId);
+            }
+        }
+
+        // Forward to the neighbors that haven't appeared in the path yet.
+        const targets = allServerIds.filter(id => !newPath.includes(id));
+        for (const target of targets) {
+            s.outbox.push({ to: target, payload: { type: 'HB', id: m.id, path: newPath } });
         }
     }
 
