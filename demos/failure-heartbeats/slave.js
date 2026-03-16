@@ -6,7 +6,7 @@ const MASTER_ID = 0;
 function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
-        dumpState({ role: 'slave', status: 'alive', outbox: [] });
+        dumpState({ role: 'slave', outbox: [] });
     }
 }
 
