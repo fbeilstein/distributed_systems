@@ -1,0 +1,29 @@
+{
+    "nodes": 5,
+    "seed": 99,
+    "ticks": 160,
+    "names": [
+        "Monitor",
+        "Target 1",
+        "Target 2",
+        "Target 3",
+        "Target 4"
+    ],
+    "servers": [
+        {
+            "codeFile": "monitor.js"
+        },
+        {
+            "codeFile": "target.js"
+        },
+        {
+            "codeFile": "target.js"
+        },
+        {
+            "codeFile": "target.js"
+        },
+        {
+            "codeFile": "target.js"
+        }
+    ]
+}
