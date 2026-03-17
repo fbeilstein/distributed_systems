@@ -10,19 +10,23 @@
 // Demo: Node 4 crashes at tick 30. Node 0 detects it, stops responding,
 //       which cascades to Node 1, 2, 3 — all stop by ~tick 75.
 
-const PING_INTERVAL = 8;
-const TIMEOUT = 20;
+const PING_INTERVAL = 20;
+const TIMEOUT = PING_INTERVAL + 10;
+
+// FSM Definition: 'listen' for passive listening, 'ping' for active broadcasting, 'inactive' for blown fuse
+const fsmDef = {
+    initial: 'listen',
+    states: {
+        'listen': { on: { 'START_PING': 'ping', 'BLOW_FUSE': 'inactive' }, color: '#3182bd' }, // blue
+        'ping': { on: { 'DONE_PING': 'listen', 'BLOW_FUSE': 'inactive' }, color: '#ff7f0e' },  // orange
+        'inactive': { color: '#e57373' }                                                       // red
+    }
+};
 
 function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
-        const fsm = new Automat({
-            initial: 'healthy',
-            states: {
-                healthy: { on: { BLOW_FUSE: 'fused' }, color: '#81c784' },
-                fused: { color: '#e57373' }
-            }
-        });
+        const fsm = new Automat(fsmDef);
         const peers = {};
         for (const id of allServerIds) {
             if (id !== serverId) {
@@ -32,23 +36,35 @@ function onUp() {
         dumpState({
             fsm: fsm.serialize(),
             peers,
+            lastPingTick: -100
         });
     }
 }
 
 function onTimer(tick) {
     let s = loadState();
+    if (!s.fsm) return;
+
     const fsm = Automat.deserialize(s.fsm);
     s.tick = tick;
 
-    // If fuse is blown, we are "silent" — don't send anything
-    if (fsm.state === 'fused') {
+    // If fuse is blown, we are "inactive" — don't send anything
+    if (fsm.state === 'inactive') {
         dumpState(s);
         return;
     }
 
-    // Send pings to all peers
-    if (tick % PING_INTERVAL === serverId % PING_INTERVAL) {
+    // Return to listen 1 tick after doing a ping broadcast
+    if (fsm.state === 'ping' && tick > s.lastPingTick) {
+        fsm.transition('DONE_PING');
+    }
+
+    // Send pings to all peers evenly staggered across the interval
+    const spacing = Math.floor(PING_INTERVAL / allServerIds.length);
+    if (tick % PING_INTERVAL === (serverId * spacing) % PING_INTERVAL) {
+        fsm.transition('START_PING');
+        s.lastPingTick = tick;
+
         for (const id of allServerIds) {
             if (id !== serverId) {
                 sendMessage(id, { type: 'PING' });
@@ -60,10 +76,8 @@ function onTimer(tick) {
     for (const [idStr, p] of Object.entries(s.peers)) {
         const gap = tick - p.lastSeen;
         const wasFailed = p.status === 'failed';
-        if (gap > TIMEOUT * 2) {
+        if (gap > TIMEOUT) {
             p.status = 'failed';
-        } else if (gap > TIMEOUT) {
-            p.status = 'suspect';
         } else {
             p.status = 'alive';
         }
@@ -81,11 +95,13 @@ function onTimer(tick) {
 
 function onMessage(message) {
     let s = loadState();
+    if (!s.fsm) return;
+
     const fsm = Automat.deserialize(s.fsm);
     const m = message.payload;
 
-    // If fuse is blown, ignore all messages (we are "silent")
-    if (fsm.state === 'fused') {
+    // If fuse is blown, ignore all messages (we are "inactive")
+    if (fsm.state === 'inactive') {
         dumpState(s);
         return;
     }

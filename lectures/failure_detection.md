@@ -427,3 +427,52 @@ $P_3$ physically crashes and its CPU halts.
         Launch Gossip Demo
     </button>
 </div>
+
+---
+
+# Reversing the Failure Detection Problem
+
+Since propagating information about failures is not always physically possible (e.g., during a total network partition), and notifying every member individually might be too expensive, we can take a fundamentally different approach.
+
+**[FUSE (Failure Notification Service)](https://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.59.2061)** focuses on reliable, cheap failure propagation that is mathematically guaranteed to work even in the presence of massive disconnects and rolling network partitions.
+
+It does this by *reversing* the detection mechanism: **Instead of actively telling everyone someone died, you purposely stop talking yourself.**
+
+---
+
+# The FUSE Protocol
+
+The algorithm arranges active processes into logical groups.
+
+1. Nodes actively send standard pings to other members of their group.
+2. If *anyone* fails to respond to a ping, the detecting node immediately stops responding to all incoming pings from its neighbors.
+3. This creates a chain-reaction: by refusing to yield ACKs, the detecting node effectively marks *itself* as failed to its neighbors, forcing them to do the exact same thing.
+
+All failures rapidly cascade through the system from the original source of the failure outward to all participants. 
+
+---
+
+# Tradeoffs of FUSE
+
+This approach converts any individual process failure instantly into a massive, undeniable **Group Failure**.
+
+* **The Massive Advantage (+)**  
+  Every surviving member is 100% mathematically guaranteed to learn about the group failure and can react appropriately (e.g., tearing down the entire distributed transaction or electing a completely new quorum).
+
+* **The Massive Drawback (-)**  
+  A single, tiny link failure separating just one process from the others will cascade into a total, apocalyptic Group Failure where every node voluntarily halts!
+
+---
+
+# The FUSE Sandbox Demo
+
+<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
+    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
+    <p style="font-size: 1.2rem;">Our Sandbox uses a true Symmetric Architecture! Every node runs the exact same logic. <br><br><b>How to test FUSE:</b> Right-click Node-2 to instantly terminate its CPU. Notice how Node-1 (the target of Node-2's pings) eventually detects the failure. At that exact moment, Node-1's state transitions permanently to <span style="color: #e57373; font-weight: bold;">Inactive (Red)</span>. Because it's inactive, it stops replying to Node-0... and finally the entire cluster voluntarily cascades into the Inactive state!</p>
+</div>
+
+<div style="text-align: center; margin-top: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-fuse/demo.json')" style="font-size: 1.5rem; padding: 15px 30px;">
+        Launch FUSE Demo
+    </button>
+</div>
