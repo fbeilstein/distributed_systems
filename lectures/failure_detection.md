@@ -370,3 +370,60 @@ If $\Phi$ crosses an arbitrary threshold (e.g. $\Phi > 8$), we mark the node as 
         Launch Phi-Accrual Demo
     </button>
 </div>
+
+---
+
+# Gossip and Failure Detection
+
+Another approach that avoids relying on a single-node view to make a decision is a **Gossip-Style Failure Detection Service**. Using gossip (think about *virus spreading*), nodes can collect and distribute states of neighboring processes.
+
+*(Reference: van Renesse, Minsky, Hayden. 1998. "A Gossip-Style Failure Detection Service.")*
+
+Each process maintains a heartbeat table:
+
+| Neighbor | Last Heartbeat Timestamp |
+| :--- | :--- |
+| **$P_1$ (self)** | $t_1$ |
+| **$P_2$** | $t_2$ |
+| **$P_3$** | $t_3$ |
+
+---
+
+# The Gossip Algorithm
+
+* **Broadcasting**: Periodically, each member increments its own heartbeat counter and distributes its entire table list to a random neighbor.
+* **Merging**: Upon message receipt, the neighboring node merges the list with its own, updating heartbeat counters to the maximum known values.
+* **Detection**: If any node in the list did not dynamically update its counter for long enough, it is considered failed.
+
+Using gossip for propagating system states increases the total number of messages in the system, but allows information to spread much more reliably.
+
+*Note: Bandwidth is logically capped, and can grow at most linearly with the number of processes in the system.*
+
+---
+
+# Case Study: 3 Processes
+
+Consider 3 processes $P_1$, $P_2$, and $P_3$ where all three can initially communicate and update their timestamps.
+
+**Scenario A: Direct Link Failure**
+The physical network link $P_1 \iff P_3$ is severed. 
+* $P_1$ and $P_3$ cannot speak directly, but $P_3$'s incrementing heartbeat state is still propagated to $P_1$ *through* $P_2$. The cluster correctly knows $P_3$ is alive!
+
+**Scenario B: True Crash Failure**
+$P_3$ physically crashes and its CPU halts.
+* Since it doesn’t send updates anymore, its heartbeat counter permanently freezes. It is definitively detected as failed by the *entire* cluster simultaneously.
+
+---
+
+# The Gossip Sandbox Demo
+
+<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
+    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
+    <p style="font-size: 1.2rem;">In a true scalable Gossip implementation (like the paper), a node picks <b>one random neighbor</b> to exchange state with.<br><br>For illustrative purposes, our Sandbox demo runs a <b>Staggered Broadcast Gossip</b> --- distributes state to all active peers in a round-robin fashion. </p>
+</div>
+
+<div style="text-align: center; margin-top: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-gossip/demo.json')" style="font-size: 1.5rem; padding: 15px 30px;">
+        Launch Gossip Demo
+    </button>
+</div>
