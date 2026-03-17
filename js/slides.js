@@ -210,7 +210,7 @@ window.showDemo = function (demoName) {
     const title = document.getElementById('demo-title');
 
     // The main engine index.html runs the sandboxes. We load it into the iframe, requesting a specific demo.
-    iframe.src = `index.html?demo=${demoName}`;
+    iframe.src = `index.html?code=${demoName}`;
     title.textContent = `Demo: ${demoName}`;
 
     overlay.classList.remove('hidden');
