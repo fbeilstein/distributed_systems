@@ -10,7 +10,7 @@
 * [Heartbeats](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-heartbeats/demo.json)
 * [Timeout-Free Failure Detector](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-timeout-free/demo.json)
 * [Outsourced Heartbeats](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-swim/demo.json)
-* Phi-Accrual Failure Detector (not implemented)
+* [Phi-Accrual Failure Detector](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-phi/demo.json)
 * [Gossip Failure Detection](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-gossip/demo.json)
 * [FUSE (failure notification service)](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/failure-fuse/demo.json)
 
