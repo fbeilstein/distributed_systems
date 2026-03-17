@@ -2,6 +2,10 @@
 
 * [old course on DB](https://github.com/fbeilstein/dbms)
 
+## Lecture Slides
+
+* [Failure Detection](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/failure_detection.md)
+
 ## Demos
 
 ### Failure Detection Mechanisms
