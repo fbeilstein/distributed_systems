@@ -149,7 +149,7 @@ In this demonstration, **Node 0** explicitly reaches out to nodes 1-4 with a `PI
 
 <div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
     <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">In a real P2P system, every node typically acts as both a monitor <i>and</i> a target, checking every other node simultaneously. To make our visualizer easier to read, our demo uses <b>Asymmetric Roles</b>: Node 0 acts as a dedicated Master/Monitor, while Nodes 1-4 act as Slaves that only respond to queries.</p>
+    <p style="font-size: 1.2rem;">In a real P2P system, every node typically acts as both a monitor <i>and</i> a target, checking every other node simultaneously. To make our visualizer easier to read, our demo uses <b>Asymmetric Roles</b>: Node 0 acts as a dedicated Monitor, while Nodes 1-4 act as Targets that only respond to queries.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
@@ -162,17 +162,15 @@ In this demonstration, **Node 0** explicitly reaches out to nodes 1-4 with a `PI
 
 # The Heartbeat Sandbox Demo
 
-Alternatively, in this demonstration, **Node 0** is completely silent. Nodes 1-4 unilaterally broadcast `HEARTBEAT` payloads at a fixed interval to Node 0. Node 0 just maintains a list of the last seen timestamps.
+Alternatively, in this demonstration, **Node 0** is completely silent. Nodes 1-4 unilaterally broadcast `HEARTBEAT` payloads at a fixed interval to Node 0. Node 0 just maintains a list of the last seen timestamps. If the gap between timestamps exceeds the strict `TIMEOUT` bounds configured, Node 0 marks the target as `suspect`, and eventually `failed`.
 
-If the gap between timestamps exceeds the strict `TIMEOUT` bounds configured, Node 0 marks the target as `suspect`, and eventually `failed`.
-
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
+<div style="background: #222; padding: 15px; border-radius: 8px; margin-top: 15px;">
     <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">Just like the pings demo, real-world heartbeats are <b>completely symmetric</b>. Every node broadcasts heartbeats to everyone else, and every node drops peers if they miss a heartbeat timeout. The demo restricts this visually to a dedicated Monitor purely to reduce visual noise on the timeline.</p>
+    <p style="font-size: 1.2rem; margin-bottom: 0;">Just like the pings demo, real-world heartbeats are <b>completely symmetric</b>. Every node broadcasts heartbeats to everyone else, and every node drops peers if they miss a heartbeat timeout. The demo restricts this visually to a dedicated Monitor purely to reduce visual noise on the timeline.</p>
 </div>
 
-<div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/failure-heartbeats/demo.json')" style="font-size: 1.5rem; padding: 15px 30px;">
+<div style="text-align: center; margin-top: 15px;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-heartbeats/demo.json')" style="font-size: 1.5rem; padding: 10px 20px;">
         Launch Heartbeats Demo
     </button>
 </div>
@@ -475,4 +473,23 @@ This approach converts any individual process failure instantly into a massive, 
     <button class="demo-btn" onclick="showDemo('demos/failure-fuse/demo.json')" style="font-size: 1.5rem; padding: 15px 30px;">
         Launch FUSE Demo
     </button>
+</div>
+
+---
+
+# Conclusions
+
+Failure detection in asynchronous distributed systems is fundamentally a game of probabilities and tradeoffs. 
+
+* **Perfect Detection is Impossible**: We cannot definitively distinguish between a crashed node and a very slow node/network.
+* **Liveness vs. Safety**: We purposefully tune our algorithms toward efficiency (fast detection) or accuracy (avoiding false positives).
+* **Adaptation is Key**: Modern systems don't rely on static timeouts. They use math (like $\Phi$-Accrual) to adapt to dynamic network conditions, or leverage Gossip to aggregate global state without single points of failure.
+* **Symmetry in the Real World**: While sandboxes and visualizations often use asymmetric roles to reduce clutter, real-world fault tolerance relies on true symmetry where every node acts as both monitor and target.
+
+---
+
+# Thank You!
+
+<div style="display: flex; justify-content: center; align-items: center; height: 300px;">
+    <h2 style="font-size: 2.5rem; color: #4CAF50;">Questions?</h2>
 </div>

@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         parseAndInjectSlides(markdown);
 
         // 4. Trigger MathJax to render all the newly injected LaTeX formulas
-        if (window.MathJax) {
+        if (window.MathJax && typeof MathJax.typesetPromise === 'function') {
             MathJax.typesetPromise().catch(err => console.error("MathJax error:", err));
         }
 
