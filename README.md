@@ -5,6 +5,7 @@
 ## Lecture Slides
 
 * [Failure Detection](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/failure_detection.md)
+* [Leader Election](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/leader_election.md)
 
 ## Demos
 
