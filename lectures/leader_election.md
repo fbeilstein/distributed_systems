@@ -142,8 +142,44 @@ While elegant in its simplicity, the Bully algorithm has two fatal flaws in prod
     <p style="font-size: 1.2rem;">Our interactive sandbox perfectly mirrors the academic Bully protocol in true symmetry. <br><br><b>How to test:</b> Right-click Node-4 (the highest rank) to kill the leader. Note how Node-0 detects it, tries to run, but is instantly bullied into submission by Node-1, who is in turn bullied by Node-2, until Node-3 successfully proves it is the highest surviving rank and seizes the throne!</p>
 </div>
 
-<div style="text-align: center; margin-top: 40px;">
+<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
     <button class="demo-btn" onclick="showDemo('demos/bully/demo.json')" style="font-size: 1.5rem; padding: 15px 30px;">
-        Launch Bully Election Demo
+        Launch Standard Bully Demo
+    </button>
+</div>
+
+---
+
+# Next-In-Line Failover
+
+There are many versions of the bully algorithm that improve its various properties. For example, we can use multiple next-in-line alternative processes as a failover to shorten reelections.
+
+* Each elected leader provides a list of failover nodes. 
+* When one of the processes detects a leader failure, it starts a new election round by sending a message to the highest-ranked alternative from the list provided by the failed leader. 
+* If one of the proposed alternatives is up, it becomes a new leader without having to go through the complete election round. 
+* If the process that has detected the leader failure is itself the highest ranked process from the list, it can notify the processes about the new leader right away.
+
+---
+
+# Failover Case Study
+
+Consider a cluster of processes with ranks **1, 2, 3, 4, 5, 6**. 
+
+The initial leader was node 6, and it provides alternative node 5. Node 6 crashes. Look, for example, at how process 3 behaves:
+
+* `3 -ping-> 5`
+* `5 -alive-> 3`
+* `3 -notify-> 5`
+* `5 -notify-> 1, 2, 3, 4`
+
+As a result, we require fewer steps during the election if the next-in-line process is alive.
+
+---
+
+# The Failover Sandbox Demo
+
+<div style="text-align: center; margin-top: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/bully-failover/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #4caf50;">
+        Launch Failover Optimization Demo
     </button>
 </div>
