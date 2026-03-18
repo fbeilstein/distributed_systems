@@ -31,7 +31,7 @@ const tickDisplay = document.getElementById('tick-display');
 // --- Load JSON config ---
 async function loadConfig(url) {
     try {
-        const resp = await fetch(url);
+        const resp = await fetch(url, { cache: 'no-store' }); // no cache!!!
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const config = JSON.parse(await resp.text());
 
@@ -44,7 +44,7 @@ async function loadConfig(url) {
                 if (sc.codeFile) {
                     const codeUrl = baseUrl + sc.codeFile;
                     try {
-                        const codeResp = await fetch(codeUrl);
+                        const codeResp = await fetch(codeUrl, { cache: 'no-store' });
                         if (!codeResp.ok) throw new Error(`HTTP ${codeResp.status}`);
                         sc.code = await codeResp.text();
                     } catch (e) {

@@ -10,8 +10,7 @@
 
 const HEARTBEAT_INTERVAL = 10;
 const LEADER_TIMEOUT = 25;  // No heartbeat for this long → start election
-const ELECTION_TIMEOUT = 20;  // No OK response → declare victory
-
+const ELECTION_TIMEOUT = 40;  // No OK response → declare victory
 const NO_LEADER = -1;
 
 function onUp() {
@@ -32,7 +31,7 @@ function onUp() {
             electionStartTick: null,
             electing: false,
             lastLeaderSeen: 0,
-            outbox: [],
+            permutation: [2, 4, 1, 3, 0] // Random-looking permutation for pings
         });
     } else {
         // Recovery: force a new election since we don't know current leader
@@ -45,14 +44,8 @@ function onUp() {
         s2.electionStartTick = null;
         s2.electing = false;
         s2.lastLeaderSeen = 0;
+        if (!s2.permutation) s2.permutation = [2, 4, 1, 3, 0];
         dumpState(s2);
-    }
-}
-
-function processOutbox(s) {
-    if (s.outbox && s.outbox.length > 0) {
-        const msg = s.outbox.shift();
-        sendMessage(msg.to, msg.payload);
     }
 }
 
@@ -61,16 +54,15 @@ function onTimer(tick) {
     const fsm = Automat.deserialize(s.fsm);
     s.tick = tick;
 
-    // If leader, send periodic heartbeats
+    // If leader, send periodic heartbeats to all followers simultaneously, but loop in random order
     if (fsm.state === 'leader') {
         if (tick % HEARTBEAT_INTERVAL === 0) {
-            for (const id of allServerIds) {
-                if (id !== serverId) {
-                    s.outbox.push({ to: id, payload: { type: 'HEARTBEAT', leader: serverId } });
+            for (const target of s.permutation) {
+                if (target !== serverId && target < allServerIds.length) {
+                    sendMessage(target, { type: 'HEARTBEAT', leader: serverId });
                 }
             }
         }
-        processOutbox(s);
         dumpState(s);
         return;
     }
@@ -83,18 +75,19 @@ function onTimer(tick) {
         s.electing = false;
         s.electionStartTick = null;
         for (const id of allServerIds) {
-            if (id !== serverId) {
-                s.outbox.push({ to: id, payload: { type: 'COORDINATOR', leader: serverId } });
+            if (id !== serverId && id < serverId) {
+                sendMessage(id, { type: 'COORDINATOR', leader: serverId });
             }
         }
         s.fsm = fsm.serialize();
-        processOutbox(s);
         dumpState(s);
         return;
     }
 
-    // Non-leader: check if leader has been silent too long
-    if (!s.electing && tick - s.lastLeaderSeen > LEADER_TIMEOUT && tick > 5) {
+    // Non-leader: check if leader has been silent too long.
+    // Shift the timeout based on the random permutation so they don't all fire at once!
+    const offset = s.permutation ? s.permutation.indexOf(serverId) * 10 : 0;
+    if (!s.electing && tick - s.lastLeaderSeen > LEADER_TIMEOUT + offset && tick > 5) {
         // Start election
         s.electing = true;
         s.electionStartTick = tick;
@@ -109,18 +102,17 @@ function onTimer(tick) {
             s.electing = false;
             for (const id of allServerIds) {
                 if (id !== serverId) {
-                    s.outbox.push({ to: id, payload: { type: 'COORDINATOR', leader: serverId } });
+                    sendMessage(id, { type: 'COORDINATOR', leader: serverId });
                 }
             }
         } else {
             for (const id of higher) {
-                s.outbox.push({ to: id, payload: { type: 'ELECTION', from: serverId } });
+                sendMessage(id, { type: 'ELECTION', from: serverId });
             }
         }
     }
 
     s.fsm = fsm.serialize();
-    processOutbox(s);
     dumpState(s);
 }
 
@@ -140,7 +132,7 @@ function onMessage(message) {
 
     else if (m.type === 'ELECTION') {
         // Reply OK to the lower-ID node (bully it)
-        s.outbox.push({ to: message.from, payload: { type: 'OK', from: serverId } });
+        sendMessage(message.from, { type: 'OK', from: serverId });
 
         // Start our own election if not already
         if (!s.electing) {
@@ -155,12 +147,12 @@ function onMessage(message) {
                 s.electing = false;
                 for (const id of allServerIds) {
                     if (id !== serverId) {
-                        s.outbox.push({ to: id, payload: { type: 'COORDINATOR', leader: serverId } });
+                        sendMessage(id, { type: 'COORDINATOR', leader: serverId });
                     }
                 }
             } else {
                 for (const id of higher) {
-                    s.outbox.push({ to: id, payload: { type: 'ELECTION', from: serverId } });
+                    sendMessage(id, { type: 'ELECTION', from: serverId });
                 }
             }
         }
@@ -171,6 +163,8 @@ function onMessage(message) {
         // (they will handle it)
         s.electing = false;
         s.electionStartTick = null;
+        // Crucial: reset our timeout clock so we don't instantly complain again on the next tick!
+        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
         if (fsm.can('HIGHER_ID_ANSWERED')) fsm.transition('HIGHER_ID_ANSWERED');
     }
 
