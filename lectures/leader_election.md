@@ -219,8 +219,58 @@ Node 6 crashes. Look, for example, at how ordinary process 3 behaves:
 * `3 -notify-> 1, 2, 4, 5`
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/bully-candidates/demo.json')" style="font-size: 1.5rem; padding: 15px 20px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/bully-candidates/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Candidate Optimization Demo
+    </button>
+</div>
+
+---
+
+# The Ring Algorithm
+
+In the [ring algorithm](https://dl.acm.org/doi/pdf/10.1145/359104.359108), all nodes in the system form a logical ring and are aware of the ring topology (i.e., their predecessors and successors in the ring). 
+
+When a process detects the leader failure, it starts the new election. The election message is forwarded across the ring: each process contacts its successor (the next node closest to it in the ring). 
+* If this node is unavailable, the process skips the unreachable node and attempts to contact the nodes after it in the ring, until eventually one of them responds. 
+* Nodes contact their siblings, following around the ring and collecting the explicit **live node set**. They add themselves to the set before passing it over to the next node.
+*(This is functionally similar to the failure-detection algorithm described in "Timeout-Free Failure Detector", where nodes append their identifiers to the path before passing it back to the next node).*
+
+---
+
+# Ring Evaluation
+
+The algorithm proceeds by fully traversing the ring. 
+
+When the message comes back to the node that started the election, the **highest-ranked node from the live set** is chosen as a leader. The initiator then circulates a second message (`ELECTED`) around the ring to officially notify the live members of the results.
+
+### Case Study
+
+Consider processes **1, 2, 3, 4, 5, 6**. 
+Node 6 is the leader, but suddenly crashes. Node 3 detects the timeout and starts an election:
+
+* `3 -ping,{3}-> 4`
+* `4 -ping,{3,4}-> 5`
+* `5 -ping,{3,4,5}-> 6` *(Node 6 is dead, no response!)*
+* `5 -ping,{3,4,5}-> 1` *(Node 5 skips dead Node 6!)*
+* `1 -ping,{3,4,5,1}-> 2`
+* `2 -ping,{3,4,5,1,2}-> 3`
+* `3 -notify,{new leader 5}-> 4` ... etc
+
+*(Note: Variants of this algorithm exist that collect a single highest-ranked identifier instead of a full set of active nodes to artificially save space).*
+
+---
+
+# Dealing with Network Partitions
+
+However, the Ring Algorithm suffers from an absolutely critical design flaw when physical networking issues occur.
+
+Since the physical ring can be perfectly partitioned in two or more parts, with each part potentially isolating itself and running its own independent token loop, each side of the partition will independently elect its own highest-ranked member. 
+
+This approach **doesn’t hold a safety property**, meaning it fails to protect against Split-Brain scenarios.
+
+<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/ring-election/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Launch Ring Election Demo
     </button>
 </div>
 
