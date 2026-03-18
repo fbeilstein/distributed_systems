@@ -218,9 +218,67 @@ Node 6 crashes. Look, for example, at how ordinary process 3 behaves:
 * `2` is chosen as the new leader (highest alive candidate)
 * `3 -notify-> 1, 2, 4, 5`
 
-
-<div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/bully-candidates/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/bully-candidates/demo.json')" style="font-size: 1.5rem; padding: 15px 20px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Candidate Optimization Demo
+    </button>
+</div>
+
+---
+
+# The Invitation Algorithm
+
+An invitation algorithm allows processes to **"invite"** other processes to join their groups instead of aggressively trying to outrank them.
+
+This algorithm naturally allows **multiple leaders** to coexist by definition, since each independent group has its own leader. 
+
+Unlike the Bully algorithm where you try to conquer the entire network at once, the Invitation algorithm allows creating process groups and peacefully merging them incrementally without having to trigger a new global election from scratch.
+
+---
+
+# Group Mechanics
+
+1. Each process starts as a leader of a new group, where the only member is the process itself. 
+2. Group leaders periodically contact peers that do not belong to their groups, inviting them to join limitlessly. 
+3. If the peer process is a leader itself, the two groups are mathematically evaluated and **merged**.
+4. If the contacted process is already a follower of someone else, it simply responds with its group leader's ID (or forwards the invite), allowing the two actual group leaders to establish contact and merge groups in fewer steps.
+
+If a peer gets 2 or more invitations simultaneously, it may accept any of them (groups will continuously grow and merge into one at the end regardless of the order).
+
+---
+
+# Minimizing Merge Overhead
+
+Since groups are merged completely, it doesn't fundamentally matter whether the process that suggested the group merge becomes the new leader, or if the invited process does. 
+
+However, to keep the number of network messages required to merge groups to an absolute minimum:
+* **The leader of the dynamically larger group always stays the leader.**
+* This way, *only* the processes from the smaller group have to receive a `MERGE` update about the change of leader, drastically reducing network overhead.
+
+---
+
+# The "Double Surrender" Deadlock
+
+When two groups are the exact same size, we must resolve ties carefully. 
+
+If we simply programmed the algorithm to say *"Whoever invites first wins"*, what happens if two leaders send an `INVITE` to each other at the exact same millisecond? 
+* Leader A receives the invite and steps down.
+* Leader B receives the invite and steps down.
+* Suddenly, both leaders have surrendered and the group is permanently deadlocked!
+
+To prevent this **"Double Surrender Deadlock"**, algorithms use a strict, asymmetric mathematical tie-breaker. If group sizes are identical, the node with the **Higher ID** always wins the tie-breaker and forces the other to gracefully join them.
+
+---
+
+# The Invitation Sandbox Demo
+
+<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
+    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
+    <p style="font-size: 1.2rem;">Our interactive sandbox perfectly mirrors the Invitation protocol. <br><br><b>How to test:</b> Launch the demo and watch how the 6 isolated nodes (who all start out as independent leaders) randomly send invitations to each other. Notice how they form pairwise clusters, evaluate sizes, and steadily collapse down into larger and larger groups until one massive unified cluster is formed!</p>
+</div>
+
+<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/invitation/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Launch Invitation Demo
     </button>
 </div>

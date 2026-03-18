@@ -8,7 +8,7 @@
 //
 // Demo: 5 nodes start as individual groups → merge via invitations.
 
-const INVITE_INTERVAL = 12;
+// Demo: 5 nodes start as individual groups → merge via invitations.
 
 function onUp() {
     let s = loadState();
@@ -25,6 +25,7 @@ function onUp() {
             groupId: serverId,         // Group identified by leader's ID
             leader: serverId,          // Who we follow
             members: [serverId],       // Known members of our group
+            nextInviteTick: serverId * 5 + 5, // Stagger initial invites
             outbox: [],
         });
     }
@@ -42,12 +43,19 @@ function onTimer(tick) {
     const fsm = Automat.deserialize(s.fsm);
     s.tick = tick;
 
-    if (fsm.state === 'leader' && tick % INVITE_INTERVAL === serverId % INVITE_INTERVAL) {
-        // Send INVITE to nodes not in our group
+    if (fsm.state === 'leader' && tick >= (s.nextInviteTick || 0)) {
+        // Schedule the next invite dynamically between 20 and 40 ticks
+        const delay = 20 + ((tick * 11 + serverId * 3) % 20);
+        s.nextInviteTick = tick + delay;
+
+        // Send INVITE to one pseudo-random node not in our group
         const outsiders = allServerIds.filter(id => !s.members.includes(id));
-        for (const id of outsiders) {
+        if (outsiders.length > 0) {
+            const randomIndex = (tick * 7 + serverId) % outsiders.length;
+            const targetId = outsiders[randomIndex];
+
             s.outbox.push({
-                to: id, payload: {
+                to: targetId, payload: {
                     type: 'INVITE',
                     groupId: s.groupId,
                     leader: serverId,
@@ -66,37 +74,38 @@ function onMessage(message) {
     const fsm = Automat.deserialize(s.fsm);
     const m = message.payload;
 
-    if (m.type === 'INVITE') {
-        // Accept if inviting group is larger than ours, or same size with higher leader ID
-        const ourSize = s.members.length;
-        const theirSize = m.members.length;
-        const shouldJoin = theirSize > ourSize || (theirSize === ourSize && m.leader > s.leader);
+    if (m.type === 'INVITE' || m.type === 'FORWARD') {
+        if (m.leader === s.leader) {
+            // Ignore own group
+        } else if (fsm.state !== 'leader') {
+            // Followers don't negotiate; forward to their leader
+            s.outbox.push({ to: s.leader, payload: { ...m, type: 'FORWARD' } });
+        } else {
+            // We are the leader, evaluate the invite
+            const ourSize = s.members.length;
+            const theirSize = m.members.length;
+            const shouldJoin = theirSize > ourSize || (theirSize === ourSize && m.leader > s.leader);
 
-        if (shouldJoin && m.leader !== s.leader) {
-            // Join the other group
-            const wasLeader = fsm.state === 'leader';
-            s.groupId = m.groupId;
-            s.leader = m.leader;
-            s.members = [...new Set([...m.members, ...s.members])]; // merge member lists
-            if (serverId === m.leader) {
-                if (fsm.can('BECOME_LEADER')) fsm.transition('BECOME_LEADER');
-            } else {
-                if (fsm.can('JOIN_GROUP')) fsm.transition('JOIN_GROUP');
-            }
+            if (shouldJoin) {
+                // Join the other group
+                s.groupId = m.groupId;
+                s.leader = m.leader;
 
-            // Notify our new leader that we joined
-            s.outbox.push({ to: m.leader, payload: { type: 'JOIN_ACK', from: serverId, members: s.members } });
-
-            // If we were a leader of our old group, notify our old members
-            if (wasLeader) {
+                // Keep track of our old members before we overwrite our state, we need to notify them
                 const oldMembers = s.members.filter(id => id !== serverId && !m.members.includes(id));
+
+                s.members = [...new Set([...m.members, ...s.members])]; // merge member lists
+                if (fsm.can('JOIN_GROUP')) fsm.transition('JOIN_GROUP');
+
+                // Notify our new leader that we joined
+                s.outbox.push({ to: m.leader, payload: { type: 'JOIN_ACK', from: serverId, members: s.members } });
+
+                // Notify our old members to also transition
                 for (const id of oldMembers) {
                     s.outbox.push({ to: id, payload: { type: 'MERGE', newLeader: m.leader, groupId: m.groupId, members: s.members } });
                 }
-            }
-        } else if (!shouldJoin && m.leader !== s.leader) {
-            // Our group wins — counter-invite
-            if (fsm.state === 'leader') {
+            } else {
+                // Our group wins — counter-invite
                 s.outbox.push({
                     to: m.leader, payload: {
                         type: 'INVITE',
@@ -119,6 +128,11 @@ function onMessage(message) {
             for (const id of (m.members || [])) {
                 if (!s.members.includes(id)) s.members.push(id);
             }
+        } else {
+            // We stepped down while they were joining us. Forward to our new leader!
+            s.outbox.push({ to: s.leader, payload: m });
+            // And proactively tell the stranded follower that we moved!
+            s.outbox.push({ to: m.from, payload: { type: 'MERGE', newLeader: s.leader, groupId: s.groupId, members: s.members } });
         }
     }
 
