@@ -143,7 +143,7 @@ While elegant in its simplicity, the Bully algorithm has two fatal flaws in prod
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/bully/demo.json')" style="font-size: 1.5rem; padding: 15px 30px;">
+    <button class="demo-btn" onclick="showDemo('demos/bully/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Standard Bully Demo
     </button>
 </div>
@@ -174,12 +174,53 @@ The initial leader was node 6, and it provides alternative node 5. Node 6 crashe
 
 As a result, we require fewer steps during the election if the next-in-line process is alive.
 
+<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/bully-failover/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Launch Failover Optimization Demo
+    </button>
+</div>
+
 ---
 
-# The Failover Sandbox Demo
+# Candidate/Ordinary Optimization
+
+Another algorithm attempts to lower requirements on the number of messages by splitting the nodes into two subsets: **candidate** and **ordinary**. Only one of the candidate nodes can eventually become a leader.
+
+The ordinary process initiates an election by:
+1. Contacting candidate nodes.
+2. Collecting responses from them.
+3. Picking the highest-ranked alive candidate as a new leader.
+4. Notifying the rest of the nodes about the election results.
+
+---
+
+# Dealing with Simultaneous Elections
+
+To solve the problem with multiple simultaneous elections, the algorithm proposes to use a tiebreaker variable **δ** (a process-specific delay).
+
+* This delay varies significantly between nodes, allowing one node to initiate the election before the others. 
+* The tiebreaker time is generally greater than the message round-trip time. 
+* Nodes with higher priorities have a lower δ, and vice versa.
+
+---
+
+# Candidate/Ordinary Case Study
+
+Consider processes with ranks **1, 2, 3, 4, 5, 6**. 
+* Initial leader was **6**
+* **Candidates** = 1, 2, 6 
+* **Ordinary** = 3, 4, 5
+
+Node 6 crashes. Look, for example, at how ordinary process 3 behaves:
+
+* `3 -ping-> 1, 2`
+* `1, 2 -alive-> 3`
+* `2` is chosen as the new leader (highest alive candidate)
+* `3 -notify-> 1, 2, 4, 5`
+
 
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/bully-failover/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #4caf50;">
-        Launch Failover Optimization Demo
+    <button class="demo-btn" onclick="showDemo('demos/bully-candidates/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Launch Candidate Optimization Demo
     </button>
 </div>

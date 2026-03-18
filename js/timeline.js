@@ -122,7 +122,7 @@ export class Timeline {
             const y = this.serverToY(server.id);
 
             // Label
-            ctx.fillStyle = '#333';
+            ctx.fillStyle = server.color || '#333';
             ctx.font = 'bold 12px monospace';
             ctx.textAlign = 'right';
             ctx.fillText(server.name, LABEL_WIDTH - 10, y + 4);
@@ -134,22 +134,22 @@ export class Timeline {
             for (const [down, up] of intervals) {
                 // Draw normal segment before crash
                 if (lastTick < down) {
-                    this._drawTrackSegment(ctx, lastTick, down, y, false);
+                    this._drawTrackSegment(ctx, lastTick, down, y, false, server.color || '#888');
                 }
                 // Draw crash segment
                 const end = up !== null ? up : this.maxTicks + 1;
-                this._drawTrackSegment(ctx, down, end, y, true);
+                this._drawTrackSegment(ctx, down, end, y, true, server.color || '#888');
                 lastTick = end;
             }
             // Draw remaining normal segment
             if (lastTick <= this.maxTicks) {
-                this._drawTrackSegment(ctx, lastTick, this.maxTicks + 1, y, false);
+                this._drawTrackSegment(ctx, lastTick, this.maxTicks + 1, y, false, server.color || '#888');
             }
         }
         ctx.restore();
     }
 
-    _drawTrackSegment(ctx, fromTick, toTick, y, isCrashed) {
+    _drawTrackSegment(ctx, fromTick, toTick, y, isCrashed, color) {
         const x1 = this.tickToX(fromTick);
         const x2 = this.tickToX(toTick);
 
@@ -162,8 +162,8 @@ export class Timeline {
             ctx.lineWidth = 1.5;
             ctx.setLineDash([4, 4]);
         } else {
-            ctx.strokeStyle = '#888';
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.0;
             ctx.setLineDash([]);
         }
 

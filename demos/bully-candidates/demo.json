@@ -5,25 +5,30 @@
     "names": [
         "Ordinary-0",
         "Ordinary-1",
-        "Ordinary-2",
+        "Candidate-2",
         "Candidate-3",
         "Candidate-4"
     ],
     "servers": [
         {
-            "codeFile": "ordinary.js"
+            "codeFile": "ordinary.js",
+            "color": "#9e9e9e"
         },
         {
-            "codeFile": "ordinary.js"
+            "codeFile": "ordinary.js",
+            "color": "#9e9e9e"
         },
         {
-            "codeFile": "ordinary.js"
+            "codeFile": "candidate.js",
+            "color": "#1976d2"
         },
         {
-            "codeFile": "candidate.js"
+            "codeFile": "candidate.js",
+            "color": "#1976d2"
         },
         {
-            "codeFile": "candidate.js"
+            "codeFile": "candidate.js",
+            "color": "#1976d2"
         }
     ]
 }

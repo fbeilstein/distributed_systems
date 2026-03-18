@@ -118,6 +118,7 @@ function applyConfig(engine, config) {
                 else code += 'function onMessage(message) {}\n\n';
             }
             engine.servers[i].code = code;
+            if (sc.color) engine.servers[i].color = sc.color;
         }
     }
 
