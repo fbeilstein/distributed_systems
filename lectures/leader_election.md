@@ -332,3 +332,34 @@ To prevent this **"Double Surrender Deadlock"**, algorithms use a strict, asymme
         Launch Invitation Demo
     </button>
 </div>
+
+---
+
+# Lecture Summary: Core Takeaways
+
+Leader Election is one of the most intellectually fascinating—and dangerous—mechanisms in distributed systems:
+
+1. **Centralization comes at a premium**: By electing a leader, you gain total global ordering and extreme consistency (preventing race conditions), but you introduce a brutal performance bottleneck and a Single Point of Failure.
+2. **Topology heavily influences protocol**: Dictatorial algorithms (Bully) act radically differently than peer-driven algorithms (Ring), and cooperative cluster-forming algorithms (Invitation). 
+3. **Safety is paramount**: The vast majority of physical network incidents cause cluster partitions. If your algorithm violates mathematical Safety (like the Ring algorithm), you **will** suffer a catastrophic Split-Brain event.
+
+---
+
+# Real-world Consensus Trade-offs
+
+The algorithms discussed today (Bully, Ring, Invitation) are intellectually foundational, but they rely heavily on strict perfect failure detectors and synchronous assumptions.
+
+In modern multi-million node cloud orchestrations, raw leader election isn't enough. To mathematically guarantee safety during severe network degradations without locking up, systems abandon raw monarchy and adopt **Quorum Consensus**.
+
+* **Raft:** The modern standard (used in Kubernetes `etcd` and Consul). Leaders can only write state if they have an active lease supported by the strict `majority` of live followers.
+* **Paxos:** The academic granddaddy (used by Google Spanner and AWS). Focuses on infinitely durable multi-phase commits decoupled from strict leader dependencies.
+
+---
+
+# Concluding Thoughts
+
+When architecting a new microservice cluster, **ask yourself**: *Does this system truly need a globally ordered leader?* 
+
+Or can it survive perfectly fine as a localized, masterless, highly available **eventually consistent** platform (like Cassandra or DynamoDB)? 
+
+Because the moment you introduce a Leader Election sequence... you assume responsibility for every single mathematical edge-case of its eventual failure!
