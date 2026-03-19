@@ -55,6 +55,25 @@ In replication environments, we inherently care most about three timeline events
 
 These operations trigger a sequential cascade of events initiated by the client. In some cases, updating the background replicas can safely happen *after* the initial write has officially "finished" from the client's perspective, but this does not change the strict rule that the client must be able to observably read their operations back in a logical, expected order.
 
+```static-timeline
+{
+  "ticks": 100,
+  "servers": ["A", "B", "C", "D"],
+  "states": [
+    { "server": "A", "start": 20, "end": 40, "state": "write()", "color": "#ffb74d" },
+    { "server": "B", "start": 80, "end": 95, "state": "sync", "color": "#90caf9" },
+    { "server": "C", "start": 50, "end": 70, "state": "sync", "color": "#90caf9" },
+    { "server": "D", "start": 40, "end": 48, "state": "read()", "color": "#81c784" }
+  ],
+  "messages": [
+    { "from": "A", "to": "D", "sendTick": 40, "recvTick": 40 },
+    { "from": "A", "to": "C", "sendTick": 40, "recvTick": 50 },
+    { "from": "A", "to": "B", "sendTick": 40, "recvTick": 80 },
+    { "from": "B", "to": "A", "sendTick": 95, "recvTick": 95, "lost": true }
+  ]
+}
+```
+
 ---
 
 # Availability
