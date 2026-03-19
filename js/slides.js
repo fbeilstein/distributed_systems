@@ -279,6 +279,7 @@ function renderStaticTimelines() {
                     const sId = serverNames.indexOf(st.server);
                     if (sId !== -1) {
                         for (let t = st.start; t <= st.end; t++) {
+                            if (!mockEngine.history[t]) continue;
                             if (!mockEngine.history[t].serverStates[sId]) {
                                 mockEngine.history[t].serverStates[sId] = { fsm: { state: null, colors: {} } };
                             }
@@ -321,9 +322,17 @@ function renderStaticTimelines() {
 
             // 7. Render Timeline natively
             const timeline = new Timeline(canvas, null);
-            timeline.scale = 20; // default zoom
+            timeline.hideScrubber = true;
             timeline.setEngine(mockEngine);
+            timeline.scale = config.scale || 20; // horizontal stretch
+            timeline.resize(); // apply scale to canvas dimensions
             timeline.draw();
+
+            // Apply overarching CSS reduction to physically shrink the rendered canvas
+            if (config.zoom) {
+                canvas.style.width = (canvas.width * config.zoom) + 'px';
+                canvas.style.height = (canvas.height * config.zoom) + 'px';
+            }
 
         } catch (err) {
             console.error('Failed to parse static-timeline JSON:', err);

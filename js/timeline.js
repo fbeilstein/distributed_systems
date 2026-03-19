@@ -94,7 +94,9 @@ export class Timeline {
         this._drawTracks(ctx, servers);
         this._drawStateBands(ctx, servers);
         this._drawMessages(ctx, messages);
-        this._drawScrubber(ctx);
+        if (!this.hideScrubber) {
+            this._drawScrubber(ctx);
+        }
     }
 
     _drawTickGrid(ctx) {
