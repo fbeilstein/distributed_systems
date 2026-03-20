@@ -174,12 +174,18 @@ If Process 1 and Process 2 are executing across a network simultaneously, we are
 
 # Overlapping Operations
 
+<small>
+
 Even with just a *single* copy of the data, there is no universally simple answer to what `P2` should see. 
+
+</small>
 
 ```static-timeline
 {
-  "zoom": 0.85,
+  "zoom": 0.9,
   "ticks": 55,
+  "trackHeight": 50,
+  "stateBandOffset": 1,
   "servers": ["P1", "case 1", "case 2", "case 3", "case 4"],
   "states": [
     { "server": "P1", "start": 20, "end": 34, "state": "write(x = 25)", "color": "#ffb74d" },
@@ -194,15 +200,14 @@ Even with just a *single* copy of the data, there is no universally simple answe
   ]
 }
 ```
-
----
-
-# Overlapping Operations
+<small>
 
 Even with just a *single* copy of the data, there is no universally simple answer to what `P2` should see. 
 * Should the first `read()` get `0` or `25`? 
 * Should the second `read()` get `0` or `25`? 
 * What happens if it's a "Safe Register" and returns absolute garbage during the overlap?
+
+</small>
 
 ---
 
@@ -306,8 +311,10 @@ Assume a shared register starts at **`x = 0`**.
 
 ```static-timeline
 {
-  "zoom": 0.75,
-  "ticks": 65,
+  "zoom": 0.85,
+  "ticks": 55,
+  "trackHeight": 50,
+  "stateBandOffset": 1,
   "servers": ["W1", "W2", "R1", "R2", "R3"],
   "states": [
     { "server": "W1", "start": 5, "end": 25, "state": "write(x=1)", "color": "#ffb74d" },
@@ -319,8 +326,10 @@ Assume a shared register starts at **`x = 0`**.
 }
 ```
 
----
+<small>
 
 * **$R_1$** safely overlaps both writes. It can legally read `0` (old value), `1` (W1 triggered first), or `2` (W2 triggered first).
 * **$R_2$** occurs *after* W1 completes, but overlaps W2. Because it strictly follows W1, it can no longer read 0. It must read `1` (W1), or `2` (if W2 triggered first).
 * **$R_3$** occurs strictly *after* both writes complete. Assuming W2 was sequentially assigned after W1 inside the database, R3 will permanently read `2`.
+
+</small>

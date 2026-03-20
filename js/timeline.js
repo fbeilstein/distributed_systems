@@ -26,6 +26,11 @@ export class Timeline {
         this.hoveredMessage = null;
         this.scale = DEFAULT_PIXELS_PER_TICK;
 
+        // Configurable Layout Properties
+        this.trackHeight = TRACK_HEIGHT;
+        this.trackPaddingTop = TRACK_PADDING_TOP;
+        this.stateBandOffset = STATE_BAND_OFFSET;
+
         // Shift+scroll to zoom
         this.canvas.addEventListener('wheel', (e) => {
             if (!e.shiftKey) return;
@@ -58,7 +63,7 @@ export class Timeline {
         if (!this.engine) return;
         const numServers = this.engine.servers.length;
         const width = LABEL_WIDTH + (this.maxTicks + 2) * this.scale;
-        const height = TRACK_PADDING_TOP + numServers * TRACK_HEIGHT + 40;
+        const height = this.trackPaddingTop + numServers * this.trackHeight + 40;
         this.canvas.width = width;
         this.canvas.height = height;
         this.canvas.style.width = width + 'px';
@@ -74,11 +79,11 @@ export class Timeline {
     }
 
     serverToY(serverId) {
-        return TRACK_PADDING_TOP + serverId * TRACK_HEIGHT + TRACK_HEIGHT / 2;
+        return this.trackPaddingTop + serverId * this.trackHeight + this.trackHeight / 2;
     }
 
     yToServer(y) {
-        const idx = Math.round((y - TRACK_PADDING_TOP - TRACK_HEIGHT / 2) / TRACK_HEIGHT);
+        const idx = Math.round((y - this.trackPaddingTop - this.trackHeight / 2) / this.trackHeight);
         if (idx < 0 || idx >= this.engine.servers.length) return -1;
         return idx;
     }
@@ -110,10 +115,10 @@ export class Timeline {
         for (let t = 0; t <= this.maxTicks; t += 5) {
             const x = this.tickToX(t);
             ctx.beginPath();
-            ctx.moveTo(x, TRACK_PADDING_TOP - 15);
+            ctx.moveTo(x, this.trackPaddingTop - 15);
             ctx.lineTo(x, this.canvas.height);
             ctx.stroke();
-            ctx.fillText(t.toString(), x, TRACK_PADDING_TOP - 20);
+            ctx.fillText(t.toString(), x, this.trackPaddingTop - 20);
         }
         ctx.restore();
     }
@@ -158,7 +163,7 @@ export class Timeline {
         if (isCrashed) {
             // Crashed zone background
             ctx.fillStyle = 'rgba(200, 200, 200, 0.15)';
-            ctx.fillRect(x1, y - TRACK_HEIGHT / 2 + 5, x2 - x1, TRACK_HEIGHT - 10);
+            ctx.fillRect(x1, y - this.trackHeight / 2 + 5, x2 - x1, this.trackHeight - 10);
 
             ctx.strokeStyle = '#bbb';
             ctx.lineWidth = 1.5;
@@ -186,7 +191,7 @@ export class Timeline {
         ];
 
         for (const server of servers) {
-            const y = this.serverToY(server.id) + STATE_BAND_OFFSET;
+            const y = this.serverToY(server.id) + this.stateBandOffset;
 
             // Collect runs of the same FSM state
             const runs = [];
@@ -337,16 +342,16 @@ export class Timeline {
         ctx.strokeStyle = '#2a7a8a';
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x, TRACK_PADDING_TOP - 15);
+        ctx.moveTo(x, this.trackPaddingTop - 15);
         ctx.lineTo(x, this.canvas.height);
         ctx.stroke();
 
         // Scrubber handle (triangle at top)
         ctx.fillStyle = '#2a7a8a';
         ctx.beginPath();
-        ctx.moveTo(x - 8, TRACK_PADDING_TOP - 20);
-        ctx.lineTo(x + 8, TRACK_PADDING_TOP - 20);
-        ctx.lineTo(x, TRACK_PADDING_TOP - 10);
+        ctx.moveTo(x - 8, this.trackPaddingTop - 20);
+        ctx.lineTo(x + 8, this.trackPaddingTop - 20);
+        ctx.lineTo(x, this.trackPaddingTop - 10);
         ctx.closePath();
         ctx.fill();
 
@@ -354,7 +359,7 @@ export class Timeline {
         ctx.fillStyle = '#2a7a8a';
         ctx.font = 'bold 11px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`t=${this.scrubberTick}`, x, TRACK_PADDING_TOP - 25);
+        ctx.fillText(`t=${this.scrubberTick}`, x, this.trackPaddingTop - 25);
         ctx.restore();
     }
 

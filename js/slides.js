@@ -325,6 +325,12 @@ function renderStaticTimelines() {
             timeline.hideScrubber = true;
             timeline.setEngine(mockEngine);
             timeline.scale = config.scale || 20; // horizontal stretch
+
+            // Allow vertical fine-tuning through markdown JSON
+            if (config.trackHeight !== undefined) timeline.trackHeight = config.trackHeight;
+            if (config.trackPaddingTop !== undefined) timeline.trackPaddingTop = config.trackPaddingTop;
+            if (config.stateBandOffset !== undefined) timeline.stateBandOffset = config.stateBandOffset;
+
             timeline.resize(); // apply scale to canvas dimensions
             timeline.draw();
 
