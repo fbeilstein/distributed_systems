@@ -546,3 +546,60 @@ This simulation natively models the exact **"Retry Problem"**: Client 1 attempts
 <center>
 <a href="?demo=rifl-retry" class="demo-btn">Launch RIFL Deduplication Demo</a>
 </center>
+
+---
+
+# <font color=red>Sequential Consistency</font>
+
+Because achieving pure physical Linearizability is often violently expensive in high-performance distributed systems, engineers frequently relax the model while still maintaining incredibly strong mathematical correctness.
+
+**Sequential Consistency** allows a system to mathematically order overlapping operations as if they were executed in some clean sequential order, while strictly requiring that operations originating from the *same* individual process are executed in the exact programmatic order they were submitted.
+
+Crucially, under Sequential Consistency, the absolute order of execution *between different processes* is formally undefined, because there is no physically shared concept of a global clock!
+
+---
+
+# The Rules of Observation
+
+Formal Sequential Consistency is defined by three strict rules of observation:
+
+1. **Local Order:** All write operations propagating from the same process must appear in the exact order they were submitted by that specific process. 
+2. **Global Agreement:** Operations propagating from *different* sources may initially be ordered arbitrarily by the network... but ***all* active processes must universally *observe* the final operations in the exact same chronological order.**
+3. **Stale Reads:** Processes can safely observe operations executed by other participants in an order strictly consistent with their own history, but this viewpoint is allowed to be arbitrarily mathematically *stale* from the global perspective. *(e.g. Even if writes propagate to different replicas in identical order, they are legally allowed to arrive at drastically different times).*
+
+---
+
+# Sequential Consistency Example
+
+Observe the following asynchronous timeline: $W_1$ and $W_2$ overlap, meaning their true physical global execution order is technically undefined.
+
+However, under strict Sequential Consistency, both $R_1$ and $R_2$ legally must observe the resultant states occurring in the **exact same logical execution order**—even though $R_2$'s reads are arbitrarily delayed!
+
+```static-timeline
+{
+  "zoom": 0.85,
+  "ticks": 58,
+  "trackHeight": 50,
+  "stateBandOffset": 10,
+  "servers": ["W1", "W2", "R1", "R2"],
+  "states": [
+    { "server": "W1", "start": 5, "end": 15, "state": "write(x=1)", "color": "#ffb74d" },
+    { "server": "W2", "start": 10, "end": 20, "state": "write(x=2)", "color": "#ffb74d" },
+    { "server": "R1", "start": 25, "end": 32, "state": "read(x)->1", "color": "#81c784" },
+    { "server": "R1", "start": 35, "end": 42, "state": "read(x)->2", "color": "#81c784" },
+    { "server": "R2", "start": 40, "end": 47, "state": "read(x)->1", "color": "#81c784" },
+    { "server": "R2", "start": 50, "end": 57, "state": "read(x)->2", "color": "#81c784" }
+  ]
+}
+```
+
+---
+
+# Sequential Consistency vs Linearizability
+
+The primary mathematical difference between Linearizability and Sequential Consistency is the explicit absence of **globally enforced wall-clock time bounds**.
+
+* **Under Linearizability:** By the exact geometric instant a write structurally completes, its results physically physically *have* to be universally applied, and absolutely *every* reader in the entire cluster should legally be able to see that value immediately.
+* **Under Sequential Consistency:** This rigorous physical time requirement is relaxed. An operation’s results are legally allowed to become physically visible *long after* its actual completion, as long as the logical programmatic order remains perfectly consistent across all active observers!
+
+*(Note: Just like Linearizability, modern CPU architectures do not guarantee Sequential Consistency natively by default either! Programmers must explicitly inject memory barriers—or "fences"—to forcefully guarantee simultaneous multi-threaded visibility).*
