@@ -58,12 +58,12 @@ export function executeHandler(handlerName, code, context, arg) {
     `;
 
         const fn = new Function(
-            'loadState', 'dumpState', 'sendMessage', 'getRandom',
+            'loadState', 'dumpState', 'sendMessage', 'getRandom', 'prng',
             'serverId', 'allServerIds', '__arg__',
             wrappedCode
         );
 
-        fn(loadState, dumpState, sendMessage, getRandom, context.serverId, context.allServerIds, arg);
+        fn(loadState, dumpState, sendMessage, getRandom, context.prng, context.serverId, context.allServerIds, arg);
     } catch (e) {
         error = e.message || String(e);
     }

@@ -760,9 +760,9 @@ To physically see exactly how mathematical causality organically spreads like a 
 
 **Watch the Arrays & Colors:**
 * The mathematical arrays physically displayed natively on the graphical front of each Node explicitly represent its internal `[ Node 0, Node 1, Node 2 ]` Vector Clock sequence!
-* Notice how Node 0 internally updates to `[ 1, 0, 0 ]`, temporarily flashing **ORANGE** to natively indicate a local event, then explicitly passes its array to Node 1 via a physical network message.
-* When Node 1 receives it, it uniquely executes the **Merge Resolution** rule! It mathematically absorbs the `1` from Node 0, then cleanly structurally increments its own Clock 1 counter natively, officially physically ticking its graphical display to `[ 1, 1, 0 ]` and flashing **BLUE** to indicate a merge!
-* By simply visually tracking the Orange vs Blue mathematical arrays organically floating on the screen, you can explicitly map the causal history of exactly who has talked to who!
+* Notice how whenever any Node organically randomly decides to logically execute an internal event, it temporarily flashes **ORANGE** and natively increments its own array counter before officially passing its array payload to a target via a physical network message.
+* When the target receives it, it uniquely executes the **Merge Resolution** rule! It mathematically absorbs the highest numerical values across both arrays, cleanly structurally increments its own array index natively, and flashes **BLUE** to physically indicate a merge!
+* Because events fire completely asynchronously and randomly in this simulation, you can visually track the explicit causal history of exactly who has talked to who simply by reading the mathematical arrays organically floating on the screen!
 
 <center>
 <a href="?demo=vector-clocks" class="demo-btn">Launch Vector Clocks Demo</a>

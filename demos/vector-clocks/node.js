@@ -53,46 +53,32 @@ function onTimer(tick) {
     s.tick = tick;
     let didUpdate = false;
 
-    // Node 0: write at tick 5, send to Node 1
-    if (serverId === 0 && tick === 5) {
+    // We can casually natively access the `prng` state object magically injected natively from the physics Engine!
+    // Because it is mathematically stateful, we can call it infinitely sequentially and mathematically preserve determinism beautifully:
+
+    // Roughly 4% chance per physical tick to organically generate a local physics event
+    if (tick > 2 && prng.next() < 0.04) {
+
+        // Pick a random valid target
+        let target = prng.nextInt(0, N - 1);
+        if (target === serverId) target = (target + 1) % N;
+
         s.vc = tick_vc(s.vc, serverId);
-        s.data = 'x=1';
-        s.log.push({ vc: [...s.vc], event: 'write x=1', tick });
-        sendMessage(1, { type: 'UPDATE', data: s.data, vc: s.vc });
-        update_fsm(s, '#ffb74d'); // Internal tick -> Orange
+        s.data = `d_${serverId}_${prng.nextInt(0, 99)}`;
+        s.log.push({ vc: [...s.vc], event: `write ${s.data}`, tick });
+
+        // Randomly decide (70:30) between a heavy UPDATE payload or a lightweight SYNC
+        if (prng.next() > 0.3) {
+            sendMessage(target, { type: 'UPDATE', data: s.data, vc: s.vc });
+        } else {
+            sendMessage(target, { type: 'SYNC', vc: s.vc });
+        }
+
+        update_fsm(s, '#ffb74d'); // Internal mathematically flashes Orange
         didUpdate = true;
     }
 
-    // Node 0: independent write at tick 20, send to Node 2
-    if (serverId === 0 && tick === 20) {
-        s.vc = tick_vc(s.vc, serverId);
-        s.data = 'x=3';
-        s.log.push({ vc: [...s.vc], event: 'write x=3', tick });
-        sendMessage(2, { type: 'UPDATE', data: s.data, vc: s.vc });
-        update_fsm(s, '#ffb74d'); // Internal tick -> Orange
-        didUpdate = true;
-    }
-
-    // Node 1: write at tick 15, send to Node 2
-    if (serverId === 1 && tick === 15) {
-        s.vc = tick_vc(s.vc, serverId);
-        s.data = 'y=2';
-        s.log.push({ vc: [...s.vc], event: 'write y=2', tick });
-        sendMessage(2, { type: 'UPDATE', data: s.data, vc: s.vc });
-        update_fsm(s, '#ffb74d'); // Internal tick -> Orange
-        didUpdate = true;
-    }
-
-    // Node 2: send a summary back to Node 0 at tick 50
-    if (serverId === 2 && tick === 50) {
-        s.vc = tick_vc(s.vc, serverId);
-        s.log.push({ vc: [...s.vc], event: 'sync to Node-0', tick });
-        sendMessage(0, { type: 'SYNC', vc: s.vc });
-        update_fsm(s, '#ffb74d'); // Internal tick -> Orange
-        didUpdate = true;
-    }
-
-    // Update graphical renderer on every physics tick to cleanly resolve timeouts
+    // Update graphical renderer dynamically
     if (!didUpdate) {
         update_fsm(s);
     }
