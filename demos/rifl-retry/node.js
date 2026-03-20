@@ -5,15 +5,13 @@ function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
         if (serverId === SERVER_ID) {
-            // Server FSM visualizes strictly the internal database State, plus a bright Blue flash if RIFL intercepts a duplicate.
+            // Server FSM visualizes strictly the internal database State
             const fsm = new Automat({
                 initial: 'V_NULL',
                 states: {
                     'V_NULL': { on: { WRITE_1: 'V_1', WRITE_2: 'V_2' }, color: '#cfd8dc' },
-                    'V_1': { on: { WRITE_2: 'V_2', RIFL_HIT: 'RIFL_CACHE_1' }, color: '#81c784' },
-                    'V_2': { on: { WRITE_1: 'V_1', RIFL_HIT: 'RIFL_CACHE_2' }, color: '#ffb74d' },
-                    'RIFL_CACHE_1': { on: { WRITE_2: 'V_2', RESTORE: 'V_1' }, color: '#4fc3f7' },
-                    'RIFL_CACHE_2': { on: { WRITE_1: 'V_1', RESTORE: 'V_2' }, color: '#4fc3f7' }
+                    'V_1': { on: { WRITE_2: 'V_2' }, color: '#81c784' },
+                    'V_2': { on: { WRITE_1: 'V_1' }, color: '#ffb74d' }
                 }
             });
             dumpState({
@@ -22,13 +20,14 @@ function onUp() {
                 completions: {} // Map of clientId -> last sequence ID safely committed
             });
         } else {
-            // Client simply tracks whether its request successfully bridged the network safely.
+            // Client simply tracks whether its request successfully bridged the network.
             const fsm = new Automat({
                 initial: 'IDLE',
                 states: {
                     IDLE: { on: { START: 'SENDING' }, color: '#cfd8dc' },
-                    SENDING: { on: { ACK: 'DONE' }, color: '#fff59d' },
-                    DONE: { color: '#81c784' }
+                    SENDING: { on: { ACK: 'DONE', ACK_CACHED: 'DONE_CACHED' }, color: '#fff59d' },
+                    DONE: { color: '#81c784' },
+                    DONE_CACHED: { color: '#4fc3f7' }  // Distinct BLUE color to proudly display RIFL hit
                 }
             });
             dumpState({
@@ -60,11 +59,6 @@ function onTimer(tick) {
             sendMessage(SERVER_ID, { type: 'RPC_WRITE', clientId: serverId, seqId: s.seqId, val: s.val });
             s.lastSendTick = tick;
         }
-    } else {
-        // Reset the bright visual flash after explicitly proving the Completion Object successfully blocked the payload.
-        if ((fsm.state === 'RIFL_CACHE_1' || fsm.state === 'RIFL_CACHE_2') && tick - (s.cacheTick || 0) > 15) {
-            if (fsm.can('RESTORE')) fsm.transition('RESTORE');
-        }
     }
 
     s.fsm = fsm.serialize();
@@ -87,10 +81,7 @@ function onMessage(message) {
 
             if (sid <= s.completions[cid]) {
                 // RIFL COMPLETION OBJECT CATCHES DUPLICATE!
-                // It cleanly intercepts the message and forces a fake cache ACK rather than applying a destructive physical mutation!
-                if (fsm.can('RIFL_HIT')) fsm.transition('RIFL_HIT');
-
-                s.cacheTick = s.tick !== undefined ? s.tick : 0;
+                // It cleanly intercepts the message and safely routes a fake CACHED ACK rather than physically mutating!
                 sendMessage(cid, { type: 'RPC_ACK', seqId: sid, status: 'CACHED' });
             } else {
                 // NORMAL NEW WRITE. Validate and officially apply physically.
@@ -106,7 +97,11 @@ function onMessage(message) {
     } else {
         if (m.type === 'RPC_ACK' && m.seqId === s.seqId) {
             // Unblocks the client's pending application timer cleanly
-            if (fsm.can('ACK')) fsm.transition('ACK');
+            if (m.status === 'CACHED') {
+                if (fsm.can('ACK_CACHED')) fsm.transition('ACK_CACHED');
+            } else {
+                if (fsm.can('ACK')) fsm.transition('ACK');
+            }
             s.lastSendTick = null;
         }
     }

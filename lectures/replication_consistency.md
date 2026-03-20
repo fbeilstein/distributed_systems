@@ -535,15 +535,13 @@ Best of all, almost all of RIFL's complex network implementation details are nat
 
 # Interactive RIFL Sandbox
 
-To genuinely understand the absolute necessity of Sequence Maps and Completion Objects, launch the mathematical sandbox below!
-
 This simulation natively models the exact **"Retry Problem"**: Client 1 attempts to write $V=1$, while Client 2 attempts to write $V=2$.
 
-**Your Mission:**
 1. Let Client 1 broadcast its initial write request.
-2. Just before the Server's green "SUCCESS" ACK message physically reaches Client 1, rapidly **Double-Click** the transmission arrow to dynamically drop the network packet on the floor!
-3. Watch exactly what happens: Client 1 will physically cross its timeout threshold and furiously transmit a blind duplicate write *after* Client 2 has already safely acquired the state!
-4. Watch the Server gracefully catch the illegal duplicate using its internal Sequence Maps, flashing **BRIGHT BLUE** instead of destructively overwriting Client 2's data!
+2. Just before the Server's green "SUCCESS" ACK message physically reaches Client 1, **Double-Click** the transmission arrow to dynamically drop the network packet on the floor!
+3. Watch exactly what happens: Client 1 will physically cross its timeout threshold and transmit a blind duplicate write *after* Client 2 has already safely acquired the state!
+4. Watch the Server gracefully catch the illegal duplicate using its internal Sequence Maps, and successfully return a cached Response!
+5. Client 1 will seamlessly receive the deduplicated response and enter a unique **BRIGHT BLUE** `DONE_CACHED` state instead of its standard green `DONE` state.
 
 <center>
 <a href="?demo=rifl-retry" class="demo-btn">Launch RIFL Deduplication Demo</a>
