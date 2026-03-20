@@ -174,18 +174,30 @@ If Process 1 and Process 2 are executing across a network simultaneously, we are
 
 # Overlapping Operations
 
+Even with just a *single* copy of the data, there is no universally simple answer to what `P2` should see. 
+
 ```static-timeline
 {
   "zoom": 0.85,
   "ticks": 55,
-  "servers": ["P1", "P2"],
+  "servers": ["P1", "case 1", "case 2", "case 3", "case 4"],
   "states": [
-    { "server": "P1", "start": 30, "end": 70, "state": "write(25)", "color": "#ffb74d" },
-    { "server": "P2", "start": 10, "end": 40, "state": "read()", "color": "#81c784" },
-    { "server": "P2", "start": 50, "end": 80, "state": "read()", "color": "#81c784" }
+    { "server": "P1", "start": 20, "end": 34, "state": "write(x = 25)", "color": "#ffb74d" },
+    { "server": "case 1", "start": 0, "end": 4, "state": "read(x)", "color": "#81c784" },
+    { "server": "case 1", "start": 10, "end": 14, "state": "read(x)", "color": "#81c784" },
+    { "server": "case 2", "start": 40, "end": 44, "state": "read(x)", "color": "#81c784" },
+    { "server": "case 2", "start": 50, "end": 54, "state": "read(x)", "color": "#81c784" },
+    { "server": "case 3", "start": 10, "end": 14, "state": "read(x)", "color": "#81c784" },
+    { "server": "case 3", "start": 40, "end": 44, "state": "read(x)", "color": "#81c784" },
+    { "server": "case 4", "start": 20, "end": 24, "state": "read(x)", "color": "#81c784" },
+    { "server": "case 4", "start": 30, "end": 34, "state": "read(x)", "color": "#81c784" }
   ]
 }
 ```
+
+---
+
+# Overlapping Operations
 
 Even with just a *single* copy of the data, there is no universally simple answer to what `P2` should see. 
 * Should the first `read()` get `0` or `25`? 
@@ -206,6 +218,109 @@ Fundamental difficulties arise immediately:
 
 # Consistency Models
 
-To regain our sanity, reason definitively about operational order, and provide developers with absolute, non-ambiguous descriptions of their database's potential outcomes, distributed systems engineers are forced to formally define strict **Consistency Models**. 
+Since operations on physical memory registers are inevitably allowed to overlap over wide-area networks, we must define crystal clear semantics: *what exactly happens if multiple clients attempt to read or modify different physical copies of the data simultaneously?*
+
+**Consistency models** provide these strict semantics and mathematical guarantees. You can think of a consistency model as a **legally binding contract** between the network participants:
+1. It dictates exactly what each replica *has to do* to satisfy the required semantics.
+2. It dictates exactly what users *can mathematically expect* when issuing asynchronous read and write operations.
 
 *(Note: While the terminology between standard multi-threaded "Concurrent Systems" and "Distributed Systems" heavily aligns, we cannot directly copy/paste most local concurrency algorithms across a network due to the brutal differences in physical communication patterns, hardware performance, and network reliability).*
+
+---
+
+# Two Types of Consistency
+
+When we say "Consistency", we are usually referring to two distinct structural concepts:
+
+1. **Consistency (State):** Defines the acceptable invariants and allowable mathematical relationships between divergent physical copies of the data (e.g. how far out of sync replicas are legally allowed to drift).
+2. **Consistency (Operation):** Defines strict constraints on the chronological execution order of incoming database operations.
+
+---
+
+# The Cost of Synchronization
+
+Without a supernatural "global clock" perfectly linking every CPU on Earth, it is inherently difficult to give distributed operations a universally precise and deterministic execution order. Attempting to forcefully synchronize state perfectly across a wide-area network is overwhelmingly time-consuming and destroys system availability.
+
+Instead of fighting physics, consistency models allow us to logically limit the number of possible catastrophic execution histories by:
+* Intelligently positioning strictly dependent writes serially after one another.
+* Explicitly defining a mathematical point in time at which a newly written value is legally "propagated" and visible to all future readers across the cluster.
+
+---
+
+# Strict Consistency
+
+**Strict consistency** represents the absolute Holy Grail of distributed systems. It is the mathematical equivalent of complete and flawless *replication transparency*.
+
+Under Strict Consistency, any write operation performed by any process is **instantly** available for all subsequent reads by any other process anywhere in the cluster.
+
+---
+
+# The Global Clock
+
+Strict Consistency fundamentally relies on the hypothetical existence of an absolutely perfect **global clock**.
+
+It dictates that if there was a `write(x, 1)` completed at an exact universal instant $t_1$, then *any* `read(x)` executed by any node at *any* instant $t_2 > t_1$ will absolutely and undeniably return the newly written value `1`.
+
+---
+
+# The Catch
+
+Unfortunately, due to the speed of light, network latency, and the theory of relativity...
+
+This is just a **theoretical model**, and it is physically **impossible** to implement in the real world.
+
+---
+
+# Linearizability
+
+**Linearizability** is the absolute strongest single-object, single-operation consistency model physically possible. 
+
+Under this model, the effects of a write become visible to all readers exactly *once* at some exact, infinitesimal point in time between its start and its end.
+
+Crucially, no client can ever observe state transitions or side effects of *partial* (unfinished, in-flight) or *incomplete* (interrupted/failed) write operations.
+
+---
+
+# Indeterminism vs Sequential Histories
+
+Under linearizability, concurrent operations are mathematically mapped and represented as *one* of the possible sequential histories for which absolute visibility properties structurally hold. 
+
+However, there is still inherent *indeterminism* in linearizability: if two operations overlap, there may exist more than one mathematically valid way in which the events can be chronologically ordered!
+
+* **If two operations overlap, they may take effect in any order.** 
+* But as soon as a single read operation returns a particular new value, all reads that come chronologically *after* it are legally bound to return a value at least as recent.
+
+---
+
+# The Rules of Read and Write
+
+1. **Reads:** Every read of a shared value must return the *latest* value successfully written preceding the read, **or** the value of a write that *overlaps* with the read.
+2. **Writes:** Linearizable write access to a shared variable implicitly guarantees **mutual exclusion**: between two concurrent writes targeting the same data, only one can technically "go first" internally.
+3. **Atomic Illusion:** Even though physical operations take time, are highly concurrent, and have messy overlaps on the wire, under linearizability their effects become visible in a way that makes them appear **strictly sequential** and instantaneous.
+
+---
+
+# Linearizability Example
+
+Assume a shared register starts at **`x = 0`**. 
+
+```static-timeline
+{
+  "zoom": 0.75,
+  "ticks": 65,
+  "servers": ["W1", "W2", "R1", "R2", "R3"],
+  "states": [
+    { "server": "W1", "start": 5, "end": 25, "state": "write(x=1)", "color": "#ffb74d" },
+    { "server": "W2", "start": 10, "end": 40, "state": "write(x=2)", "color": "#ffb74d" },
+    { "server": "R1", "start": 15, "end": 20, "state": "read()", "color": "#81c784" },
+    { "server": "R2", "start": 30, "end": 35, "state": "read()", "color": "#81c784" },
+    { "server": "R3", "start": 45, "end": 50, "state": "read()", "color": "#81c784" }
+  ]
+}
+```
+
+---
+
+* **$R_1$** safely overlaps both writes. It can legally read `0` (old value), `1` (W1 triggered first), or `2` (W2 triggered first).
+* **$R_2$** occurs *after* W1 completes, but overlaps W2. Because it strictly follows W1, it can no longer read 0. It must read `1` (W1), or `2` (if W2 triggered first).
+* **$R_3$** occurs strictly *after* both writes complete. Assuming W2 was sequentially assigned after W1 inside the database, R3 will permanently read `2`.
