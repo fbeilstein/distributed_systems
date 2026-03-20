@@ -183,7 +183,7 @@ Even with just a *single* copy of the data, there is no universally simple answe
 ```static-timeline
 {
   "zoom": 0.9,
-  "ticks": 55,
+  "ticks": 53,
   "trackHeight": 50,
   "stateBandOffset": 1,
   "servers": ["P1", "case 1", "case 2", "case 3", "case 4"],
@@ -192,7 +192,7 @@ Even with just a *single* copy of the data, there is no universally simple answe
     { "server": "case 1", "start": 0, "end": 4, "state": "read(x)", "color": "#81c784" },
     { "server": "case 1", "start": 10, "end": 14, "state": "read(x)", "color": "#81c784" },
     { "server": "case 2", "start": 40, "end": 44, "state": "read(x)", "color": "#81c784" },
-    { "server": "case 2", "start": 50, "end": 54, "state": "read(x)", "color": "#81c784" },
+    { "server": "case 2", "start": 48, "end": 52, "state": "read(x)", "color": "#81c784" },
     { "server": "case 3", "start": 10, "end": 14, "state": "read(x)", "color": "#81c784" },
     { "server": "case 3", "start": 40, "end": 44, "state": "read(x)", "color": "#81c784" },
     { "server": "case 4", "start": 20, "end": 24, "state": "read(x)", "color": "#81c784" },
@@ -333,3 +333,218 @@ Assume a shared register starts at **`x = 0`**.
 * **$R_3$** occurs strictly *after* both writes complete. Assuming W2 was sequentially assigned after W1 inside the database, R3 will permanently read `2`.
 
 </small>
+
+---
+
+# Linearization Points
+
+One of the most important architectural traits of linearizability is **visibility**: once an operation is officially complete, *everyone* must universally see it. The system absolutely cannot “travel back in time” to revert it or temporarily make it invisible for some slow participants.
+
+This strict consistency model is best explained in terms of **atomic** (uninterruptible, indivisible) operations. 
+
+In reality, physical database operations take time over the network and do not *have* to be truly atomic underneath, but their external side-effects absolutely must become visible simultaneously at *some exact point in time*, creating the mathematical illusion that they were instantaneous! 
+
+This exact moment of universal transition is called the **Linearization Point**.
+
+---
+
+# Visualizing the Cutoff
+
+<small>
+
+A visible value must solidly remain stable until the very next value legally becomes visible after it. A register should never rapidly "alternate" or flicker between two modern states for different clients. The **linearization point** serves as a strict cutoff timeline boundary, exactly after which all operation effects become irreversibly visible. 
+
+</small>
+
+```static-timeline
+{
+  "zoom": 0.85,
+  "ticks": 55,
+  "trackHeight": 50,
+  "stateBandOffset": 1,
+  "servers": ["W", "R1", "R2"],
+  "states": [
+    { "server": "W", "start": 10, "end": 30, "state": "writing...", "color": "#ffe0b2" },
+    { "server": "W", "start": 30, "end": 50, "state": "committed", "color": "#ffb74d" },
+    { "server": "R1", "start": 15, "end": 20, "state": "read()", "color": "#81c784" },
+    { "server": "R2", "start": 40, "end": 45, "state": "read()", "color": "#81c784" }
+  ]
+}
+```
+
+<small>
+
+* **$W$** contains the precise linearization point (the exact graphical boundary between `writing...` and `committed` at $t=30$).
+* **$R_1$** safely overlaps the write, but specifically occurs *before* the internal cutoff point is triggered inside the database. Therefore, it mathematically reads the **old data**.
+* **$R_2$** safely overlaps the write, but specifically occurs *after* the internal cutoff point is triggered. Therefore, it reads the **new data** $W$.
+
+</small>
+
+---
+
+# Implementing Cutoffs
+
+How do we actually implement linearization points in a distributed architecture? 
+
+Engineers typically build these cutoffs by enforcing **Mutual Exclusion**:
+1. Holding **Locks** to forcefully guard a critical processing section.
+2. Low-level **Atomic Read/Write** instructions.
+3. Complex **Read-Modify-Write** hardware primitives.
+
+*(Note: Most modern programming languages natively offer CPU-level primitives that allow atomic writes and Compare-And-Swap (CAS) concurrency).*
+
+---
+
+# Atomic Primitives: Write vs CAS
+
+When building linearization properties at the code level, distinguishing between atomic instructions is critical:
+
+* **Atomic Write:** Just blindly forces the new value into memory. 
+  *(Beware the **ABA Problem**: if another thread changed the value to B, and then back to A, a blind equality check $A == A$ might tragically make you believe "no changes occurred" when they actually did!)*
+* **Atomic CAS (Compare-And-Swap):** The CPU natively forces the transition to the new value *only* if the underlying previous value in memory is logically proven to be strictly unchanged from what the client originally read.
+
+---
+
+# The ABA Problem
+
+A classic pitfall when relying on simple read-modify-write checks without true atomic verification is the **ABA Problem**.
+
+```static-timeline
+{
+  "zoom": 0.85,
+  "ticks": 55,
+  "trackHeight": 50,
+  "stateBandOffset": 10,
+  "servers": ["Thread 1", "Register", "Thread 2"],
+  "states": [
+    { "server": "Thread 2", "start": 2, "end": 12, "state": "read(x) == 1 ?", "color": "#81c784" },
+    { "server": "Register", "start": 0, "end": 16, "state": "x = 1", "color": "#e0e0e0" },
+    { "server": "Thread 1", "start": 12, "end": 22, "state": "write(x = 2)", "color": "#ffb74d" },
+    { "server": "Register", "start": 16, "end": 30, "state": "x = 2", "color": "#ffcc80" },
+    { "server": "Thread 1", "start": 26, "end": 36, "state": "write(x = 1)", "color": "#ffb74d" },
+    { "server": "Register", "start": 30, "end": 55, "state": "x = 1", "color": "#ffecb3" },
+    { "server": "Thread 2", "start": 40, "end": 50, "state": "read(x) == 1 ?", "color": "#ba68c8" }
+  ],
+  "messages": [
+    { "from": "Register", "to": "Thread 2", "sendTick": 8, "recvTick": 8 },
+    { "from": "Thread 1", "to": "Register", "sendTick": 16, "recvTick": 16 },
+    { "from": "Thread 1", "to": "Register", "sendTick": 30, "recvTick": 30 },
+    { "from": "Register", "to": "Thread 2", "sendTick": 45, "recvTick": 45 }
+  ]
+}
+```
+
+<small>
+
+1. **Thread 2** reads `x` and sees `1`. It prepares to confidently do some computation based on this value.
+2. Under the hood, **Thread 1** aggressively spins up and overwrites the register to `2`.
+3. Before Thread 2 ever finishes calculating, **Thread 1** wakes up again and rapidly overwrites the register *back* to `1`.
+4. **Thread 2** finishes computing and attempts to conditionally update the register **only if** `x` is *identically equal* exactly to `1`. It looks at the register, happily confirms `1 == 1`, assumes nobody touched anything while it was sleeping, and completely corrupts the data state!
+
+</small>
+
+---
+
+# The Cost of Linearizability
+
+Despite its profound mathematical guarantees, many modern systems aggressively avoid implementing strict linearizability today.
+
+Even standard processors **do not** offer linearizability when accessing main memory by default!
+
+This is because strict synchronization instructions are inherently expensive, incredibly slow, and generate massive amounts of cross-node CPU traffic and cache invalidation protocols.
+
+---
+
+# Biting the Bullet
+
+However, it *is* possible to selectively enforce linearizability mathematically when absolutely necessary.
+
+In local concurrent programming, engineers use Compare-And-Swap (CAS) instructions to enforce linearizability checkpoints. Many high-performance, lock-free algorithms work by doing all the heavy computation locally to prepare the results, and then safely relying on a single synchronized CAS instruction to atomically update the pointer and publish the results to the rest of the system.
+
+---
+
+# Consensus and Composition
+
+In highly distributed environments, true linearizability demands intense network coordination and explicit causal ordering. 
+
+It is almost exclusively implemented using formal **Consensus** (e.g., Paxos or Raft): clients interact with a replicated store via messages, and the consensus module acts as the ultimate gatekeeper, rigorously ensuring that all applied operations are ordered identically across the cluster so each write operation magically appears mathematically *instantaneous*.
+
+**Compositionality:**
+One massive mathematical advantage of linearizability is that it is *composable*! A system constructed entirely of linearizable objects is natively linearizable itself. 
+*(Warning: Executing a transaction that involves BOTH objects simultaneously still requires additional external synchronization!)*
+
+---
+
+# Reusable Infrastructure for Linearizability
+
+**Reusable Infrastructure for Linearizability (RIFL)** is a robust architectural mechanism for formally implementing strictly linearizable [remote procedure calls (RPCs)](https://en.wikipedia.org/wiki/Remote_procedure_call).
+
+RIFL specifically solves the absolute nightmare of **"Exactly-Once Delivery"**. Distributed operations must functionally be applied exactly *once*, mathematically surviving network partitions, client disconnections, or catastrophic server crashes.
+
+**The Retry Problem:**
+Suppose Client 1 writes `V1` but doesn't instantly receive the network acknowledgment. Fearing failure, it triggers a retry timeout. Meanwhile, Client 2 jumps in and successfully writes `V2`.
+
+If Client 1 blindly retries its operation and overwrites the shared data with its structurally older `V1`, Client 2's logically newer `V2` write is permanently and incorrectly destroyed! The system *must* prevent blind repeated execution.
+
+---
+
+# The Anatomy of RIFL
+
+To systematically block dangerous blind retries, RIFL constructs a highly disciplined network protocol:
+
+1. **Leases:** RIFL forces all clients to individually obtain explicit **Leases** (unique central identifiers) officially issued by a system-wide service.
+2. **Sequence Tracking:** Every single message traversing the network is uniquely stamped by mathematically combining the active *Client ID* with a strictly, monotonically increasing *Sequence Number*.
+
+Through this dual combination, the database can definitively log and recognize exactly *who* is sending the message and *which specific operation* they are attempting to physically execute!
+
+---
+
+# Lease Lifecycle & Garbage Collection
+
+Because clients can randomly explode entirely, RIFL strictly demands that clients periodically **renew** their active leases over the network to explicitly signal their liveness.
+
+* If a client fails to renew its lease before the timeout violently expires, it is officially marked as **crashed**.
+* All temporary networking data, locks, and history associated with its lease are brutally **garbage collected**, ensuring dead operations don't permanently clog the server log forever.
+* If a failed client later "wakes up" from a network partition and aggressively attempts to continue writing using an expired lease, the database will instantly reject the commits and force the client to securely start completely from scratch.
+
+---
+
+# Completion Objects
+
+If a server crashes right before it can successfully send an "ACK" back across the wire, the client will inevitably retry the operation. To protect itself from physically applying the exact same transaction twice, the database heavily relies on **Completion Objects**.
+
+When the database applies an operation, it physically atomically stores the actual data *alongside* a durable **Completion Object** representing the exact sequence number. 
+
+When the client blindly retries...
+* Instead of reapplying the destructive write, RIFL natively spots the existing Completion Object sitting in storage!
+* It successfully recognizes the incoming retry as a strict duplicate, completely skips the internal data mutation, and simply safely returns the cached completion result!
+
+To ensure absolute safety, creating a Completion Object mathematically **must be strictly atomic** with the actual physical mutation of the underlying data record!
+
+---
+
+# The Power of RIFL
+
+The absolute brilliance of Completion Objects is that they safely exist in physical memory until the issuing client explicitly promises it won’t retry the operation anymore, OR the server formally detects the client's lease has violently expired (triggering garbage collection).
+
+By universally, physically guaranteeing that an RPC can logically *never* be executed more than once, RIFL structurally forces operations to become purely **linearizable** (by making their results universally visible atomically). 
+
+Best of all, almost all of RIFL's complex network implementation details are natively independent from the underlying hard-drive storage engine!
+
+---
+
+# Interactive RIFL Sandbox
+
+To genuinely understand the absolute necessity of Sequence Maps and Completion Objects, launch the mathematical sandbox below!
+
+This simulation natively models the exact **"Retry Problem"**: Client 1 attempts to write $V=1$, while Client 2 attempts to write $V=2$.
+
+**Your Mission:**
+1. Let Client 1 broadcast its initial write request.
+2. Just before the Server's green "SUCCESS" ACK message physically reaches Client 1, rapidly **Double-Click** the transmission arrow to dynamically drop the network packet on the floor!
+3. Watch exactly what happens: Client 1 will physically cross its timeout threshold and furiously transmit a blind duplicate write *after* Client 2 has already safely acquired the state!
+4. Watch the Server gracefully catch the illegal duplicate using its internal Sequence Maps, flashing **BRIGHT BLUE** instead of destructively overwriting Client 2's data!
+
+<center>
+<a href="?demo=rifl-retry" class="demo-btn">Launch RIFL Deduplication Demo</a>
+</center>

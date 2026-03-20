@@ -1,0 +1,21 @@
+{
+    "nodes": 3,
+    "seed": 42,
+    "ticks": 120,
+    "names": [
+        "Server (RIFL)",
+        "Client 1",
+        "Client 2"
+    ],
+    "servers": [
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        }
+    ]
+}
