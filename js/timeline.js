@@ -30,6 +30,7 @@ export class Timeline {
         this.trackHeight = TRACK_HEIGHT;
         this.trackPaddingTop = TRACK_PADDING_TOP;
         this.stateBandOffset = STATE_BAND_OFFSET;
+        this.stateBandHeight = 14;
 
         // Shift+scroll to zoom
         this.canvas.addEventListener('wheel', (e) => {
