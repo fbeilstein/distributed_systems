@@ -170,15 +170,37 @@ To actively detect exactly which bytes differ between the network responses, dat
 
 # Digest Reads
 
+```static-timeline
+{
+  "zoom": 1.0,
+  "float": "right",
+  "width": "45%",
+  "ticks": 12,
+  "trackHeight": 35,
+  "stateBandOffset": 10,
+  "servers": ["Coordinator", "Node 1", "Node 2", "Node 3"],
+  "states": [
+    { "server": "Coordinator", "start": 0, "end": 12, "state": "Evaluating", "color": "#cfd8dc" },
+    { "server": "Node 1", "start": 0, "end": 12, "state": "Data, 10MB", "color": "#ffb74d" },
+    { "server": "Node 2", "start": 0, "end": 12, "state": "Digest, 32B", "color": "#81c784" },
+    { "server": "Node 3", "start": 0, "end": 12, "state": "Digest, 32B", "color": "#81c784" }
+  ],
+  "messages": [
+    {"from": "Coordinator", "to": "Node 1", "sendTick": 2, "recvTick": 5},
+    {"from": "Coordinator", "to": "Node 2", "sendTick": 2, "recvTick": 5},
+    {"from": "Coordinator", "to": "Node 3", "sendTick": 2, "recvTick": 5},
+    {"from": "Node 1", "to": "Coordinator", "sendTick": 6, "recvTick": 10},
+    {"from": "Node 2", "to": "Coordinator", "sendTick": 6, "recvTick": 9},
+    {"from": "Node 3", "to": "Coordinator", "sendTick": 6, "recvTick": 9}
+  ]
+}
+```
+
 While Read Repair guarantees consistency, there is a fundamental network problem: **reading full payloads of data from every single node in the Quorum takes far too long.**
 
 If a Client queries a 10MB record, and the Coordinator requests that exact 10MB record from Node 1, Node 2, and Node 3 to compare them, the network bandwidth becomes immediately saturated with 30MB of redundant data.
 
 To optimize this, most architectures employ **Digest Reads**:
-1. `Coordinator` $\dashrightarrow \text{Normal Read} \dashrightarrow$ `Node 1`
-2. `Coordinator` $\dashrightarrow \text{Digest Request} \dashrightarrow$ `Node 2, Node 3...`
-3. `Coordinator` $\leftarrow \text{10MB Data Payload} \leftarrow$ `Node 1`
-4. `Coordinator` $\leftarrow \text{32-byte Hash Digest} \leftarrow$ `Node 2, Node 3...`
 
 The Coordinator locally hashes the 10MB payload from Node 1. If it matches the tiny 32-byte hashes returned by the other nodes, the Coordinator instantly returns the data to the client! It only triggers a heavy "Full Read" from the other nodes if the hashes fiercely disagree.
 
@@ -212,19 +234,19 @@ Because robust databases routinely layer more than just one solitary Anti-Entrop
     { "server": "Client", "start": 45, "end": 58, "state": "Reads Data", "color": "#81c784" },
     { "server": "Coordinator", "start": 0, "end": 14, "state": "Idle", "color": "#e0e0e0" },
     { "server": "Coordinator", "start": 15, "end": 34, "state": "Validating Hashes", "color": "#ffb74d" },
-    { "server": "Node 1", "start": 0, "end": 58, "state": "10MB Data", "color": "#81c784" },
-    { "server": "Node 2", "start": 0, "end": 58, "state": "10MB Data", "color": "#81c784" },
-    { "server": "Node 3", "start": 0, "end": 58, "state": "10MB Data", "color": "#81c784" }
+    { "server": "Node 1", "start": 25, "end": 35, "state": "Uploading 10MB Data", "color": "#ffb74d" },
+    { "server": "Node 2", "start": 23, "end": 32, "state": "Uploading 32B Hash", "color": "#81c784" },
+    { "server": "Node 3", "start": 24, "end": 34, "state": "Uploading 32B Hash", "color": "#81c784" }
   ],
   "messages": [
     {"from": "Client", "to": "Coordinator", "sendTick": 8, "recvTick": 15},
-    {"from": "Coordinator", "to": "Node 1", "sendTick": 18, "recvTick": 25, "payload": "Read()"},
-    {"from": "Coordinator", "to": "Node 2", "sendTick": 18, "recvTick": 23, "payload": "Digest()"},
-    {"from": "Coordinator", "to": "Node 3", "sendTick": 18, "recvTick": 24, "payload": "Digest()"},
-    {"from": "Node 2", "to": "Coordinator", "sendTick": 26, "recvTick": 32, "payload": "Hash(v1)"},
-    {"from": "Node 3", "to": "Coordinator", "sendTick": 27, "recvTick": 34, "payload": "Hash(v1)"},
-    {"from": "Node 1", "to": "Coordinator", "sendTick": 28, "recvTick": 35, "payload": "Data v1"},
-    {"from": "Coordinator", "to": "Client", "sendTick": 37, "recvTick": 45, "payload": "Data v1"}
+    {"from": "Coordinator", "to": "Node 1", "sendTick": 18, "recvTick": 25},
+    {"from": "Coordinator", "to": "Node 2", "sendTick": 18, "recvTick": 23},
+    {"from": "Coordinator", "to": "Node 3", "sendTick": 18, "recvTick": 24},
+    {"from": "Node 2", "to": "Coordinator", "sendTick": 26, "recvTick": 32},
+    {"from": "Node 3", "to": "Coordinator", "sendTick": 27, "recvTick": 34},
+    {"from": "Node 1", "to": "Coordinator", "sendTick": 28, "recvTick": 35},
+    {"from": "Coordinator", "to": "Client", "sendTick": 37, "recvTick": 45}
   ]
 }
 ```
@@ -254,15 +276,39 @@ This is because the data inside the hint log of the Coordinator is structurally 
 
 # Sloppy Quorums
 
+```static-timeline
+{
+  "zoom": 1.0,
+  "float": "right",
+  "width": "45%",
+  "ticks": 19,
+  "trackHeight": 35,
+  "stateBandOffset": 10,
+  "servers": ["Coord", "Node A", "Node C", "Node B", "Node D"],
+  "states": [
+    { "server": "Coord", "start": 0, "end": 6, "state": "Writing", "color": "#ffb74d" },
+    { "server": "Node A", "start": 0, "end": 20, "state": "v1", "color": "#81c784" },
+    { "server": "Node C", "start": 0, "end": 20, "state": "v1", "color": "#81c784" },
+    { "server": "Node B", "start": 0, "end": 10, "state": "Offline", "color": "#ef5350" },
+    { "server": "Node B", "start": 11, "end": 16, "state": "Rebooting", "color": "#ffb74d" },
+    { "server": "Node B", "start": 17, "end": 20, "state": "Healed", "color": "#81c784" },
+    { "server": "Node D", "start": 0, "end": 6, "state": "Idle", "color": "#e0e0e0" },
+    { "server": "Node D", "start": 7, "end": 16, "state": "Holding Hint for B", "color": "#ffb74d" },
+    { "server": "Node D", "start": 17, "end": 20, "state": "Hint Deleted", "color": "#cfd8dc" }
+  ],
+  "messages": [
+    {"from": "Coord", "to": "Node A", "sendTick": 2, "recvTick": 5},
+    {"from": "Coord", "to": "Node C", "sendTick": 2, "recvTick": 5},
+    {"from": "Coord", "to": "Node B", "sendTick": 2, "recvTick": 5, "lost": true},
+    {"from": "Coord", "to": "Node D", "sendTick": 4, "recvTick": 7},
+    {"from": "Node D", "to": "Node B", "sendTick": 13, "recvTick": 17}
+  ]
+}
+```
+
 Some databases, such as Riak, pair Hinted Handoffs directly with **Sloppy Quorums** to prioritize extreme availability. 
 
-In a Strict Quorum, a write is rejected if $W$ replicas are not physically reachable. With Sloppy Quorums, if a primary target replica fails the database automatically recruits "additional healthy nodes" from the cluster to absorb the payload. These recruited nodes do not ordinarily hold this data, they just step in to help. 
-
-* `Coordinator` $\dashrightarrow \text{Write}$ to `Nodes A, B, C` *(Discovers Node B is down!)*
-* `Coordinator` writes to `A` and `C`.
-* `Coordinator` recruits `Node D` and stores a **Hint** there. 
-* *[Later, Node B wakes up]*
-* `Node D` forwards the Hint back to `Node B` and deletes its temporary copy.
+In a Strict Quorum, a write is rejected if $W$ replicas are not physically reachable. With Sloppy Quorums, if a primary target replica fails the database automatically recruits "additional healthy nodes" from the cluster to absorb the payload. These recruited nodes do not ordinarily hold this data, they just step in to help.
 
 ---
 
@@ -304,14 +350,14 @@ However, if another client executes a read querying the isolated `Nodes B and C`
     { "server": "Node D", "start": 50, "end": 58, "state": "Hint Deleted", "color": "#e0e0e0" }
   ],
   "messages": [
-    {"from": "Coordinator", "to": "Node A", "sendTick": 10, "recvTick": 15, "payload": "Write()"},
-    {"from": "Coordinator", "to": "Node C", "sendTick": 10, "recvTick": 14, "payload": "Write()"},
-    {"from": "Node C", "to": "Coordinator", "sendTick": 15, "recvTick": 18, "payload": "ACK"},
-    {"from": "Node A", "to": "Coordinator", "sendTick": 16, "recvTick": 19, "payload": "ACK"},
-    {"from": "Coordinator", "to": "Node D", "sendTick": 22, "recvTick": 26, "payload": "Hint for B"},
-    {"from": "Node D", "to": "Coordinator", "sendTick": 27, "recvTick": 30, "payload": "Hint ACK"},
-    {"from": "Node D", "to": "Node B", "sendTick": 35, "recvTick": 42, "payload": "Handoff v1"},
-    {"from": "Node B", "to": "Node D", "sendTick": 44, "recvTick": 49, "payload": "Handoff ACK"}
+    {"from": "Coordinator", "to": "Node A", "sendTick": 10, "recvTick": 15},
+    {"from": "Coordinator", "to": "Node C", "sendTick": 10, "recvTick": 14},
+    {"from": "Node C", "to": "Coordinator", "sendTick": 15, "recvTick": 18},
+    {"from": "Node A", "to": "Coordinator", "sendTick": 16, "recvTick": 19},
+    {"from": "Coordinator", "to": "Node D", "sendTick": 22, "recvTick": 26},
+    {"from": "Node D", "to": "Coordinator", "sendTick": 27, "recvTick": 30},
+    {"from": "Node D", "to": "Node B", "sendTick": 35, "recvTick": 42},
+    {"from": "Node B", "to": "Node D", "sendTick": 44, "recvTick": 49}
   ]
 }
 ```
@@ -559,15 +605,60 @@ Nodes perform a *shuffle operation* periodically, exchanging their active and pa
 
 The active view is updated depending on node state changes and requests from peers. Here is a breakdown of how Node A handles a failure regarding Nodes B and C:
 
-| Node A | Node B | Node C |
-|---|---|---|
-| active: `B`, replacement: `C` | | |
-| **Request to B** | **FAILS** | |
-| **Request to C** | | **OK** |
-| Try add `C` to active | | If active not full $\rightarrow$ **Accept** |
-| | | If active full $\rightarrow$ **Decline** |
-| If active not empty $\rightarrow$ Accept Decline | | decline |
-| If active empty $\rightarrow$ Reject Decline | | Replace one active node for `A` |
+### Scenario 1: Target Node has Room
+*(Node A requests a connection to Node C to replace a dead peer. Node C's active view is not full, so it immediately accepts on the first handshake.)*
+
+```static-timeline
+{
+  "zoom": 1.0,
+  "ticks": 25,
+  "trackHeight": 40,
+  "stateBandOffset": 10,
+  "servers": ["Node A", "Node C"],
+  "states": [
+    { "server": "Node A", "start": 0, "end": 20, "state": "Needs connection!", "color": "#ef5350" },
+    { "server": "Node A", "start": 21, "end": 25, "state": "Healed", "color": "#81c784" },
+    { "server": "Node C", "start": 0, "end": 6, "state": "Running", "color": "#cfd8dc" },
+    { "server": "Node C", "start": 7, "end": 13, "state": "Active View: 3/4", "color": "#ffb74d" },
+    { "server": "Node C", "start": 14, "end": 25, "state": "A is Linked", "color": "#81c784" }
+  ],
+  "messages": [
+    {"from": "Node A", "to": "Node C", "sendTick": 2, "recvTick": 8, "payload": "JOIN()"},
+    {"from": "Node C", "to": "Node A", "sendTick": 14, "recvTick": 21, "payload": "ACCEPT"}
+  ]
+}
+```
+
+---
+
+### Scenario 2: Target Node is Full
+*(Node A's Active View is **empty** and it MUST connect to C to survive. Even though Node C declines the initial packet because its queue is legally full, Node A effectively overrides the rejection, forcing Node C to surgically evict one of its existing peers!)*
+
+```static-timeline
+{
+  "zoom": 1.0,
+  "ticks": 45,
+  "trackHeight": 40,
+  "stateBandOffset": 10,
+  "servers": ["Node A", "Node C"],
+  "states": [
+    { "server": "Node A", "start": 0, "end": 19, "state": "Needs connection!", "color": "#ef5350" },
+    { "server": "Node A", "start": 20, "end": 40, "state": "Empty: Preempt!", "color": "#ab47bc" },
+    { "server": "Node A", "start": 41, "end": 45, "state": "Healed", "color": "#81c784" },
+    { "server": "Node C", "start": 0, "end": 6, "state": "Running", "color": "#cfd8dc" },
+    { "server": "Node C", "start": 7, "end": 13, "state": "Active View: 4/4 (Full)", "color": "#ffb74d" },
+    { "server": "Node C", "start": 14, "end": 28, "state": "Declined", "color": "#cfd8dc" },
+    { "server": "Node C", "start": 29, "end": 35, "state": "Evicting Random Peer", "color": "#ab47bc" },
+    { "server": "Node C", "start": 36, "end": 45, "state": "A is Linked", "color": "#81c784" }
+  ],
+  "messages": [
+    {"from": "Node A", "to": "Node C", "sendTick": 2, "recvTick": 8, "payload": "JOIN()"},
+    {"from": "Node C", "to": "Node A", "sendTick": 13, "recvTick": 19, "payload": "DECLINE"},
+    {"from": "Node A", "to": "Node C", "sendTick": 24, "recvTick": 30, "payload": "URGENT JOIN"},
+    {"from": "Node C", "to": "Node A", "sendTick": 35, "recvTick": 41, "payload": "ACCEPT (Forced)"}
+  ]
+}
+```
 
 This robust handshake allows bootstrapping or recovering nodes to quickly become effective cluster members at the cost of cycling some connections.
 * **Convergence:** HyParView scores very highly on how quickly its peer sampling service converges to a stable overlay during severe topology reorganizations!

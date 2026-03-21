@@ -317,6 +317,16 @@ function renderStaticTimelines() {
             container.style.marginTop = '20px';
             container.style.marginBottom = '20px';
 
+            // Apply custom alignment formatting
+            if (config.float) {
+                container.style.float = config.float;
+                container.style.margin = '15px';
+                container.style.marginTop = '5px';
+            }
+            if (config.width) {
+                container.style.width = config.width;
+            }
+
             const canvas = document.createElement('canvas');
             container.appendChild(canvas);
 
