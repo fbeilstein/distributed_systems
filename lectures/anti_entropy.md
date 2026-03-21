@@ -43,20 +43,20 @@ To rapidly broadcast updates to all nodes in a massive cluster, systems generall
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 50,
+  "ticks": 58,
   "trackHeight": 40,
   "stateBandOffset": 10,
   "servers": ["Source", "Node 1", "Node 2", "Node 3", "Node 4"],
   "states": [
-    { "server": "Source", "start": 0, "end": 50, "state": "Broadcasting", "color": "#ffb74d" },
+    { "server": "Source", "start": 0, "end": 58, "state": "Broadcasting", "color": "#ffb74d" },
     { "server": "Node 1", "start": 0, "end": 14, "state": "Unaware", "color": "#e0e0e0" },
-    { "server": "Node 1", "start": 15, "end": 50, "state": "Infected", "color": "#81c784" },
+    { "server": "Node 1", "start": 15, "end": 58, "state": "Infected", "color": "#81c784" },
     { "server": "Node 2", "start": 0, "end": 14, "state": "Unaware", "color": "#e0e0e0" },
-    { "server": "Node 2", "start": 15, "end": 50, "state": "Infected", "color": "#81c784" },
+    { "server": "Node 2", "start": 15, "end": 58, "state": "Infected", "color": "#81c784" },
     { "server": "Node 3", "start": 0, "end": 26, "state": "Unaware", "color": "#e0e0e0" },
-    { "server": "Node 3", "start": 27, "end": 50, "state": "Infected", "color": "#81c784" },
+    { "server": "Node 3", "start": 27, "end": 58, "state": "Infected", "color": "#81c784" },
     { "server": "Node 4", "start": 0, "end": 26, "state": "Unaware", "color": "#e0e0e0" },
-    { "server": "Node 4", "start": 27, "end": 50, "state": "Infected", "color": "#81c784" }
+    { "server": "Node 4", "start": 27, "end": 58, "state": "Infected", "color": "#81c784" }
   ],
   "messages": [
     {"from": "Source", "to": "Node 1", "sendTick": 5, "recvTick": 15},
@@ -134,37 +134,37 @@ To actively detect exactly which bytes differ between the network responses, dat
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 70,
+  "ticks": 58,
   "trackHeight": 40,
   "stateBandOffset": 10,
   "servers": ["Client", "Coordinator", "Node A", "Node B", "Node C"],
   "states": [
-    { "server": "Client", "start": 5, "end": 64, "state": "Waiting...", "color": "#ffe0b2" },
-    { "server": "Client", "start": 65, "end": 70, "state": "Reads v1", "color": "#81c784" },
-    { "server": "Coordinator", "start": 0, "end": 14, "state": "Idle", "color": "#e0e0e0" },
-    { "server": "Coordinator", "start": 15, "end": 35, "state": "Querying R=3", "color": "#ffb74d" },
-    { "server": "Coordinator", "start": 36, "end": 55, "state": "Blocking Repair", "color": "#ef5350" },
-    { "server": "Node A", "start": 0, "end": 70, "state": "v1", "color": "#81c784" },
-    { "server": "Node B", "start": 0, "end": 47, "state": "v0 (Stale)", "color": "#e0e0e0" },
-    { "server": "Node B", "start": 48, "end": 70, "state": "v1 (Repaired)", "color": "#81c784" },
-    { "server": "Node C", "start": 0, "end": 70, "state": "v1", "color": "#81c784" }
+    { "server": "Client", "start": 2, "end": 44, "state": "Waiting...", "color": "#ffe0b2" },
+    { "server": "Client", "start": 45, "end": 58, "state": "Reads v1", "color": "#81c784" },
+    { "server": "Coordinator", "start": 0, "end": 5, "state": "Idle", "color": "#e0e0e0" },
+    { "server": "Coordinator", "start": 6, "end": 21, "state": "Querying R=3", "color": "#ffb74d" },
+    { "server": "Coordinator", "start": 22, "end": 38, "state": "Blocking Repair", "color": "#ef5350" },
+    { "server": "Node A", "start": 0, "end": 58, "state": "v1", "color": "#81c784" },
+    { "server": "Node B", "start": 0, "end": 29, "state": "v0 (Stale)", "color": "#e0e0e0" },
+    { "server": "Node B", "start": 30, "end": 58, "state": "v1 (Repaired)", "color": "#81c784" },
+    { "server": "Node C", "start": 0, "end": 58, "state": "v1", "color": "#81c784" }
   ],
   "messages": [
-    {"from": "Client", "to": "Coordinator", "sendTick": 8, "recvTick": 15},
-    {"from": "Coordinator", "to": "Node A", "sendTick": 18, "recvTick": 25},
-    {"from": "Coordinator", "to": "Node B", "sendTick": 18, "recvTick": 23},
-    {"from": "Coordinator", "to": "Node C", "sendTick": 18, "recvTick": 24},
-    {"from": "Node B", "to": "Coordinator", "sendTick": 26, "recvTick": 32},
-    {"from": "Node C", "to": "Coordinator", "sendTick": 27, "recvTick": 34},
-    {"from": "Node A", "to": "Coordinator", "sendTick": 28, "recvTick": 35},
-    {"from": "Coordinator", "to": "Node B", "sendTick": 40, "recvTick": 48},
-    {"from": "Node B", "to": "Coordinator", "sendTick": 50, "recvTick": 55},
-    {"from": "Coordinator", "to": "Client", "sendTick": 57, "recvTick": 65}
+    {"from": "Client", "to": "Coordinator", "sendTick": 3, "recvTick": 6},
+    {"from": "Coordinator", "to": "Node A", "sendTick": 8, "recvTick": 13},
+    {"from": "Coordinator", "to": "Node B", "sendTick": 8, "recvTick": 12},
+    {"from": "Coordinator", "to": "Node C", "sendTick": 8, "recvTick": 14},
+    {"from": "Node B", "to": "Coordinator", "sendTick": 14, "recvTick": 18},
+    {"from": "Node A", "to": "Coordinator", "sendTick": 16, "recvTick": 20},
+    {"from": "Node C", "to": "Coordinator", "sendTick": 17, "recvTick": 21},
+    {"from": "Coordinator", "to": "Node B", "sendTick": 24, "recvTick": 30},
+    {"from": "Node B", "to": "Coordinator", "sendTick": 32, "recvTick": 37},
+    {"from": "Coordinator", "to": "Client", "sendTick": 39, "recvTick": 45}
   ]
 }
 ```
 
-*(Notice how the Coordinator definitively stops at Tick 36! It detects the `v0` discrepancy from Node B, halts the entire client response, drops a Repair packet to Node B at tick 40, and waits for the ACK at tick 55 before finally responding to the Client. This guarantees true Monotonicity.)*
+*(Notice how the Coordinator definitively stops at Tick 22! It detects the `v0` discrepancy from Node B, halts the entire client response, drops a Repair packet to Node B at tick 24, and waits for the ACK at tick 37 before finally responding to the Client. This guarantees true Monotonicity.)*
 
 ---
 
@@ -203,18 +203,18 @@ Because robust databases routinely layer more than just one solitary Anti-Entrop
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 50,
+  "ticks": 58,
   "trackHeight": 40,
   "stateBandOffset": 10,
   "servers": ["Client", "Coordinator", "Node 1", "Node 2", "Node 3"],
   "states": [
     { "server": "Client", "start": 5, "end": 44, "state": "Waiting...", "color": "#ffe0b2" },
-    { "server": "Client", "start": 45, "end": 50, "state": "Reads Data", "color": "#81c784" },
+    { "server": "Client", "start": 45, "end": 58, "state": "Reads Data", "color": "#81c784" },
     { "server": "Coordinator", "start": 0, "end": 14, "state": "Idle", "color": "#e0e0e0" },
     { "server": "Coordinator", "start": 15, "end": 34, "state": "Validating Hashes", "color": "#ffb74d" },
-    { "server": "Node 1", "start": 0, "end": 50, "state": "10MB Data", "color": "#81c784" },
-    { "server": "Node 2", "start": 0, "end": 50, "state": "10MB Data", "color": "#81c784" },
-    { "server": "Node 3", "start": 0, "end": 50, "state": "10MB Data", "color": "#81c784" }
+    { "server": "Node 1", "start": 0, "end": 58, "state": "10MB Data", "color": "#81c784" },
+    { "server": "Node 2", "start": 0, "end": 58, "state": "10MB Data", "color": "#81c784" },
+    { "server": "Node 3", "start": 0, "end": 58, "state": "10MB Data", "color": "#81c784" }
   ],
   "messages": [
     {"from": "Client", "to": "Coordinator", "sendTick": 8, "recvTick": 15},
@@ -284,38 +284,38 @@ However, if another client executes a read querying the isolated `Nodes B and C`
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 70,
+  "ticks": 58,
   "trackHeight": 40,
   "stateBandOffset": 10,
   "servers": ["Coordinator", "Node A", "Node B", "Node C", "Node D"],
   "states": [
-    { "server": "Coordinator", "start": 0, "end": 14, "state": "Idle", "color": "#e0e0e0" },
-    { "server": "Coordinator", "start": 15, "end": 28, "state": "Writes R=3", "color": "#ffb74d" },
-    { "server": "Coordinator", "start": 33, "end": 42, "state": "Writes Hint", "color": "#ef5350" },
-    { "server": "Node A", "start": 0, "end": 26, "state": "v0", "color": "#e0e0e0" },
-    { "server": "Node A", "start": 27, "end": 70, "state": "v1", "color": "#81c784" },
-    { "server": "Node B", "start": 0, "end": 47, "state": "CRASHED", "color": "#ef5350" },
-    { "server": "Node B", "start": 48, "end": 62, "state": "Rebooted (v0)", "color": "#ffb74d" },
-    { "server": "Node B", "start": 63, "end": 70, "state": "v1 (Healed)", "color": "#81c784" },
-    { "server": "Node C", "start": 0, "end": 26, "state": "v0", "color": "#e0e0e0" },
-    { "server": "Node C", "start": 27, "end": 70, "state": "v1", "color": "#81c784" },
-    { "server": "Node D", "start": 0, "end": 39, "state": "Idle", "color": "#e0e0e0" },
-    { "server": "Node D", "start": 40, "end": 57, "state": "Holding Hint", "color": "#ffb74d" },
-    { "server": "Node D", "start": 58, "end": 70, "state": "Hint Deleted", "color": "#e0e0e0" }
+    { "server": "Coordinator", "start": 0, "end": 7, "state": "Idle", "color": "#e0e0e0" },
+    { "server": "Coordinator", "start": 8, "end": 19, "state": "Writes R=3", "color": "#ffb74d" },
+    { "server": "Coordinator", "start": 20, "end": 30, "state": "Writes Hint", "color": "#ef5350" },
+    { "server": "Node A", "start": 0, "end": 14, "state": "v0", "color": "#e0e0e0" },
+    { "server": "Node A", "start": 15, "end": 58, "state": "v1", "color": "#81c784" },
+    { "server": "Node B", "start": 0, "end": 32, "state": "CRASHED", "color": "#ef5350" },
+    { "server": "Node B", "start": 33, "end": 42, "state": "Rebooted (v0)", "color": "#ffb74d" },
+    { "server": "Node B", "start": 43, "end": 58, "state": "v1 (Healed)", "color": "#81c784" },
+    { "server": "Node C", "start": 0, "end": 13, "state": "v0", "color": "#e0e0e0" },
+    { "server": "Node C", "start": 14, "end": 58, "state": "v1", "color": "#81c784" },
+    { "server": "Node D", "start": 0, "end": 25, "state": "Idle", "color": "#e0e0e0" },
+    { "server": "Node D", "start": 26, "end": 49, "state": "Holding Hint", "color": "#ffb74d" },
+    { "server": "Node D", "start": 50, "end": 58, "state": "Hint Deleted", "color": "#e0e0e0" }
   ],
   "messages": [
-    {"from": "Coordinator", "to": "Node A", "sendTick": 18, "recvTick": 25, "payload": "Write()"},
-    {"from": "Coordinator", "to": "Node C", "sendTick": 18, "recvTick": 24, "payload": "Write()"},
-    {"from": "Node A", "to": "Coordinator", "sendTick": 26, "recvTick": 32, "payload": "ACK"},
-    {"from": "Node C", "to": "Coordinator", "sendTick": 25, "recvTick": 31, "payload": "ACK"},
-    {"from": "Coordinator", "to": "Node D", "sendTick": 34, "recvTick": 39, "payload": "Hint for B"},
-    {"from": "Node D", "to": "Coordinator", "sendTick": 40, "recvTick": 43, "payload": "Hint ACK"},
-    {"from": "Node D", "to": "Node B", "sendTick": 51, "recvTick": 60, "payload": "Handoff v1"},
-    {"from": "Node B", "to": "Node D", "sendTick": 62, "recvTick": 68, "payload": "Handoff ACK"}
+    {"from": "Coordinator", "to": "Node A", "sendTick": 10, "recvTick": 15, "payload": "Write()"},
+    {"from": "Coordinator", "to": "Node C", "sendTick": 10, "recvTick": 14, "payload": "Write()"},
+    {"from": "Node C", "to": "Coordinator", "sendTick": 15, "recvTick": 18, "payload": "ACK"},
+    {"from": "Node A", "to": "Coordinator", "sendTick": 16, "recvTick": 19, "payload": "ACK"},
+    {"from": "Coordinator", "to": "Node D", "sendTick": 22, "recvTick": 26, "payload": "Hint for B"},
+    {"from": "Node D", "to": "Coordinator", "sendTick": 27, "recvTick": 30, "payload": "Hint ACK"},
+    {"from": "Node D", "to": "Node B", "sendTick": 35, "recvTick": 42, "payload": "Handoff v1"},
+    {"from": "Node B", "to": "Node D", "sendTick": 44, "recvTick": 49, "payload": "Handoff ACK"}
   ]
 }
 ```
-*(Notice how the Coordinator successfully saves the state in Node D. The moment Node B reboots at tick 48, Node D routes the Hint directly to Node B, decisively healing the dataset and cleaning up its own temporary logs!)*
+*(Notice how the Coordinator successfully saves the state in Node D. The moment Node B reboots at tick 33, Node D routes the Hint directly to Node B, decisively healing the dataset and cleaning up its own temporary logs!)*
 
 ---
 
@@ -408,10 +408,13 @@ Because sequence numbers increment with each write, we can trace the state of a 
 
 To get two nodes back in sync, they exchange logical clocks, identify the gaps represented by the missing dots, and then replicate data records associated with those missing numbers.
 
----
-
 <!-- Custom Embedded Interactive Bitmap Version Vector Demo -->
-<iframe src="index.html?code=demos/bitmap-version-vectors" style="width: 100%; height: 750px; border: none; border-radius: 10px; margin: 25px 0; background: #252526; box-shadow: 0 4px 10px rgba(0,0,0,0.5);"></iframe>
+<div style="text-align: center; margin-top: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/bitmap-version-vectors/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Launch Bitmap Version Vectors Demo
+    </button>
+</div>
+
 
 ---
 
@@ -423,3 +426,141 @@ Because these vectors grow over time, the system needs a robust cleanup mechanis
 
 **Downsides:**
 A notable downside is that if a node is down for an extended time period, peer nodes cannot truncate the log. The data still has to be replicated to the lagging node once it comes back up, which forces the other nodes to retain full untruncated bitmaps in the meantime.
+
+---
+
+# Gossip Dissemination
+
+To involve other nodes and propagate updates with the **reach** of a broadcast and the **reliability** of anti-entropy, we use **gossip protocols**.
+
+* Based on how rumors spread in society or diseases propagate in populations.
+* Uses cooperative probabilistic propagation to disseminate information.
+* Highly robust and reliable in the presence of failures; messages naturally find alternate paths if links drop.
+* Ideal for systems with flexible membership or mesh networks requiring no explicit coordination.
+
+---
+
+# Gossip Dissemination Process
+
+1. A process holds a record that has to be spread and sends a message to random peers.
+2. A process that hasn't received the update yet obtains it and becomes a new holder ("infected").
+3. As soon as holder processes become certain the update is fully propagated, they move to a "removed" state and stop sending.
+
+<div style="text-align: center; margin-top: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/gossip-dissemination/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Launch Gossip Dissemination Demo
+    </button>
+</div>
+
+---
+
+# Gossip Mechanics & Fanout
+
+Processes periodically select $f$ peers at random (**fanout**) and exchange currently "hot" information. 
+
+* **Latency:** The amount of time the system requires to reach full convergence.
+* Because selection is probabilistic, messages overlap and deliver repeatedly while circulating.
+
+**Latency vs Fanout Tradeoff:**
+* $f \downarrow \implies \text{latency} \uparrow$ *(Slower spread, less traffic)*
+* $f \uparrow \implies \text{latency} \downarrow$ *(Faster spread, higher redundancy)*
+
+---
+
+# Convergence & Consistency
+
+When does a node stop gossiping? Interest loss is computed via:
+* **Probabilistically:** The probability of propagation stopping is computed for each process on every step.
+* **Using a threshold:** The number of received duplicates is counted, and propagation stops when this number gets too high.
+
+**Convergent Consistency:** 
+Gossip protocols guarantee that nodes have a higher probability of sharing the exact same view for events that occurred further in the past.
+
+---
+
+# Overlay Networks & Tradeoffs
+
+Gossip algorithms distribute messages in $\mathcal{O}(\log N)$ rounds but generate high redundancy. 
+
+Selecting nodes randomly improves robustness against partitions, but is **not message optimal**. Non-epidemic approaches offer lower redundancy:
+
+* **Temporary Fixed Topology:** Nodes sample peers and form an overlay network, choosing best contact points based on proximity/latency.
+* **Spanning Trees:** Messages distribute in a fixed number of steps via a tree graph, but can form interconnected "islands".
+
+*Hybrid approach:* Mix topologies and tree-broadcasts for stable states, falling back to gossip solely for failover and recovery!
+
+---
+
+# Hybrid Gossip (Plumtrees)
+
+**Push/lazy-push multicast trees** (Plumtrees) create a trade-off between epidemic and tree-based broadcast primitives. Plumtrees construct a spanning tree overlay to actively distribute messages with minimal overhead.
+
+* **Under normal conditions:** Nodes send full messages to a small subset of peers.
+    - Sends the **full message** (eager-push) to a subset of nodes on the spanning tree.
+    - **Lazily forwards** only the message ID to the rest of its peers.
+    - If a node receives a lazy identifier for a message it hasn't seen, it queries the peer for the full payload.
+* **In case of failures:** The protocol falls back to gossip through lazy-push steps, broadcasting the message and repairing the spanning tree overlay in real time.
+
+<!-- Custom Embedded Interactive Plumtree Demo -->
+<div style="text-align: center; margin-top: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/plum/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Launch Plumtree / Hybrid Gossip Demo
+    </button>
+</div>
+
+---
+
+# Latency & Self-Healing Trees
+
+Due to the nature of distributed systems, any node or link can fail at any time, making traditional tree traversal impossible when a segment becomes unreachable. 
+
+The lazy gossip network constantly runs in the background. It notifies peers about seen messages, enabling the system to organically construct and repair the broken tree branches!
+
+**Optimized Latency:** 
+One major advantage of the lazy-push mechanism is that in a network with constant load, nodes that are first to respond are prioritized and added to the broadcast tree. 
+* This organic tree construction naturally minimizes message latency across the entire cluster.
+
+---
+
+
+# Maintaining Partial Views
+
+Broadcasting messages to all known peers and maintaining a full view of the cluster can get expensive and impractical, especially if the **churn rate** (the number of joining and leaving nodes) is high. 
+
+To avoid this overhead, gossip protocols often use a **peer sampling service**. 
+
+* The service maintains a *partial view* of the cluster, periodically refreshed using gossip.
+* Partial views naturally overlap, as some degree of redundancy is desired in gossip protocols.
+* However, excessive redundancy means the system is performing extra, unnecessary work.
+
+---
+
+# Hybrid Partial View (HyParView)
+
+The **HyParView** protocol solves the overlay problem by maintaining two distinct views of the cluster:
+1. **Active View (Small):** Creates an overlay graph actively used for message dissemination.
+2. **Passive View (Larger):** Maintains a background list of nodes that can be used to seamlessly replace failed nodes from the active view.
+
+**Periodic Shuffles:**
+Nodes perform a *shuffle operation* periodically, exchanging their active and passive views. 
+* During the exchange, nodes add members received from their peers into their own passive views.
+* The list size is capped by cycling out the oldest values.
+
+---
+
+# Active View Maintenance & Recovery
+
+The active view is updated depending on node state changes and requests from peers. Here is a breakdown of how Node A handles a failure regarding Nodes B and C:
+
+| Node A | Node B | Node C |
+|---|---|---|
+| active: `B`, replacement: `C` | | |
+| **Request to B** | **FAILS** | |
+| **Request to C** | | **OK** |
+| Try add `C` to active | | If active not full $\rightarrow$ **Accept** |
+| | | If active full $\rightarrow$ **Decline** |
+| If active not empty $\rightarrow$ Accept Decline | | decline |
+| If active empty $\rightarrow$ Reject Decline | | Replace one active node for `A` |
+
+This robust handshake allows bootstrapping or recovering nodes to quickly become effective cluster members at the cost of cycling some connections.
+* **Convergence:** HyParView scores very highly on how quickly its peer sampling service converges to a stable overlay during severe topology reorganizations!

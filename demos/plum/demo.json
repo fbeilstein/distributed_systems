@@ -1,0 +1,40 @@
+{
+    "seed": 204,
+    "ticks": 110,
+    "nodes": 7,
+    "trackHeight": 65,
+    "stateBandOffset": 15,
+    "names": [
+        "Leaf L-L (0)",
+        "Branch L (1)",
+        "Leaf L-R (2)",
+        "Root (3)",
+        "Leaf R-L (4)",
+        "Branch R (5)",
+        "Leaf R-R (6)"
+    ],
+    "servers": [
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        }
+    ],
+    "events": []
+}

@@ -188,6 +188,12 @@ async function init() {
 
     // Initialize components
     const timeline = new Timeline(canvas, tooltipEl);
+    if (config && config.trackHeight) {
+        timeline.trackHeight = config.trackHeight;
+    }
+    if (config && config.stateBandOffset !== undefined) {
+        timeline.stateBandOffset = config.stateBandOffset;
+    }
     timeline.setEngine(engine);
 
     if (config && config.customRenderCode) {
