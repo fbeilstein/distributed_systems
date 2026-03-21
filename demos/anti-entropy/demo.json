@@ -1,25 +1,28 @@
 {
     "nodes": 4,
     "seed": 121,
-    "ticks": 100,
+    "ticks": 110,
+    "trackHeight": 55,
+    "stateBandOffset": 15,
     "names": [
         "Coordinator",
-        "Replica-1",
-        "Replica-2",
-        "Replica-3"
+        "Replica 1",
+        "Replica 2",
+        "Replica 3"
     ],
     "servers": [
         {
             "codeFile": "coordinator.js"
         },
         {
-            "codeFile": "coordinator.js"
+            "codeFile": "replica.js"
         },
         {
-            "codeFile": "coordinator.js"
+            "codeFile": "replica.js"
         },
         {
-            "codeFile": "coordinator.js"
+            "codeFile": "replica.js"
         }
-    ]
+    ],
+    "events": []
 }

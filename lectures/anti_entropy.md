@@ -317,6 +317,13 @@ However, if another client executes a read querying the isolated `Nodes B and C`
 ```
 *(Notice how the Coordinator successfully saves the state in Node D. The moment Node B reboots at tick 33, Node D routes the Hint directly to Node B, decisively healing the dataset and cleaning up its own temporary logs!)*
 
+<!-- Custom Embedded Interactive Anti-Entropy Demo -->
+<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Launch Anti-Entropy Sandbox
+    </button>
+</div>
+
 ---
 
 # The Need for Background Repair

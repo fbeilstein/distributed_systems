@@ -1,96 +1,148 @@
-// Anti-Entropy — Read Repair & Hinted Handoff
-// Coordinator receives writes and replicates to all replicas.
-// On read, coordinator queries replicas, detects stale values using version numbers,
-// and triggers read repair (sends the latest value to stale replicas).
-//
-// Demo:
-//   - Tick 10: Coordinator writes v1 to all replicas.
-//   - Replica-2 is down during write → gets a "hinted handoff" queued.
-//   - Tick 45: Replica-2 comes back → coordinator detects staleness on next read,
-//     triggers repair by re-sending the value.
-//   - Tick 65: Coordinator does a second write (v2) → full replication.
+const fsmDef = {
+    initial: 'IDLE',
+    states: {
+        'IDLE': { on: { 'WRITE': 'WRITING', 'READ': 'READING', 'HINTS': 'HAS_HINTS' }, color: '#cfd8dc' },
+        'WRITING': { on: { 'DONE': 'IDLE', 'HINTS': 'HAS_HINTS' }, color: '#ffb74d' },
+        'READING': { on: { 'DONE': 'IDLE', 'REPAIR': 'REPAIRING', 'HINTS': 'HAS_HINTS' }, color: '#4fc3f7' },
+        'HAS_HINTS': { on: { 'WRITE': 'WRITING', 'READ': 'READING', 'DONE': 'IDLE', 'FLUSHED': 'IDLE' }, color: '#ef5350' },
+        'REPAIRING': { on: { 'DONE': 'IDLE', 'HINTS': 'HAS_HINTS' }, color: '#ab47bc' }
+    }
+};
 
 function onUp() {
     let s = loadState();
-    if (Object.keys(s).length === 0) {
-        if (serverId === 0) {
-            // Coordinator
-            dumpState({
-                role: 'coordinator',
-                version: 0,
-                data: null,
-                pendingWrites: {},  // { replicaId: {data, version} } — hinted handoff queue
-                quorum: 0,
-                readReplies: {},
-                outbox: [],
-            });
-        } else {
-            // Replica
-            dumpState({
-                role: 'replica',
-                version: 0,
-                data: null,
-                outbox: [],
-            });
-        }
-    } else if (serverId !== 0) {
-        // Replica recovered — signal coordinator
-        // We'll queue this on the next timer tick or manual if outbox initialized
-        let outbox = s.outbox || [];
-        outbox.push({ to: 0, payload: { type: 'RECOVERY_NOTICE', replicaId: serverId } });
-        s.outbox = outbox;
+    if (!s.fsm) {
+        s.fsm = new Automat(fsmDef).serialize();
+        s.role = 'coordinator';
+        s.version = 0;
+        s.data = null;
+        s.pendingWrites = {};
+        s.waitingAcks = {};
+        s.ackTimer = 0;
+        s.outbox = [];
         dumpState(s);
     }
 }
 
 function processOutbox(s) {
     if (s.outbox && s.outbox.length > 0) {
-        const msg = s.outbox.shift();
-        sendMessage(msg.to, msg.payload);
+        while (s.outbox.length > 0) {
+            const msg = s.outbox.shift();
+            sendMessage(msg.to, msg.payload);
+        }
     }
+}
+
+function returnToIdleOrHint(s) {
+    let fsm = Automat.deserialize(s.fsm);
+    if (Object.keys(s.pendingWrites).length > 0) {
+        if (fsm.state !== 'HAS_HINTS') fsm.transition('HINTS');
+    } else {
+        fsm.transition('DONE');
+    }
+    s.fsm = fsm.serialize();
 }
 
 function onTimer(tick) {
     let s = loadState();
-    s.tick = tick;
+    if (!s.fsm) return;
 
-    if (serverId === 0) {
-        // Write 1 at tick 10
-        if (tick === 10) {
-            s.version++;
-            s.data = 'value_v' + s.version;
-            s.pendingWrites = {};
-            const replicas = allServerIds.filter(id => id !== 0);
-            for (const r of replicas) {
-                s.outbox.push({ to: r, payload: { type: 'WRITE', data: s.data, version: s.version } });
+    let fsm = Automat.deserialize(s.fsm);
+
+    // Write v1 at tick 10
+    if (tick === 10) {
+        s.version = 1;
+        s.data = 'value_v1';
+        fsm.transition('WRITE');
+        s.fsm = fsm.serialize();
+
+        s.waitingAcks = { 1: true, 2: true, 3: true };
+        s.ackTimer = tick + 15;
+
+        const replicas = allServerIds.filter(id => id !== 0);
+        for (const r of replicas) {
+            s.outbox.push({ to: r, payload: { type: 'WRITE', data: s.data, version: s.version } });
+        }
+    }
+
+    // Write 1 Timeout Check -> Queues Hints
+    if (tick === s.ackTimer && Object.keys(s.waitingAcks).length > 0) {
+        for (const rid in s.waitingAcks) {
+            s.pendingWrites[rid] = { data: s.data, version: s.version };
+        }
+        s.waitingAcks = {};
+        returnToIdleOrHint(s);
+    }
+
+    // Read Request at tick 40 -> Validates Versions
+    if (tick === 40) {
+        if (fsm.state !== 'READING') fsm.transition('READ');
+        s.fsm = fsm.serialize();
+        s.readReplies = {};
+        s.readTimer = tick + 10;
+
+        const replicas = allServerIds.filter(id => id !== 0);
+        for (const r of replicas) {
+            s.outbox.push({ to: r, payload: { type: 'READ_REQUEST' } });
+        }
+    }
+
+    if (tick === s.readTimer && fsm.state === 'READING') {
+        // Processing read results -> Evaluates disparities
+        let latestVersion = s.version;
+        let latestData = s.data;
+        let needsRepair = [];
+
+        for (const rid in s.readReplies) {
+            const reply = s.readReplies[rid];
+            if (reply.version < latestVersion) {
+                needsRepair.push(rid);
+            } else if (reply.version >= latestVersion) {
+                // If it successfully replied with the fresh payload natively...
+                // We can dynamically clear any pending Hints that were trapped due to dropped WRITE ACK packets!
+                if (s.pendingWrites[rid]) delete s.pendingWrites[rid];
             }
         }
 
-        // Read (anti-entropy check) at tick 40
-        if (tick === 40) {
-            s.readReplies = {};
-            const replicas = allServerIds.filter(id => id !== 0);
-            for (const r of replicas) {
-                s.outbox.push({ to: r, payload: { type: 'READ_REQUEST' } });
-            }
-        }
+        if (needsRepair.length > 0) {
+            fsm.transition('REPAIR');
+            s.fsm = fsm.serialize();
+            for (let r of needsRepair) {
+                s.outbox.push({ to: parseInt(r), payload: { type: 'REPAIR', data: latestData, version: latestVersion } });
 
-        // Write 2 at tick 65
-        if (tick === 65) {
-            s.version++;
-            s.data = 'value_v' + s.version;
-            s.pendingWrites = {};
-            const replicas = allServerIds.filter(id => id !== 0);
-            for (const r of replicas) {
-                s.outbox.push({ to: r, payload: { type: 'WRITE', data: s.data, version: s.version } });
+                // Discard the stored Hint since we dynamically read repaired it!
+                if (s.pendingWrites[r]) delete s.pendingWrites[r];
             }
+            // Return to idle in 5 ticks
+            s.repairDoneTimer = tick + 5;
+        } else {
+            returnToIdleOrHint(s);
         }
+    }
 
-        // Retry hinted handoff periodically
-        if (tick % 15 === 0 && Object.keys(s.pendingWrites).length > 0) {
-            for (const [rid, pending] of Object.entries(s.pendingWrites)) {
-                s.outbox.push({ to: parseInt(rid), payload: { type: 'WRITE', data: pending.data, version: pending.version, hinted: true } });
-            }
+    if (tick === s.repairDoneTimer && fsm.state === 'REPAIRING') {
+        returnToIdleOrHint(s);
+    }
+
+    // Write v2 at tick 65
+    if (tick === 65) {
+        s.version = 2;
+        s.data = 'value_v2';
+
+        // Dynamically reset back sequentially prior to next WRITING phase avoiding overlaps
+        if (fsm.state !== 'IDLE') {
+            returnToIdleOrHint(s);
+            fsm = Automat.deserialize(s.fsm);
+        }
+        fsm.transition('WRITE');
+        s.fsm = fsm.serialize();
+
+        s.waitingAcks = { 1: true, 2: true, 3: true };
+        s.ackTimer = tick + 15;
+
+        const replicas = allServerIds.filter(id => id !== 0);
+        for (const r of replicas) {
+            s.outbox.push({ to: r, payload: { type: 'WRITE', data: s.data, version: s.version } });
         }
     }
 
@@ -100,68 +152,37 @@ function onTimer(tick) {
 
 function onMessage(message) {
     let s = loadState();
+    if (!s.fsm) return;
+
+    let fsm = Automat.deserialize(s.fsm);
     const m = message.payload;
 
-    if (serverId === 0) {
-        // Coordinator message handling
-        if (m.type === 'WRITE_ACK') {
-            // Remove from hinted handoff queue if present
-            delete s.pendingWrites[message.from];
+    if (m.type === 'WRITE_ACK') {
+        delete s.waitingAcks[message.from];
+        delete s.pendingWrites[message.from];
+
+        if (Object.keys(s.waitingAcks).length === 0) {
+            returnToIdleOrHint(s);
         }
+    }
+    else if (m.type === 'READ_REPLY') {
+        if (!s.readReplies) s.readReplies = {};
+        s.readReplies[message.from] = { version: m.version, data: m.data };
+    }
+    else if (m.type === 'RECOVERY_NOTICE') {
+        // Evaluates pending Hinton Handoff requests!
+        if (s.pendingWrites && s.pendingWrites[m.replicaId]) {
+            const pending = s.pendingWrites[m.replicaId];
+            s.outbox.push({ to: m.replicaId, payload: { type: 'WRITE', data: pending.data, version: pending.version, hinted: true } });
+            delete s.pendingWrites[m.replicaId];
 
-        else if (m.type === 'WRITE_NACK') {
-            // Replica was down — queue hinted handoff
-            s.pendingWrites[message.from] = { data: m.data, version: m.version };
-        }
-
-        else if (m.type === 'READ_REPLY') {
-            s.readReplies[message.from] = { version: m.version, data: m.data };
-
-            // Check if all replied
-            const replicas = allServerIds.filter(id => id !== 0);
-            const replied = replicas.filter(id => s.readReplies[id] !== undefined);
-            if (replied.length === replicas.length) {
-                // Find the latest version
-                let latestVersion = s.version;
-                let latestData = s.data;
-                for (const [rid, reply] of Object.entries(s.readReplies)) {
-                    if (reply.version > latestVersion) {
-                        latestVersion = reply.version;
-                        latestData = reply.data;
-                    }
-                }
-                // Read repair: fix stale replicas
-                for (const [rid, reply] of Object.entries(s.readReplies)) {
-                    if (reply.version < latestVersion) {
-                        s.outbox.push({ to: parseInt(rid), payload: { type: 'REPAIR', data: latestData, version: latestVersion } });
-                    }
-                }
-            }
-        }
-
-        else if (m.type === 'RECOVERY_NOTICE') {
-            // Replica came back — deliver any pending hinted handoff
-            if (s.pendingWrites[m.replicaId]) {
-                const pending = s.pendingWrites[m.replicaId];
-                s.outbox.push({ to: m.replicaId, payload: { type: 'WRITE', data: pending.data, version: pending.version, hinted: true } });
+            if (Object.keys(s.pendingWrites).length === 0) {
+                if (fsm.state === 'HAS_HINTS') fsm.transition('FLUSHED');
+                s.fsm = fsm.serialize();
             }
         }
     }
 
-    else {
-        // Replica message handling
-        if (m.type === 'WRITE' || m.type === 'REPAIR') {
-            if (m.version > s.version) {
-                s.version = m.version;
-                s.data = m.data;
-            }
-            s.outbox.push({ to: 0, payload: { type: 'WRITE_ACK', version: s.version } });
-        }
-
-        else if (m.type === 'READ_REQUEST') {
-            s.outbox.push({ to: 0, payload: { type: 'READ_REPLY', version: s.version, data: s.data } });
-        }
-    }
-
+    processOutbox(s);
     dumpState(s);
 }
