@@ -1,7 +1,7 @@
 if (!engine.history || engine.history.length === 0) return;
 
 ctx.save();
-ctx.textAlign = 'center';
+ctx.textAlign = 'left';
 ctx.font = 'bold 9px monospace';
 ctx.fillStyle = '#222';
 
@@ -51,8 +51,8 @@ function drawVerticalVc(ctx, timeline, startTick, endTick, y, vc) {
     const spanPx = x2 - x1;
 
     if (spanPx > 10) {
-        // Perfectly align the column of numbers immediately in the horizontal center of the time block
-        const cx = x1 + spanPx / 2.0;
+        // Drop the array column right against the start-tick edge natively to emphasize transition geometry
+        const cx = x1 + 3;
 
         ctx.globalAlpha = 0.90;
 
