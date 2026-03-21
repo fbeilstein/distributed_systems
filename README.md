@@ -6,6 +6,8 @@
 
 * [Failure Detection](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/failure_detection.md)
 * [Leader Election](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/leader_election.md)
+* [Replication](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/replication.md)
+* [Consistency](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/consistency.md)
 
 ## Demos
 
@@ -27,9 +29,12 @@
 * [Invitation Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/invitation/demo.json)
 * [Ring Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/ring-election/demo.json)
 
-### Replication and Consistency
+### Replication
 
 * [Reusable Infrastructure for Linearizability](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/rifl-retry/demo.json)
+
+### Consistency
+
 * [Vector Clocks](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/vector-clocks/demo.json)
 
 ### Anti-Entropy and Dissemination
