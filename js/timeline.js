@@ -99,6 +99,16 @@ export class Timeline {
         this._drawTracks(ctx, servers);
         this._drawStateBands(ctx, servers);
         this._drawMessages(ctx, messages);
+
+        // Invoke custom render callback if injected via demo configuration
+        if (typeof this.customRender === 'function') {
+            try {
+                this.customRender(ctx, this, this.engine);
+            } catch (e) {
+                console.error("Custom render error:", e);
+            }
+        }
+
         if (!this.hideScrubber) {
             this._drawScrubber(ctx);
         }

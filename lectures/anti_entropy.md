@@ -411,7 +411,7 @@ To get two nodes back in sync, they exchange logical clocks, identify the gaps r
 ---
 
 <!-- Custom Embedded Interactive Bitmap Version Vector Demo -->
-<iframe src="demos/bitmap-version-vectors/index.html" style="width: 100%; height: 600px; border: none; border-radius: 10px; margin: 25px 0;"></iframe>
+<iframe src="index.html?code=demos/bitmap-version-vectors" style="width: 100%; height: 750px; border: none; border-radius: 10px; margin: 25px 0; background: #252526; box-shadow: 0 4px 10px rgba(0,0,0,0.5);"></iframe>
 
 ---
 

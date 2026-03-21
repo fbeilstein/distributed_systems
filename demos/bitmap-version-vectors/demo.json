@@ -1,0 +1,36 @@
+{
+    "seed": 42,
+    "ticks": 200,
+    "nodes": 5,
+    "names": [
+        "Client",
+        "A",
+        "B",
+        "C",
+        "Coord"
+    ],
+    "customRenderFile": "render.js",
+    "servers": [
+        {
+            "codeFile": "client.js",
+            "color": "#7e57c2"
+        },
+        {
+            "codeFile": "replica.js",
+            "color": "#4fc3f7"
+        },
+        {
+            "codeFile": "replica.js",
+            "color": "#81c784"
+        },
+        {
+            "codeFile": "replica.js",
+            "color": "#ffb74d"
+        },
+        {
+            "codeFile": "coordinator.js",
+            "color": "#8d6e63"
+        }
+    ],
+    "events": []
+}

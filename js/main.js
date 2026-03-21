@@ -39,6 +39,18 @@ async function loadConfig(url) {
         if (config.servers && Array.isArray(config.servers)) {
             const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
 
+            // Fetch custom render file if present
+            if (config.customRenderFile) {
+                const renderUrl = baseUrl + config.customRenderFile;
+                try {
+                    const renderResp = await fetch(renderUrl, { cache: 'no-store' });
+                    if (!renderResp.ok) throw new Error(`HTTP ${renderResp.status}`);
+                    config.customRenderCode = await renderResp.text();
+                } catch (e) {
+                    console.error(`Failed to load custom render code from ${renderUrl}:`, e);
+                }
+            }
+
             // Fetch all codeFiles in parallel
             const fetchPromises = config.servers.map(async (sc) => {
                 if (sc.codeFile) {
@@ -177,6 +189,15 @@ async function init() {
     // Initialize components
     const timeline = new Timeline(canvas, tooltipEl);
     timeline.setEngine(engine);
+
+    if (config && config.customRenderCode) {
+        try {
+            // Bind the custom canvas drawing function to the timeline instance
+            timeline.customRender = new Function('ctx', 'timeline', 'engine', config.customRenderCode);
+        } catch (e) {
+            console.error('Failed to parse customRenderCode:', e);
+        }
+    }
 
     const stateInspector = new StateInspector(inspectorEl, engine, (serverId) => {
         codeEditor.open(serverId);

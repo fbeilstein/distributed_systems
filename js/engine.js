@@ -93,8 +93,8 @@ export class Engine {
     /**
      * Message key for matching across recomputations.
      */
-    static messageKey(from, to, sendTick) {
-        return `${from}→${to}@${sendTick}`;
+    static messageKey(from, to, sendTick, type = "") {
+        return `${from}→${to}@${sendTick}:${type}`;
     }
 
     /**
@@ -126,7 +126,7 @@ export class Engine {
     setArrivalOverride(messageId, arrivalTick) {
         const msg = this.messages.find(m => m.id === messageId);
         if (!msg) return;
-        const key = Engine.messageKey(msg.from, msg.to, msg.sendTick);
+        const key = Engine.messageKey(msg.from, msg.to, msg.sendTick, msg.payload ? msg.payload.type : "");
         const existing = this.userOverrides.get(key) || {};
         existing.arrivalTick = arrivalTick;
         this.userOverrides.set(key, existing);
@@ -138,7 +138,7 @@ export class Engine {
     toggleMessageLost(messageId) {
         const msg = this.messages.find(m => m.id === messageId);
         if (!msg) return;
-        const key = Engine.messageKey(msg.from, msg.to, msg.sendTick);
+        const key = Engine.messageKey(msg.from, msg.to, msg.sendTick, msg.payload ? msg.payload.type : "");
         const existing = this.userOverrides.get(key) || {};
         existing.lost = !existing.lost;
         this.userOverrides.set(key, existing);
@@ -259,17 +259,21 @@ export class Engine {
         // Ignore messages to non-existent servers
         if (!this.servers.find(s => s.id === outgoing.to)) return;
 
-        const key = Engine.messageKey(outgoing.from, outgoing.to, outgoing.sendTick);
+        // Extract payload type to differentiate simultaneous packets
+        const typeStr = outgoing.payload ? outgoing.payload.type : "";
 
-        // Check if this message already exists (duplicate send in same tick)
+        // Check if this message already exists (duplicate send of the exact same type in the same tick)
         const existing = messages.find(
-            m => m.from === outgoing.from && m.to === outgoing.to && m.sendTick === outgoing.sendTick
+            m => m.from === outgoing.from && m.to === outgoing.to && m.sendTick === outgoing.sendTick && (m.payload ? m.payload.type : "") === typeStr
         );
-        if (existing) return; // Skip duplicates
+        // We do NOT want to skip if the types are DIFFERENT (e.g. REPLICATE vs SYNC_DATA_CHAIN)
+        if (existing) return;
 
         // Default latency: 1-5 ticks
         let arrivalTick = outgoing.sendTick + prng.nextInt(1, 5);
         let lost = false;
+
+        const key = Engine.messageKey(outgoing.from, outgoing.to, outgoing.sendTick, typeStr);
 
         // Apply user overrides
         const override = this.userOverrides.get(key);
