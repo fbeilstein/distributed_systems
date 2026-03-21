@@ -8,7 +8,7 @@ export const DEFAULT_PIXELS_PER_TICK = 16;
 export const TRACK_HEIGHT = 80;
 export const TRACK_PADDING_TOP = 50;
 export const LABEL_WIDTH = 60;
-const STATE_BAND_HEIGHT = 14;
+const INTERACTION_RADIUS = 8;
 const STATE_BAND_OFFSET = 22; // below the track line
 const ARROWHEAD_SIZE = 7;
 const HANDLE_RADIUS = 5;
@@ -257,17 +257,17 @@ export class Timeline {
                 // Band rectangle
                 ctx.fillStyle = color;
                 ctx.globalAlpha = 0.35;
-                ctx.fillRect(x1, y, x2 - x1, STATE_BAND_HEIGHT);
+                ctx.fillRect(x1, y, x2 - x1, this.stateBandHeight);
 
                 // Border
                 ctx.globalAlpha = 0.6;
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 1;
-                ctx.strokeRect(x1, y, x2 - x1, STATE_BAND_HEIGHT);
+                ctx.strokeRect(x1, y, x2 - x1, this.stateBandHeight);
 
                 // Label (only if run spans enough pixels)
                 const spanPx = x2 - x1;
-                if (spanPx > 24) {
+                if (spanPx > 24 && (!this.engine || !this.engine.hideStateLabels)) {
                     ctx.globalAlpha = 0.85;
                     ctx.fillStyle = '#333';
                     ctx.font = '9px monospace';
@@ -277,7 +277,7 @@ export class Timeline {
                     const clipped = label.length > maxChars
                         ? label.slice(0, Math.max(1, maxChars - 1)) + '…'
                         : label;
-                    ctx.fillText(clipped, x1 + 3, y + STATE_BAND_HEIGHT - 3);
+                    ctx.fillText(clipped, x1 + 3, y + this.stateBandHeight - 3);
                 }
             }
         }

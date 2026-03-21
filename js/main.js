@@ -180,6 +180,7 @@ async function init() {
     // Apply code and events from config
     if (config) {
         applyConfig(engine, config);
+        if (config.hideStateLabels) engine.hideStateLabels = true;
     }
 
     // Update toolbar display
@@ -193,6 +194,9 @@ async function init() {
     }
     if (config && config.stateBandOffset !== undefined) {
         timeline.stateBandOffset = config.stateBandOffset;
+    }
+    if (config && config.stateBandHeight !== undefined) {
+        timeline.stateBandHeight = config.stateBandHeight;
     }
     timeline.setEngine(engine);
 

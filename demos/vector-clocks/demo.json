@@ -2,6 +2,11 @@
     "nodes": 3,
     "seed": 14,
     "ticks": 80,
+    "trackHeight": 105,
+    "stateBandOffset": 15,
+    "stateBandHeight": 40,
+    "hideStateLabels": true,
+    "customRenderFile": "render.js",
     "names": [
         "Node-0",
         "Node-1",
