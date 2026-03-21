@@ -8,6 +8,7 @@
 * [Leader Election](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/leader_election.md)
 * [Replication](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/replication.md)
 * [Consistency](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/consistency.md)
+* [Anti-Entropy and Dissemination](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/anti_entropy.md)
 
 ## Demos
 
@@ -40,6 +41,9 @@
 ### Anti-Entropy and Dissemination
 
 * [Read Repair & Hinted Handoff](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy/demo.json)
+* [Bitmap Version Vectors](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/bitmap-version-vectors/demo.json)
+* [Gossip Dissemination](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/gossip-dissemination/demo.json)
+* [Plumtree](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/plum/demo.json)
 
 ### Distributed Transactions
 
