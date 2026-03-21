@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Merkle Tree Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            font-family: monospace;
+            overflow: hidden;
+            color: #fff;
+        }
+
+        .merkle-wrap {
+            position: relative;
+            height: 350px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .merkle-node {
+            padding: 12px 10px;
+            background: #333;
+            color: #4fc3f7;
+            border-radius: 6px;
+            min-width: 90px;
+            text-align: center;
+            font-weight: bold;
+            border: 2px solid #555;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        .merkle-node.changed {
+            background: #ef5350 !important;
+            color: #fff !important;
+            border-color: #ffb74d !important;
+            transform: translate(-50%, -50%) scale(1.15);
+            box-shadow: 0 0 15px #ef5350 !important;
+        }
+
+        .merkle-input {
+            width: 90px;
+            background: #252526;
+            color: #81c784;
+            border: 1px solid #555;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1rem;
+            font-family: monospace;
+            outline: none;
+            transition: border-color 0.2s;
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+
+        .merkle-input:focus {
+            border-color: #4fc3f7;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="merkle-wrap">
+        <svg style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;">
+            <line x1="50%" y1="60" x2="25%" y2="140" stroke="#555" stroke-width="3" />
+            <line x1="50%" y1="60" x2="75%" y2="140" stroke="#555" stroke-width="3" />
+            <line x1="25%" y1="140" x2="12.5%" y2="220" stroke="#555" stroke-width="3" />
+            <line x1="25%" y1="140" x2="37.5%" y2="220" stroke="#555" stroke-width="3" />
+            <line x1="75%" y1="140" x2="62.5%" y2="220" stroke="#555" stroke-width="3" />
+            <line x1="75%" y1="140" x2="87.5%" y2="220" stroke="#555" stroke-width="3" />
+            <line x1="12.5%" y1="220" x2="12.5%" y2="290" stroke="#444" stroke-width="2" stroke-dasharray="4" />
+            <line x1="37.5%" y1="220" x2="37.5%" y2="290" stroke="#444" stroke-width="2" stroke-dasharray="4" />
+            <line x1="62.5%" y1="220" x2="62.5%" y2="290" stroke="#444" stroke-width="2" stroke-dasharray="4" />
+            <line x1="87.5%" y1="220" x2="87.5%" y2="290" stroke="#444" stroke-width="2" stroke-dasharray="4" />
+        </svg>
+        <div
+            style="position:absolute; top:10px; width:100%; text-align:center; color:#888; font-style:italic; font-size: 1rem;">
+            Edit the data blocks below to watch cryptographic hashes ripple up the branches!</div>
+        <div id="m-root" class="merkle-node" style="left:50%; top:60px;">Root</div>
+        <div id="m-n1" class="merkle-node" style="left:25%; top:140px;">Hash 0-1</div>
+        <div id="m-n2" class="merkle-node" style="left:75%; top:140px;">Hash 2-3</div>
+        <div id="m-h1" class="merkle-node" style="color:#ffb74d; left:12.5%; top:220px; min-width:80px;">H0</div>
+        <div id="m-h2" class="merkle-node" style="color:#ffb74d; left:37.5%; top:220px; min-width:80px;">H1</div>
+        <div id="m-h3" class="merkle-node" style="color:#ffb74d; left:62.5%; top:220px; min-width:80px;">H2</div>
+        <div id="m-h4" class="merkle-node" style="color:#ffb74d; left:87.5%; top:220px; min-width:80px;">H3</div>
+        <input type="text" id="m-leaf-1" class="merkle-input" value="Data A" style="left:12.5%; top:290px;"
+            oninput="runMerkle()" onclick="this.select()">
+        <input type="text" id="m-leaf-2" class="merkle-input" value="Data B" style="left:37.5%; top:290px;"
+            oninput="runMerkle()" onclick="this.select()">
+        <input type="text" id="m-leaf-3" class="merkle-input" value="Data C" style="left:62.5%; top:290px;"
+            oninput="runMerkle()" onclick="this.select()">
+        <input type="text" id="m-leaf-4" class="merkle-input" value="Data D" style="left:87.5%; top:290px;"
+            oninput="runMerkle()" onclick="this.select()">
+    </div>
+
+    <script>
+        function mHash(str) {
+            let h = 0;
+            for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+            return Math.abs(h).toString(16).padStart(8, '0');
+        }
+
+        function runMerkle() {
+            const l1 = document.getElementById('m-leaf-1');
+            if (!l1) return;
+            const h1 = mHash(l1.value);
+            const h2 = mHash(document.getElementById('m-leaf-2').value);
+            const h3 = mHash(document.getElementById('m-leaf-3').value);
+            const h4 = mHash(document.getElementById('m-leaf-4').value);
+
+            const n1 = mHash(h1 + h2);
+            const n2 = mHash(h3 + h4);
+            const root = mHash(n1 + n2);
+
+            function setNode(id, val) {
+                const el = document.getElementById(id);
+                if (el.textContent !== val) {
+                    el.textContent = val;
+                    if (!el.hasAttribute('data-init')) {
+                        el.setAttribute('data-init', 'true');
+                    } else {
+                        el.classList.add('changed');
+                        setTimeout(() => el.classList.remove('changed'), 400);
+                    }
+                }
+            }
+
+            setNode('m-h1', h1); setNode('m-h2', h2); setNode('m-h3', h3); setNode('m-h4', h4);
+            setNode('m-n1', n1); setNode('m-n2', n2); setNode('m-root', root);
+        }
+        runMerkle();
+    </script>
+</body>
+
+</html>

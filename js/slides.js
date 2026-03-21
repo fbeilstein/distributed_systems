@@ -180,6 +180,10 @@ function updateCounter() {
  */
 function setupKeyboardNav() {
     document.addEventListener('keydown', (e) => {
+        // Prevent slides from switching if the user is typing inside an inline input field (like the Merkle demo)
+        const tag = e.target.tagName.toLowerCase();
+        if (tag === 'input' || tag === 'textarea') return;
+
         // Don't trigger if they are somehow typing in an input inside a demo (though iframe should catch it)
         if (document.getElementById('demo-overlay').classList.contains('hidden') === false) {
             // Only allow escape key to exit demo
