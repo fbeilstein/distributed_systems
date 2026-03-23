@@ -1,7 +1,7 @@
 {
     "nodes": 5,
-    "seed": 131,
-    "ticks": 100,
+    "seed": 42,
+    "ticks": 150,
     "names": [
         "Node-0",
         "Node-1",
@@ -23,7 +23,7 @@
             "codeFile": "node.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "observer.js"
         }
     ]
 }

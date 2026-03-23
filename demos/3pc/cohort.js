@@ -12,24 +12,29 @@ function onUp() {
             }
         });
         dumpState({ fsm: fsm.serialize(), data: null, pendingTx: null, pendingData: null, history: [] });
-    } else {
-        // We recovered from a crash! 
-        // If we are in the middle of a transaction, force an immediate status update on the next tick
-        if (s.pendingTx !== null) {
-            s.voteTick = -1000; // -1000 guarantees truthiness and instant mathematical timeout
-            dumpState(s);
-        }
     }
+    // Recovery is handled in onTimer() by detecting tick gaps — more reliable than dumpState here.
 }
 
 function onTimer(tick) {
     let s = loadState();
-    s.tick = tick;
-
     const fsm = Automat.deserialize(s.fsm);
 
-    // If blocked waiting for coordinator, poll peers instead of hard-forcing Split Brain
-    // Use 25 ticks to give the Coordinator's 18-tick abort timeout priority
+    // Crash-recovery detection: if the saved tick jumped (we were offline for ≥1 tick)
+    // and there is an in-flight transaction, rewind voteTick so the timeout fires immediately.
+    const prevTick = s.tick;
+    s.tick = tick;
+    if (
+        s.pendingTx !== null &&
+        prevTick !== undefined &&
+        tick > prevTick + 1 &&
+        (fsm.state === 'voted_commit' || fsm.state === 'voted_abort' || fsm.state === 'prepared')
+    ) {
+        s.voteTick = tick - 30; // guarantees tick - voteTick > 25 on this very tick
+    }
+
+    // If blocked waiting for coordinator, poll peers instead of hard-forcing Split Brain.
+    // Use 25 ticks to give the Coordinator's 18-tick abort timeout priority.
     if ((fsm.state === 'voted_commit' || fsm.state === 'voted_abort' || fsm.state === 'prepared') && s.voteTick !== undefined && (tick - s.voteTick > 25)) {
         s.voteTick = tick; // Reset to avoid spam
         const peers = allServerIds.filter(id => id !== serverId);

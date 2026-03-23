@@ -1,67 +1,51 @@
-// Consistent Hashing — Key Distribution on a Logical Ring
-// Nodes are placed on a 0–999 integer ring by hashing their IDs.
-// Each key is assigned to the first node clockwise from hash(key).
-// Demo:
-//   - Tick 0: 4 nodes are on the ring, each owns a range of keys.
-//   - Tick 30: A 5th virtual node "joins" (simulated via messages).
-//   - Tick 70: The virtual node "leaves" — keys shift back to neighbors.
+// Consistent Hashing — Ring Node (KV Store with Replication)
+// Ring size 64 · Replication factor 2 (primary + successor)
 //
-// Node 4 is a special "observer" that triggers join/leave events.
-// All other nodes maintain the full ring topology and track their owned key ranges.
+// Positions (Knuth hash % 64):
+//   Node-0 @ 0 · Node-3 @ 19 · Node-2 @ 34 · Node-1 @ 49
+//
+// Each node stores:
+//   • Keys it is the PRIMARY owner for  (from SET messages)
+//   • Keys it is the REPLICA  successor for (from REPLICATE messages)
+// On GET: serve if key is in local store; otherwise forward clockwise (1 hop).
+//
+// What to try:
+//   • Crash the primary node for a key → observer retries next node → served from replica
+//   • Crash both primary + replica → MISS
 
-const RING_SIZE = 1000;
+const RING_SIZE = 64;
 
-// Deterministic hash: node ID → ring position
 function nodeHash(id) {
-    let h = (id * 2654435761) >>> 0;  // Knuth multiplicative hash
-    return h % RING_SIZE;
+    return ((id * 2654435761) >>> 0) % RING_SIZE;
 }
 
-// Find which node owns the given ring position (first clockwise)
 function findOwner(ringNodes, pos) {
-    // ringNodes: [{id, pos}] sorted by pos
     if (ringNodes.length === 0) return -1;
     const sorted = [...ringNodes].sort((a, b) => a.pos - b.pos);
-    for (const n of sorted) {
-        if (n.pos >= pos) return n.id;
-    }
-    return sorted[0].id; // wrap around
+    for (const n of sorted) { if (n.pos >= pos) return n.id; }
+    return sorted[0].id;
 }
 
-// Compute key ranges owned by each node
-function computeRanges(ringNodes) {
-    if (ringNodes.length === 0) return {};
+function findSuccessor(ringNodes, id) {
+    if (ringNodes.length < 2) return -1;
     const sorted = [...ringNodes].sort((a, b) => a.pos - b.pos);
-    const ranges = {};
-    for (let i = 0; i < sorted.length; i++) {
-        const curr = sorted[i];
-        const prev = sorted[(i - 1 + sorted.length) % sorted.length];
-        const start = (prev.pos + 1) % RING_SIZE;
-        const end = curr.pos;
-        ranges[curr.id] = { start, end, pos: curr.pos };
-    }
-    return ranges;
+    const idx = sorted.findIndex(n => n.id === id);
+    if (idx === -1) return -1;
+    return sorted[(idx + 1) % sorted.length].id;
 }
 
-function onUp() {
-    let s = loadState();
-    if (Object.keys(s).length === 0) {
-        if (serverId === 4) {
-            // Observer/controller node
-            dumpState({ role: 'observer', ringNodes: [], event: 'idle', outbox: [] });
-        } else {
-            // Regular node: compute own ring position
-            const pos = nodeHash(serverId);
-            dumpState({
-                role: 'node',
-                pos,
-                ringNodes: [],  // will be populated via gossip
-                myRange: null,
-                keys: [],
-                outbox: [],
-            });
-        }
-    }
+function computeMyRange(ringNodes, id) {
+    if (ringNodes.length === 0) return null;
+    const sorted = [...ringNodes].sort((a, b) => a.pos - b.pos);
+    const idx = sorted.findIndex(n => n.id === id);
+    if (idx === -1) return null;
+    const curr = sorted[idx];
+    const prev = sorted[(idx - 1 + sorted.length) % sorted.length];
+    const start = (prev.pos + 1) % RING_SIZE;
+    const end = curr.pos;
+    const size = start <= end ? end - start + 1 : (RING_SIZE - start) + end + 1;
+    const label = start <= end ? `${start}–${end}` : `${start}–${RING_SIZE - 1}, 0–${end} (wrap)`;
+    return { start, end, size, label };
 }
 
 function processOutbox(s) {
@@ -71,82 +55,112 @@ function processOutbox(s) {
     }
 }
 
+// ── Lifecycle ─────────────────────────────────────────────────────────────────
+
+function onUp() {
+    let s = loadState();
+    if (Object.keys(s).length !== 0) return;
+
+    const fsm = new Automat({
+        initial: 'ready',
+        states: {
+            ready: { on: { STORE: 'storing', SERVE: 'serving', FWD: 'forwarding' }, color: '#81c784' },
+            storing: { on: { DONE: 'ready' }, color: '#4fc3f7' },
+            serving: { on: { DONE: 'ready' }, color: '#a5d6a7' },
+            forwarding: { on: { DONE: 'ready' }, color: '#ffb74d' },
+        }
+    });
+
+    dumpState({
+        fsm: fsm.serialize(),
+        pos: nodeHash(serverId),
+        ringNodes: [],
+        myRange: null, rangeLabel: 'none', rangeSize: 0,
+        store: {},        // key → value (primary-owned data)
+        replicas: {},     // key → value (replica copies from predecessor)
+        successor: null,
+        outbox: [],
+    });
+}
+
 function onTimer(tick) {
     let s = loadState();
     s.tick = tick;
+    const fsm = Automat.deserialize(s.fsm);
 
-    if (serverId === 4) {
-        // Observer triggers join/leave events
-        if (tick === 5) {
-            // Broadcast ring topology: nodes 0-3 form the initial ring
-            const initialRing = [0, 1, 2, 3].map(id => ({ id, pos: nodeHash(id) }));
-            s.ringNodes = initialRing;
-            s.event = 'initial_ring';
-            for (const id of [0, 1, 2, 3]) {
-                s.outbox.push({ to: id, payload: { type: 'RING_UPDATE', nodes: initialRing } });
-            }
-        }
-
-        if (tick === 30) {
-            // Simulate a new node (virtual node at position 500) joining
-            const newNode = { id: 99, pos: 500 };
-            const updatedRing = [...s.ringNodes.filter(n => n.id !== 99), newNode];
-            s.ringNodes = updatedRing;
-            s.event = 'node_99_joined';
-            for (const id of [0, 1, 2, 3]) {
-                s.outbox.push({ to: id, payload: { type: 'RING_UPDATE', nodes: updatedRing } });
-            }
-        }
-
-        if (tick === 70) {
-            // Simulate node 99 leaving
-            const updatedRing = s.ringNodes.filter(n => n.id !== 99);
-            s.ringNodes = updatedRing;
-            s.event = 'node_99_left';
-            for (const id of [0, 1, 2, 3]) {
-                s.outbox.push({ to: id, payload: { type: 'RING_UPDATE', nodes: updatedRing } });
-            }
-        }
-
-        processOutbox(s);
-        dumpState(s);
-        return;
-    }
-
-    // Regular node: announce self at tick 5
-    if (tick === 5) {
-        s.outbox.push({ to: 4, payload: { type: 'JOIN_ANNOUNCE', id: serverId, pos: s.pos } });
+    if (s.outbox.length === 0 &&
+        (fsm.state === 'storing' || fsm.state === 'serving' || fsm.state === 'forwarding')) {
+        if (fsm.can('DONE')) fsm.transition('DONE');
     }
 
     processOutbox(s);
+    s.fsm = fsm.serialize();
     dumpState(s);
 }
 
 function onMessage(message) {
     let s = loadState();
+    const fsm = Automat.deserialize(s.fsm);
     const m = message.payload;
 
     if (m.type === 'RING_UPDATE') {
         s.ringNodes = m.nodes;
+        s.myRange = computeMyRange(m.nodes, serverId);
+        s.rangeSize = s.myRange ? s.myRange.size : 0;
+        s.rangeLabel = s.myRange ? s.myRange.label : 'none';
+        s.successor = findSuccessor(m.nodes, serverId);
+    }
 
-        // Compute our owned key range
-        const ranges = computeRanges(m.nodes);
-        const myRange = ranges[serverId];
-        s.myRange = myRange || null;
-
-        // Determine which representative keys we "own"
-        if (myRange) {
-            const sampleKeys = [];
-            for (let k = 0; k <= 9; k++) {
-                const keyPos = (k * 97 + 13) % RING_SIZE; // 10 representative keys spread around ring
-                const owner = findOwner(m.nodes, keyPos);
-                if (owner === serverId) {
-                    sampleKeys.push({ key: 'k' + k, pos: keyPos });
-                }
-            }
-            s.keys = sampleKeys;
+    if (m.type === 'SET') {
+        // Store locally and replicate to successor
+        s.store[m.key] = m.value;
+        if (fsm.can('STORE')) fsm.transition('STORE');
+        // Acknowledge to sender
+        s.outbox.push({ to: m.from, payload: { type: 'STORED', key: m.key, storedBy: serverId } });
+        // Replicate to successor
+        if (s.successor !== null && s.successor !== -1) {
+            s.outbox.push({
+                to: s.successor,
+                payload: { type: 'REPLICATE', key: m.key, value: m.value }
+            });
         }
     }
 
+    if (m.type === 'REPLICATE') {
+        s.replicas[m.key] = m.value;
+    }
+
+    if (m.type === 'GET') {
+        const hop = m.hop || 0;
+        // Check own store first (primary), then replicas
+        const value = s.store[m.key] !== undefined ? s.store[m.key]
+            : s.replicas[m.key] !== undefined ? s.replicas[m.key]
+                : undefined;
+
+        if (value !== undefined) {
+            if (fsm.can('SERVE')) fsm.transition('SERVE');
+            s.outbox.push({
+                to: m.from,
+                payload: {
+                    type: 'HIT', key: m.key, value, servedBy: serverId,
+                    fromReplica: s.store[m.key] === undefined
+                }
+            });
+        } else if (hop < 3 && s.successor !== null && s.successor !== -1) {
+            // Forward clockwise — key might be on successor
+            if (fsm.can('FWD')) fsm.transition('FWD');
+            s.outbox.push({
+                to: s.successor,
+                payload: { type: 'GET', key: m.key, from: m.from, hop: hop + 1 }
+            });
+        } else {
+            s.outbox.push({
+                to: m.from,
+                payload: { type: 'MISS', key: m.key }
+            });
+        }
+    }
+
+    s.fsm = fsm.serialize();
     dumpState(s);
 }

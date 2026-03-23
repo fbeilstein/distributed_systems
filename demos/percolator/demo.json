@@ -1,0 +1,25 @@
+{
+    "nodes": 4,
+    "seed": 42,
+    "ticks": 200,
+    "names": [
+        "Coordinator",
+        "Oracle",
+        "Shard-A",
+        "Shard-B"
+    ],
+    "servers": [
+        {
+            "codeFile": "coordinator.js"
+        },
+        {
+            "codeFile": "oracle.js"
+        },
+        {
+            "codeFile": "shard.js"
+        },
+        {
+            "codeFile": "shard.js"
+        }
+    ]
+}
