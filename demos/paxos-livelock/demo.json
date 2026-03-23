@@ -1,0 +1,29 @@
+{
+    "nodes": 5,
+    "seed": 204,
+    "ticks": 200,
+    "names": [
+        "Proposer-0",
+        "Proposer-1",
+        "Acceptor-2",
+        "Acceptor-3",
+        "Acceptor-4"
+    ],
+    "servers": [
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        }
+    ]
+}

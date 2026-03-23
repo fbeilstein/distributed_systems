@@ -1,0 +1,29 @@
+{
+    "nodes": 5,
+    "seed": 732,
+    "ticks": 180,
+    "names": [
+        "Leader",
+        "Follower-1",
+        "Follower-2",
+        "Lagging-1",
+        "Lagging-2"
+    ],
+    "servers": [
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        }
+    ]
+}

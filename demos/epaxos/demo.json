@@ -1,0 +1,29 @@
+{
+    "nodes": 5,
+    "seed": 283,
+    "ticks": 100,
+    "names": [
+        "Leader-1 (set_x)",
+        "Leader-2 (inc_x)",
+        "Replica-1",
+        "Replica-2",
+        "Replica-3"
+    ],
+    "servers": [
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        },
+        {
+            "codeFile": "node.js"
+        }
+    ]
+}
