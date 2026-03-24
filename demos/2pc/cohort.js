@@ -6,8 +6,10 @@ function onUp() {
             initial: 'ready',
             states: {
                 ready: { on: { VOTE_COMMIT: 'voted_commit', VOTE_ABORT: 'voted_abort' }, color: '#b2dfdb' },
-                voted_commit: { on: { COMMIT: 'ready', ABORT: 'ready' }, color: '#4db6ac' },
+                voted_commit: { on: { COMMIT: 'ready', ABORT: 'ready', TIMEOUT: 'fallback' }, color: '#4db6ac' },
                 voted_abort: { on: { ABORT: 'ready' }, color: '#ef9a9a' },
+                fallback: { on: { COMMIT: 'ready', ABORT: 'ready', BLOCKED: 'permanently_blocked' }, color: '#ffb74d' },
+                permanently_blocked: { on: { COMMIT: 'ready', ABORT: 'ready' }, color: '#9e9e9e' }
             }
         });
         dumpState({ fsm: fsm.serialize(), data: null, pendingTx: null, history: [] });
@@ -20,15 +22,32 @@ function onTimer(tick) {
 
     // Check if we are blocked waiting for the coordinator's decision
     const fsm = Automat.deserialize(s.fsm);
-    if ((fsm.state === 'voted_commit' || fsm.state === 'voted_abort') && s.voteTick && (tick - s.voteTick > 15)) {
+    if ((fsm.state === 'voted_commit' || fsm.state === 'voted_abort' || fsm.state === 'fallback') && s.voteTick && (tick - s.voteTick > 15)) {
         s.voteTick = tick; // Reset to avoid spamming
+
+        if (fsm.state === 'voted_abort') {
+            // We voted NO, the transaction is doomed globally. Unilaterally abort!
+            if (fsm.can('ABORT')) fsm.transition('ABORT');
+            s.history.push('TX' + s.pendingTx + ':abort (unilateral)');
+            s.pendingTx = null;
+            s.fsm = fsm.serialize();
+            dumpState(s);
+            return;
+        }
+
         s.peerStates = {}; // Track responses from peers
+
+        if (fsm.state === 'voted_commit' && fsm.can('TIMEOUT')) {
+            fsm.transition('TIMEOUT');
+        }
+
         const peers = allServerIds.filter(id => id !== serverId && id !== 0); // Ask only cohorts (coordinator is 0)
         for (const peer of peers) {
             sendMessage(peer, { type: 'STATE_REQUEST', txId: s.pendingTx });
         }
     }
 
+    s.fsm = fsm.serialize();
     dumpState(s);
 }
 
@@ -55,7 +74,9 @@ function onMessage(message) {
     if (m.type === 'STATE_REQUEST') {
         if (s.history.includes('TX' + m.txId + ':commit')) {
             sendMessage(message.from, { type: 'STATE_COMMIT', txId: m.txId });
-        } else if (s.history.includes('TX' + m.txId + ':abort') || s.history.includes('TX' + m.txId + ':abort (cooperative)')) {
+        } else if (s.history.some(h => h.startsWith('TX' + m.txId + ':abort'))) {
+            sendMessage(message.from, { type: 'STATE_ABORT', txId: m.txId });
+        } else if (fsm.state === 'voted_abort') {
             sendMessage(message.from, { type: 'STATE_ABORT', txId: m.txId });
         } else if (fsm.state === 'ready') {
             // Safety: if we haven't voted yet, and someone is recovering, we MUST abort
@@ -63,7 +84,7 @@ function onMessage(message) {
             if (fsm.can('VOTE_ABORT')) fsm.transition('VOTE_ABORT');
             s.history.push('TX' + m.txId + ':abort');
             sendMessage(message.from, { type: 'STATE_ABORT', txId: m.txId });
-        } else if (fsm.state === 'voted_commit') {
+        } else if (fsm.state === 'voted_commit' || fsm.state === 'fallback' || fsm.state === 'permanently_blocked') {
             sendMessage(message.from, { type: 'STATE_VOTED_COMMIT', txId: m.txId });
         }
     }
@@ -78,7 +99,7 @@ function onMessage(message) {
             fsm.transition('ABORT');
             s.history.push('TX' + m.txId + ':abort');
             s.pendingTx = null;
-        } else if (m.type === 'STATE_VOTED_COMMIT' && fsm.state === 'voted_commit') {
+        } else if (m.type === 'STATE_VOTED_COMMIT' && (fsm.state === 'voted_commit' || fsm.state === 'fallback')) {
             if (!s.peerStates) s.peerStates = {};
             s.peerStates[message.from] = 'voted_commit';
 
@@ -92,8 +113,10 @@ function onMessage(message) {
             // until the coordinator comes back online.
             const otherCohorts = allServerIds.filter(id => id !== serverId && id !== 0);
             if (otherCohorts.every(id => s.peerStates[id] === 'voted_commit')) {
-                // Do nothing. Stay blocked.
-                // console.log("FATAL: All cohorts are blocked in voted_commit. Coordinator is dead. We must wait.");
+                // Visually loop back from 'fallback' to 'voted_commit' to show we are forever stuck polling
+                if (fsm.can('BLOCKED')) {
+                    fsm.transition('BLOCKED');
+                }
             }
         }
     }
