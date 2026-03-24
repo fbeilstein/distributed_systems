@@ -311,6 +311,19 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 
 ---
 
+# 2PC Recovery: Cooperative Termination
+
+If the **Coordinator crashes** while cohorts are waiting in the `voted` state, cohorts can run a fallback polling protocol:
+
+1. **Ask peers for their state**: A timed-out cohort broadcasts a state request to all other cohorts.
+2. **If anyone aborted**: The transaction is globally doomed (requires unanimity). The panicked cohort safely aborts.
+3. **If anyone committed**: The coordinator must have finalized the commit across the board before dying. The panicked cohort safely commits.
+4. **If everyone is blocked**: If all surviving cohorts respond `voted`, **they are permanently paralyzed.** They cannot guess the dead coordinator's final durable decision (which could be commit *or* abort). 
+
+> *In our 2PC demo, you can watch this visually! If the coordinator dies, cohorts flash orange **(`fallback` state)** as they frantically ask peers for help. If all cohorts are alive and blocked, they transition to grey **(`permanently_blocked`)** and silently wait forever. If a cohort is also dead, the survivors endlessly flash orange as they infinitely retry to communicate with the dead node!*
+
+---
+
 # Three-Phase Commit (3PC)
 
 3PC adds an **extra intermediate phase** between voting and committing, plus **timeouts on both sides** that allow cohorts to proceed autonomously if the coordinator fails.

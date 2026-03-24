@@ -2,6 +2,7 @@
     "nodes": 4,
     "seed": 42,
     "ticks": 115,
+    "customRenderFile": "render.js",
     "names": [
         "Coordinator",
         "DB-1",

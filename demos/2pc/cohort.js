@@ -81,7 +81,10 @@ function onMessage(message) {
         } else if (fsm.state === 'ready') {
             // Safety: if we haven't voted yet, and someone is recovering, we MUST abort
             // to ensure we don't later vote commit if the late coordinator wakes up.
-            if (fsm.can('VOTE_ABORT')) fsm.transition('VOTE_ABORT');
+            if (fsm.can('VOTE_ABORT')) {
+                fsm.transition('VOTE_ABORT');
+                fsm.transition('ABORT');
+            }
             s.history.push('TX' + m.txId + ':abort');
             sendMessage(message.from, { type: 'STATE_ABORT', txId: m.txId });
         } else if (fsm.state === 'voted_commit' || fsm.state === 'fallback' || fsm.state === 'permanently_blocked') {
