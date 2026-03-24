@@ -45,7 +45,15 @@ This means atomicity must hold not just for local operations, but for **operatio
 
 Transactions run concurrently. The **history** of a system is all the operations executed in order, representing a dependency graph of which transactions preceded others.
 
-A history is **serializable** if it is equivalent to some **sequential** history — one where transactions execute one after another, without overlap.
+A history is **serializable** if its final result is functionally equivalent to some **sequential** history — one where transactions execute one after another, without any overlap.
+
+---
+
+# Transaction Serializability
+
+<small>
+Tx 1 completes entirely before Tx 2 begins --- Trivially Serializable.
+</small>
 
 ```static-timeline
 {
@@ -53,18 +61,31 @@ A history is **serializable** if it is equivalent to some **sequential** history
   "ticks": 58,
   "trackHeight": 50,
   "stateBandOffset": 10,
-  "servers": ["T1: Transfer", "T2: Report"],
+  "servers": ["Tx 1", "Tx 2"],
   "states": [
-    { "server": "T1: Transfer", "start": 3, "end": 28, "state": "read A, write A, write B", "color": "#ffb74d" },
-    { "server": "T2: Report",   "start": 10, "end": 45, "state": "read A, read B, compute sum", "color": "#81c784" }
-  ],
-  "messages": [
-    {"from": "T1: Transfer", "to": "T2: Report", "sendTick": 15, "recvTick": 22, "label": "conflict?"}
+    { "server": "Tx 1", "start": 5,  "end": 26, "state": "read A, write A, write B", "color": "#ffb74d" },
+    { "server": "Tx 2", "start": 30, "end": 55, "state": "read A, read B, compute sum", "color": "#81c784" }
   ]
 }
 ```
 
-*(T1 and T2 overlap. A serializable history means the result must be equivalent to either T1→T2 or T2→T1 executing fully before the other.)*
+<small>
+When Tx 1 and Tx 2 overlap in time, their database operations interleave. This concurrent execution is <b>only serializable if</b> the final state of the database is exactly the same as the sequential execution Tx 1 → Tx 2 or Tx 2 → Tx 1.
+</small>
+
+```static-timeline
+{
+  "zoom": 0.85,
+  "ticks": 58,
+  "trackHeight": 50,
+  "stateBandOffset": 10,
+  "servers": ["Tx 1", "Tx 2"],
+  "states": [
+    { "server": "Tx 1", "start": 5,  "end": 38, "state": "read A, write A, write B", "color": "#ffb74d" },
+    { "server": "Tx 2", "start": 18, "end": 52, "state": "read A, read B (overlapping)", "color": "#ef5350" }
+  ]
+}
+```
 
 ---
 
@@ -122,45 +143,87 @@ The coordinator can be:
 
 **Phase 2 — Commit or Abort**
 - If **all** cohorts vote commit → coordinator sends `COMMIT` to all.
-- If **any** cohort votes abort → coordinator sends `ABORT` to all.
-
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 70,
+  "ticks": 58,
   "trackHeight": 50,
   "stateBandOffset": 10,
   "servers": ["Coordinator", "DB-1", "DB-2", "DB-3"],
   "states": [
-    { "server": "Coordinator", "start": 0,  "end": 9,  "state": "idle",        "color": "#8bc34a" },
-    { "server": "Coordinator", "start": 10, "end": 24, "state": "collecting",  "color": "#ff9800" },
-    { "server": "Coordinator", "start": 25, "end": 35, "state": "committing",  "color": "#2196f3" },
-    { "server": "Coordinator", "start": 36, "end": 70, "state": "idle",        "color": "#8bc34a" },
-    { "server": "DB-1",        "start": 0,  "end": 14, "state": "ready",       "color": "#b2dfdb" },
-    { "server": "DB-1",        "start": 15, "end": 28, "state": "voted_commit","color": "#4db6ac" },
-    { "server": "DB-1",        "start": 29, "end": 70, "state": "ready",       "color": "#b2dfdb" },
-    { "server": "DB-2",        "start": 0,  "end": 17, "state": "ready",       "color": "#b2dfdb" },
-    { "server": "DB-2",        "start": 18, "end": 30, "state": "voted_commit","color": "#4db6ac" },
-    { "server": "DB-2",        "start": 31, "end": 70, "state": "ready",       "color": "#b2dfdb" },
-    { "server": "DB-3",        "start": 0,  "end": 19, "state": "ready",       "color": "#b2dfdb" },
-    { "server": "DB-3",        "start": 20, "end": 33, "state": "voted_commit","color": "#4db6ac" },
-    { "server": "DB-3",        "start": 34, "end": 70, "state": "ready",       "color": "#b2dfdb" }
+    { "server": "Coordinator", "start": 0,  "end": 8,  "state": "idle",        "color": "#8bc34a" },
+    { "server": "Coordinator", "start": 9, "end": 20, "state": "collecting",  "color": "#ff9800" },
+    { "server": "Coordinator", "start": 21, "end": 35, "state": "committing",  "color": "#2196f3" },
+    { "server": "Coordinator", "start": 36, "end": 57, "state": "idle",        "color": "#8bc34a" },
+    { "server": "DB-1",        "start": 0,  "end": 12, "state": "ready",       "color": "#b2dfdb" },
+    { "server": "DB-1",        "start": 13, "end": 22, "state": "voted_commit","color": "#4db6ac" },
+    { "server": "DB-1",        "start": 23, "end": 57, "state": "ready",       "color": "#b2dfdb" },
+    { "server": "DB-2",        "start": 0,  "end": 14, "state": "ready",       "color": "#b2dfdb" },
+    { "server": "DB-2",        "start": 15, "end": 24, "state": "voted_commit","color": "#4db6ac" },
+    { "server": "DB-2",        "start": 25, "end": 57, "state": "ready",       "color": "#b2dfdb" },
+    { "server": "DB-3",        "start": 0,  "end": 16, "state": "ready",       "color": "#b2dfdb" },
+    { "server": "DB-3",        "start": 17, "end": 26, "state": "voted_commit","color": "#4db6ac" },
+    { "server": "DB-3",        "start": 27, "end": 57, "state": "ready",       "color": "#b2dfdb" }
   ],
   "messages": [
-    {"from": "Coordinator", "to": "DB-1", "sendTick": 10, "recvTick": 15},
-    {"from": "Coordinator", "to": "DB-2", "sendTick": 11, "recvTick": 17},
-    {"from": "Coordinator", "to": "DB-3", "sendTick": 12, "recvTick": 19},
-    {"from": "DB-1", "to": "Coordinator", "sendTick": 16, "recvTick": 21},
-    {"from": "DB-2", "to": "Coordinator", "sendTick": 18, "recvTick": 23},
-    {"from": "DB-3", "to": "Coordinator", "sendTick": 20, "recvTick": 24},
-    {"from": "Coordinator", "to": "DB-1", "sendTick": 25, "recvTick": 29},
-    {"from": "Coordinator", "to": "DB-2", "sendTick": 26, "recvTick": 31},
-    {"from": "Coordinator", "to": "DB-3", "sendTick": 27, "recvTick": 34}
+    {"from": "Coordinator", "to": "DB-1", "sendTick": 9, "recvTick": 13},
+    {"from": "Coordinator", "to": "DB-2", "sendTick": 10, "recvTick": 15},
+    {"from": "Coordinator", "to": "DB-3", "sendTick": 11, "recvTick": 17},
+    {"from": "DB-1", "to": "Coordinator", "sendTick": 14, "recvTick": 18},
+    {"from": "DB-2", "to": "Coordinator", "sendTick": 16, "recvTick": 19},
+    {"from": "DB-3", "to": "Coordinator", "sendTick": 18, "recvTick": 20},
+    {"from": "Coordinator", "to": "DB-1", "sendTick": 21, "recvTick": 23},
+    {"from": "Coordinator", "to": "DB-2", "sendTick": 22, "recvTick": 25},
+    {"from": "Coordinator", "to": "DB-3", "sendTick": 23, "recvTick": 27}
   ]
 }
 ```
 
-During each step, coordinator and cohorts **write results to durable storage** to enable crash recovery.
+---
+
+# 2PC Execution
+
+
+**Phase 2 — Commit or Abort**
+
+- If **any** cohort votes abort → coordinator sends `ABORT` to all.
+```static-timeline
+{
+  "zoom": 0.85,
+  "ticks": 58,
+  "trackHeight": 50,
+  "stateBandOffset": 10,
+  "servers": ["Coordinator", "DB-1", "DB-2", "DB-3"],
+  "states": [
+    { "server": "Coordinator", "start": 0,  "end": 8,  "state": "idle",        "color": "#8bc34a" },
+    { "server": "Coordinator", "start": 9, "end": 20, "state": "collecting",  "color": "#ff9800" },
+    { "server": "Coordinator", "start": 21, "end": 35, "state": "aborting",    "color": "#f44336" },
+    { "server": "Coordinator", "start": 36, "end": 58, "state": "idle",        "color": "#8bc34a" },
+    { "server": "DB-1",        "start": 0,  "end": 12, "state": "ready",       "color": "#b2dfdb" },
+    { "server": "DB-1",        "start": 13, "end": 22, "state": "voted_commit","color": "#4db6ac" },
+    { "server": "DB-1",        "start": 23, "end": 58, "state": "aborted",     "color": "#e0e0e0" },
+    { "server": "DB-2",        "start": 0,  "end": 14, "state": "ready",       "color": "#b2dfdb" },
+    { "server": "DB-2",        "start": 15, "end": 24, "state": "voted_abort", "color": "#ef5350" },
+    { "server": "DB-2",        "start": 25, "end": 58, "state": "aborted",     "color": "#e0e0e0" },
+    { "server": "DB-3",        "start": 0,  "end": 16, "state": "ready",       "color": "#b2dfdb" },
+    { "server": "DB-3",        "start": 17, "end": 26, "state": "voted_commit","color": "#4db6ac" },
+    { "server": "DB-3",        "start": 27, "end": 58, "state": "aborted",     "color": "#e0e0e0" }
+  ],
+  "messages": [
+    {"from": "Coordinator", "to": "DB-1", "sendTick": 9, "recvTick": 13, "label": "PROPOSE"},
+    {"from": "Coordinator", "to": "DB-2", "sendTick": 10, "recvTick": 15, "label": "PROPOSE"},
+    {"from": "Coordinator", "to": "DB-3", "sendTick": 11, "recvTick": 17, "label": "PROPOSE"},
+    {"from": "DB-1", "to": "Coordinator", "sendTick": 14, "recvTick": 18, "label": "VOTE_COMMIT"},
+    {"from": "DB-2", "to": "Coordinator", "sendTick": 16, "recvTick": 19, "label": "VOTE_ABORT"},
+    {"from": "DB-3", "to": "Coordinator", "sendTick": 18, "recvTick": 20, "label": "VOTE_COMMIT"},
+    {"from": "Coordinator", "to": "DB-1", "sendTick": 21, "recvTick": 23, "label": "ABORT"},
+    {"from": "Coordinator", "to": "DB-2", "sendTick": 22, "recvTick": 25, "label": "ABORT"},
+    {"from": "Coordinator", "to": "DB-3", "sendTick": 23, "recvTick": 27, "label": "ABORT"}
+  ]
+}
+```
+
+- During each step, coordinator and cohorts **write results to durable storage** to enable crash recovery.
 
 ---
 
@@ -170,7 +233,7 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 - **TX 1** (odd txId): all three cohorts vote commit → full commit.
 - **TX 2** (even txId): DB-2 is configured to reject even-numbered transactions → abort path fires, and all cohorts roll back.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
+<div style="background: #222; padding: 10px; border-radius: 8px; margin-top: 20px;">
     <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
     <p style="font-size: 1.1rem;">Observe the Coordinator FSM cycling <b>idle → prepare → collecting → committing/aborting → idle</b>. When DB-2 sends VOTE_ABORT, the coordinator immediately broadcasts ABORT to all cohorts — even those that voted commit. That is the core atomicity guarantee of 2PC.</p>
 </div>
@@ -193,7 +256,7 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 70,
+  "ticks": 58,
   "trackHeight": 50,
   "stateBandOffset": 10,
   "servers": ["Coordinator", "DB-1", "DB-2 (crash)"],
@@ -201,14 +264,14 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
     { "server": "Coordinator",  "start": 0,  "end": 9,  "state": "idle",       "color": "#8bc34a" },
     { "server": "Coordinator",  "start": 10, "end": 28, "state": "collecting", "color": "#ff9800" },
     { "server": "Coordinator",  "start": 29, "end": 40, "state": "aborting",   "color": "#f44336" },
-    { "server": "Coordinator",  "start": 41, "end": 70, "state": "idle",       "color": "#8bc34a" },
+    { "server": "Coordinator",  "start": 41, "end": 57, "state": "idle",       "color": "#8bc34a" },
     { "server": "DB-1",         "start": 0,  "end": 14, "state": "ready",      "color": "#b2dfdb" },
     { "server": "DB-1",         "start": 15, "end": 32, "state": "voted",      "color": "#4db6ac" },
-    { "server": "DB-1",         "start": 33, "end": 70, "state": "aborted",    "color": "#b2dfdb" },
+    { "server": "DB-1",         "start": 33, "end": 57, "state": "aborted",    "color": "#b2dfdb" },
     { "server": "DB-2 (crash)", "start": 0,  "end": 19, "state": "ready",      "color": "#b2dfdb" },
     { "server": "DB-2 (crash)", "start": 20, "end": 34, "state": "CRASHED",    "color": "#f44336" },
     { "server": "DB-2 (crash)", "start": 35, "end": 44, "state": "recovering", "color": "#fff176" },
-    { "server": "DB-2 (crash)", "start": 45, "end": 70, "state": "aborted",    "color": "#b2dfdb" }
+    { "server": "DB-2 (crash)", "start": 45, "end": 57, "state": "aborted",    "color": "#b2dfdb" }
   ],
   "messages": [
     {"from": "Coordinator",  "to": "DB-1",         "sendTick": 10, "recvTick": 15},
@@ -221,7 +284,7 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 }
 ```
 
-> This requirement hurts **availability**: Spanner and CockroachDB mitigate this by running 2PC over **Paxos groups** rather than individual nodes, so the protocol survives individual node failures within a group.
+> This strict requirement—that **all participating nodes must be alive to commit a transaction**—hurts **availability**: Spanner and CockroachDB mitigate this by running 2PC over **Paxos groups** rather than individual nodes, so the protocol survives individual node failures within a group.
 
 ---
 
@@ -234,7 +297,9 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 - Cohorts are stuck waiting indefinitely.
 - Resolution: wait for coordinator recovery **or** elect a new coordinator and re-run the vote from scratch.
 
-### 2PC Pros & Cons
+---
+
+# 2PC Pros & Cons
 
 | ✅ Advantages | ❌ Disadvantages |
 |---|---|
@@ -242,7 +307,7 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 | Low message complexity (2 round-trips) | Cohorts block if coordinator crashes while collecting |
 | Widely deployed (MySQL, PostgreSQL, MongoDB) | Cannot recover if **both** coordinator AND a cohort crash during commit phase |
 
-> *If both crash simultaneously, the fate of the transaction becomes permanently unknown.*
+> *If the coordinator crashes, cohorts run a **cooperative termination protocol**. If any cohort already received a decision, the others can safely adopt it. However, if **every** cohort is stuck in the 'voted' state—or if a cohort has also crashed, masking its state—the survivors are completely paralyzed. They cannot rule out the possibility that the dead coordinator durably committed before failing, so they must block indefinitely.*
 
 ---
 
@@ -258,7 +323,9 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 | **Prepare** | Coordinator | If all commit: sends PREPARE. If any abort: sends ABORT immediately. |
 | **Commit** | Coordinator | Sends COMMIT after all cohorts ACK the PREPARE |
 
-### Timeout Rules
+---
+
+# 3PC Timeout Rules
 
 | Phase of Failure | Action |
 |---|---|
@@ -318,22 +385,22 @@ Calvin uses a **deterministic transaction order**: all replicas receive the same
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 72,
+  "ticks": 58,
   "trackHeight": 48,
   "stateBandOffset": 10,
   "servers": ["Sequencer", "Scheduler", "Worker", "Storage"],
   "states": [
-    { "server": "Sequencer",  "start": 2,  "end": 18, "state": "epoch: batch TXs", "color": "#ce93d8" },
-    { "server": "Sequencer",  "start": 19, "end": 32, "state": "replicate batch",   "color": "#ab47bc" },
-    { "server": "Scheduler",  "start": 25, "end": 42, "state": "deterministic plan","color": "#4fc3f7" },
-    { "server": "Worker",     "start": 38, "end": 58, "state": "collect read sets", "color": "#ffb74d" },
-    { "server": "Worker",     "start": 59, "end": 70, "state": "execute & persist", "color": "#81c784" },
-    { "server": "Storage",    "start": 62, "end": 72, "state": "committed",         "color": "#a5d6a7" }
+    { "server": "Sequencer",  "start": 2,  "end": 14, "state": "epoch: batch TXs", "color": "#ce93d8" },
+    { "server": "Sequencer",  "start": 15, "end": 28, "state": "replicate batch",   "color": "#ab47bc" },
+    { "server": "Scheduler",  "start": 22, "end": 35, "state": "deterministic plan","color": "#4fc3f7" },
+    { "server": "Worker",     "start": 33, "end": 48, "state": "collect read sets", "color": "#ffb74d" },
+    { "server": "Worker",     "start": 49, "end": 57, "state": "execute & persist", "color": "#81c784" },
+    { "server": "Storage",    "start": 52, "end": 57, "state": "committed",         "color": "#a5d6a7" }
   ],
   "messages": [
-    {"from": "Sequencer",  "to": "Scheduler", "sendTick": 20, "recvTick": 25},
-    {"from": "Scheduler",  "to": "Worker",    "sendTick": 39, "recvTick": 43},
-    {"from": "Worker",     "to": "Storage",   "sendTick": 60, "recvTick": 62}
+    {"from": "Sequencer",  "to": "Scheduler", "sendTick": 16, "recvTick": 22},
+    {"from": "Scheduler",  "to": "Worker",    "sendTick": 30, "recvTick": 33},
+    {"from": "Worker",     "to": "Storage",   "sendTick": 50, "recvTick": 52}
   ]
 }
 ```
@@ -469,22 +536,22 @@ Under SI, all reads within a transaction see a **consistent snapshot** taken at 
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 64,
+  "ticks": 58,
   "trackHeight": 48,
   "stateBandOffset": 10,
   "servers": ["T1: Auditor", "T2: Transfer", "A1 (50$)", "A2 (50$)"],
   "states": [
-    { "server": "A1 (50$)",     "start": 0,  "end": 35, "state": "50$",            "color": "#e0e0e0" },
-    { "server": "A1 (50$)",     "start": 36, "end": 64, "state": "30$",            "color": "#ffb74d" },
-    { "server": "A2 (50$)",     "start": 0,  "end": 44, "state": "50$",            "color": "#e0e0e0" },
-    { "server": "A2 (50$)",     "start": 45, "end": 64, "state": "70$",            "color": "#ffb74d" },
+    { "server": "A1 (50$)",     "start": 0,  "end": 30, "state": "50$",            "color": "#e0e0e0" },
+    { "server": "A1 (50$)",     "start": 31, "end": 57, "state": "30$",            "color": "#ffb74d" },
+    { "server": "A2 (50$)",     "start": 0,  "end": 40, "state": "50$",            "color": "#e0e0e0" },
+    { "server": "A2 (50$)",     "start": 41, "end": 57, "state": "70$",            "color": "#ffb74d" },
     { "server": "T1: Auditor",  "start": 3,  "end": 20, "state": "read A1=50$",    "color": "#81c784" },
-    { "server": "T1: Auditor",  "start": 46, "end": 60, "state": "read A2=70$ ❌", "color": "#ef5350" },
-    { "server": "T2: Transfer", "start": 25, "end": 46, "state": "move 20$: A1→A2","color": "#4fc3f7" }
+    { "server": "T1: Auditor",  "start": 42, "end": 55, "state": "read A2=70$ ❌", "color": "#ef5350" },
+    { "server": "T2: Transfer", "start": 22, "end": 42, "state": "move 20$: A1→A2","color": "#4fc3f7" }
   ],
   "messages": [
-    {"from": "T2: Transfer", "to": "A1 (50$)", "sendTick": 28, "recvTick": 36},
-    {"from": "T2: Transfer", "to": "A2 (50$)", "sendTick": 38, "recvTick": 45}
+    {"from": "T2: Transfer", "to": "A1 (50$)", "sendTick": 25, "recvTick": 31},
+    {"from": "T2: Transfer", "to": "A2 (50$)", "sendTick": 33, "recvTick": 41}
   ]
 }
 ```
@@ -500,19 +567,19 @@ SI does **not** prevent **write skew**: a situation where each transaction indiv
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 64,
+  "ticks": 58,
   "trackHeight": 48,
   "stateBandOffset": 10,
   "servers": ["T1: Withdraw A1", "T2: Withdraw A2", "A1 (100$)", "A2 (150$)"],
   "states": [
-    { "server": "A1 (100$)",       "start": 0,  "end": 44, "state": "100$",             "color": "#e0e0e0" },
-    { "server": "A1 (100$)",       "start": 45, "end": 64, "state": "-100$",            "color": "#ef5350" },
-    { "server": "A2 (150$)",       "start": 0,  "end": 50, "state": "150$",             "color": "#e0e0e0" },
-    { "server": "A2 (150$)",       "start": 51, "end": 64, "state": "-50$",             "color": "#ef5350" },
-    { "server": "T1: Withdraw A1", "start": 5,  "end": 20, "state": "read sum=250 ✅",  "color": "#81c784" },
-    { "server": "T1: Withdraw A1", "start": 24, "end": 45, "state": "write A1=-100$",   "color": "#ffb74d" },
-    { "server": "T2: Withdraw A2", "start": 8,  "end": 22, "state": "read sum=250 ✅",  "color": "#81c784" },
-    { "server": "T2: Withdraw A2", "start": 30, "end": 51, "state": "write A2=-50$",    "color": "#ffb74d" }
+    { "server": "A1 (100$)",       "start": 0,  "end": 39, "state": "100$",             "color": "#e0e0e0" },
+    { "server": "A1 (100$)",       "start": 40, "end": 57, "state": "-100$",            "color": "#ef5350" },
+    { "server": "A2 (150$)",       "start": 0,  "end": 45, "state": "150$",             "color": "#e0e0e0" },
+    { "server": "A2 (150$)",       "start": 46, "end": 57, "state": "-50$",             "color": "#ef5350" },
+    { "server": "T1: Withdraw A1", "start": 5,  "end": 18, "state": "read sum=250 ✅",  "color": "#81c784" },
+    { "server": "T1: Withdraw A1", "start": 22, "end": 40, "state": "write A1=-100$",   "color": "#ffb74d" },
+    { "server": "T2: Withdraw A2", "start": 8,  "end": 20, "state": "read sum=250 ✅",  "color": "#81c784" },
+    { "server": "T2: Withdraw A2", "start": 27, "end": 46, "state": "write A2=-50$",    "color": "#ffb74d" }
   ]
 }
 ```

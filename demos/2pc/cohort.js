@@ -22,9 +22,10 @@ function onTimer(tick) {
     const fsm = Automat.deserialize(s.fsm);
     if ((fsm.state === 'voted_commit' || fsm.state === 'voted_abort') && s.voteTick && (tick - s.voteTick > 15)) {
         s.voteTick = tick; // Reset to avoid spamming
-        const peers = allServerIds.filter(id => id !== serverId); // Ask everyone, including coordinator
+        s.peerStates = {}; // Track responses from peers
+        const peers = allServerIds.filter(id => id !== serverId && id !== 0); // Ask only cohorts (coordinator is 0)
         for (const peer of peers) {
-            sendMessage(peer, { type: 'DECISION_REQUEST', txId: s.pendingTx });
+            sendMessage(peer, { type: 'STATE_REQUEST', txId: s.pendingTx });
         }
     }
 
@@ -51,11 +52,49 @@ function onMessage(message) {
         }
     }
 
-    if (m.type === 'DECISION_REQUEST') {
+    if (m.type === 'STATE_REQUEST') {
         if (s.history.includes('TX' + m.txId + ':commit')) {
-            sendMessage(message.from, { type: 'COMMIT', txId: m.txId, peer: true });
-        } else if (s.history.includes('TX' + m.txId + ':abort')) {
-            sendMessage(message.from, { type: 'ABORT', txId: m.txId, peer: true });
+            sendMessage(message.from, { type: 'STATE_COMMIT', txId: m.txId });
+        } else if (s.history.includes('TX' + m.txId + ':abort') || s.history.includes('TX' + m.txId + ':abort (cooperative)')) {
+            sendMessage(message.from, { type: 'STATE_ABORT', txId: m.txId });
+        } else if (fsm.state === 'ready') {
+            // Safety: if we haven't voted yet, and someone is recovering, we MUST abort
+            // to ensure we don't later vote commit if the late coordinator wakes up.
+            if (fsm.can('VOTE_ABORT')) fsm.transition('VOTE_ABORT');
+            s.history.push('TX' + m.txId + ':abort');
+            sendMessage(message.from, { type: 'STATE_ABORT', txId: m.txId });
+        } else if (fsm.state === 'voted_commit') {
+            sendMessage(message.from, { type: 'STATE_VOTED_COMMIT', txId: m.txId });
+        }
+    }
+
+    if ((m.type === 'STATE_COMMIT' || m.type === 'STATE_ABORT' || m.type === 'STATE_VOTED_COMMIT') && s.pendingTx === m.txId) {
+        if (m.type === 'STATE_COMMIT' && fsm.can('COMMIT')) {
+            fsm.transition('COMMIT');
+            s.data = s.pendingData;
+            s.history.push('TX' + m.txId + ':commit');
+            s.pendingTx = null;
+        } else if (m.type === 'STATE_ABORT' && fsm.can('ABORT')) {
+            fsm.transition('ABORT');
+            s.history.push('TX' + m.txId + ':abort');
+            s.pendingTx = null;
+        } else if (m.type === 'STATE_VOTED_COMMIT' && fsm.state === 'voted_commit') {
+            if (!s.peerStates) s.peerStates = {};
+            s.peerStates[message.from] = 'voted_commit';
+
+            // DANGER! We cannot safely abort even if EVERY cohort is in 'voted_commit'.
+            // Why? The dead coordinator might have already written 'COMMIT' to its local durable
+            // log, told the user the transaction succeeded, and THEN crashed before sending the 
+            // COMMIT messages to us. If we collaboratively abort here, we cause a split-brain 
+            // fatal data corruption when the coordinator wakes up.
+            // 
+            // Therefore, in standard 2PC, if everyone is 'voted_commit', we are PERMANENTLY BLOCKED 
+            // until the coordinator comes back online.
+            const otherCohorts = allServerIds.filter(id => id !== serverId && id !== 0);
+            if (otherCohorts.every(id => s.peerStates[id] === 'voted_commit')) {
+                // Do nothing. Stay blocked.
+                // console.log("FATAL: All cohorts are blocked in voted_commit. Coordinator is dead. We must wait.");
+            }
         }
     }
 
