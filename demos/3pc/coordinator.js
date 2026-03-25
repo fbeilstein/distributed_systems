@@ -6,10 +6,10 @@ function onUp() {
             initial: 'idle',
             states: {
                 idle: { on: { START: 'propose' }, color: '#8bc34a' },
-                propose: { on: { ALL_SENT: 'collect_votes' }, color: '#cddc39' },
+                propose: { on: { ALL_SENT: 'collect_votes', TIMEOUT: 'aborting' }, color: '#cddc39' },
                 collect_votes: { on: { ALL_VOTED: 'prepare', TIMEOUT: 'aborting', ANY_ABORT: 'aborting' }, color: '#ffb74d' },
-                prepare: { on: { ALL_SENT: 'wait_acks' }, color: '#ffeb3b' },
-                wait_acks: { on: { ALL_ACK: 'committing', TIMEOUT: 'aborting' }, color: '#ffc107' },
+                prepare: { on: { ALL_SENT: 'wait_acks', TIMEOUT: 'aborting' }, color: '#ffeb3b' },
+                wait_acks: { on: { ALL_ACK: 'committing', TIMEOUT: 'committing' }, color: '#ffc107' },
                 committing: { on: { DONE: 'idle' }, color: '#2196f3' },
                 aborting: { on: { DONE: 'idle' }, color: '#f44336' },
             }
@@ -21,7 +21,28 @@ function onUp() {
 function onTimer(tick) {
     let s = loadState();
     const fsm = Automat.deserialize(s.fsm);
+    const prevTick = s.tick;
     s.tick = tick;
+    s.fsm = fsm.serialize(); // Sync before checks
+
+    // Recovery Detection: if we were offline and an in-flight transaction is risky
+    if (prevTick !== undefined && tick > prevTick + 1) {
+        if (fsm.state === 'propose' || fsm.state === 'collect_votes' || fsm.state === 'prepare') {
+            fsm.transition('TIMEOUT'); // Transitions specifically to 'aborting' from these states
+            s.history.push('TX' + s.txId + ':abort (recovery)');
+            const targets = allServerIds.filter(id => id !== serverId);
+            s.outbox = targets.map(id => ({ to: id, msg: { type: 'ABORT', txId: s.txId } }));
+        }
+        else if (fsm.state === 'wait_acks') {
+            fsm.transition('TIMEOUT'); // Transition specifically to 'committing' (as per previous fix)
+            s.history.push('TX' + s.txId + ':commit (recovery)');
+            const targets = allServerIds.filter(id => id !== serverId);
+            s.outbox = targets.map(id => ({ to: id, msg: { type: 'COMMIT', txId: s.txId } }));
+        }
+        s.fsm = fsm.serialize();
+        dumpState(s);
+        return;
+    }
 
     // 1. idle -> propose (ticks 10 and 65, exactly like 2PC)
     if (fsm.state === 'idle' && (tick === 10 || tick === 65)) {
@@ -64,9 +85,9 @@ function onTimer(tick) {
 
     if (fsm.state === 'wait_acks' && tick - s.phaseStart > 18) {
         fsm.transition('TIMEOUT');
-        s.history.push('TX' + s.txId + ':abort');
+        s.history.push('TX' + s.txId + ':commit');
         const targets = allServerIds.filter(id => id !== serverId);
-        s.outbox = targets.map(id => ({ to: id, msg: { type: 'ABORT', txId: s.txId } }));
+        s.outbox = targets.map(id => ({ to: id, msg: { type: 'COMMIT', txId: s.txId } }));
     }
 
     s.fsm = fsm.serialize();
