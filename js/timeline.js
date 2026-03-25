@@ -29,6 +29,7 @@ export class Timeline {
         // Configurable Layout Properties
         this.trackHeight = TRACK_HEIGHT;
         this.trackPaddingTop = TRACK_PADDING_TOP;
+        this.labelWidth = LABEL_WIDTH;
         this.stateBandOffset = STATE_BAND_OFFSET;
         this.stateBandHeight = 14;
 
@@ -40,7 +41,7 @@ export class Timeline {
             const rect = this.canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             // Tick under cursor before zoom
-            const tickUnderCursor = (mouseX + container.scrollLeft - LABEL_WIDTH) / this.scale;
+            const tickUnderCursor = (mouseX + container.scrollLeft - this.labelWidth) / this.scale;
 
             const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
             this.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, this.scale * factor));
@@ -49,7 +50,7 @@ export class Timeline {
             this.draw();
 
             // Restore scroll so tick under cursor stays in place
-            const newX = tickUnderCursor * this.scale + LABEL_WIDTH;
+            const newX = tickUnderCursor * this.scale + this.labelWidth;
             container.scrollLeft = newX - mouseX;
         }, { passive: false });
     }
@@ -63,7 +64,7 @@ export class Timeline {
     resize() {
         if (!this.engine) return;
         const numServers = this.engine.servers.length;
-        const width = LABEL_WIDTH + (this.maxTicks + 2) * this.scale;
+        const width = this.labelWidth + (this.maxTicks + 2) * this.scale;
         const height = this.trackPaddingTop + numServers * this.trackHeight + 40;
         this.canvas.width = width;
         this.canvas.height = height;
@@ -72,11 +73,11 @@ export class Timeline {
     }
 
     tickToX(tick) {
-        return LABEL_WIDTH + tick * this.scale;
+        return this.labelWidth + tick * this.scale;
     }
 
     xToTick(x) {
-        return Math.round((x - LABEL_WIDTH) / this.scale);
+        return Math.round((x - this.labelWidth) / this.scale);
     }
 
     serverToY(serverId) {
@@ -143,7 +144,7 @@ export class Timeline {
             ctx.fillStyle = server.color || '#333';
             ctx.font = 'bold 12px monospace';
             ctx.textAlign = 'right';
-            ctx.fillText(server.name, LABEL_WIDTH - 10, y + 4);
+            ctx.fillText(server.name, this.labelWidth - 10, y + 4);
 
             // Track line — draw per-segment to handle crash zones
             let lastTick = 0;

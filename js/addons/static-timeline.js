@@ -110,6 +110,7 @@ SlideAddons.register('static-timeline', (block) => {
         if (config.trackHeight !== undefined) timeline.trackHeight = config.trackHeight;
         if (config.trackPaddingTop !== undefined) timeline.trackPaddingTop = config.trackPaddingTop;
         if (config.stateBandOffset !== undefined) timeline.stateBandOffset = config.stateBandOffset;
+        if (config.labelWidth !== undefined) timeline.labelWidth = config.labelWidth;
 
         timeline.resize(); // apply scale to canvas dimensions
         timeline.draw();

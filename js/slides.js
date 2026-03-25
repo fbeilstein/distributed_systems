@@ -1,5 +1,6 @@
 import { SlideAddons } from './slides-addons.js';
 import './addons/static-timeline.js';
+import './addons/static-diagram.js';
 
 // Core Slide Engine State
 let currentSlideIndex = 0;

@@ -112,22 +112,6 @@ function onMessage(message) {
         }
     }
 
-    if (m.type === 'DECISION_REQUEST') {
-        if (s.history.includes('TX' + m.txId + ':commit')) {
-            sendMessage(message.from, { type: 'COMMIT', txId: m.txId });
-        } else if (s.history.includes('TX' + m.txId + ':abort')) {
-            sendMessage(message.from, { type: 'ABORT', txId: m.txId });
-        } else if (m.txId === s.txId) {
-            // If the transaction is still active, re-send the current phase requirements
-            // so recovering cohorts can instantly catch up instead of waiting for a timeout
-            if (fsm.state === 'collect_votes' || fsm.state === 'propose') {
-                sendMessage(message.from, { type: 'PROPOSE', txId: s.txId, data: s.txId });
-            } else if (fsm.state === 'wait_acks' || fsm.state === 'prepare') {
-                sendMessage(message.from, { type: 'PREPARE', txId: s.txId });
-            }
-        }
-    }
-
     s.fsm = fsm.serialize();
     dumpState(s);
 }

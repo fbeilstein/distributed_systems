@@ -6,9 +6,9 @@ function onUp() {
             initial: 'idle',
             states: {
                 idle: { on: { VOTE_COMMIT: 'voted_commit', VOTE_ABORT: 'voted_abort' }, color: '#b2dfdb' },
-                voted_commit: { on: { PREPARE: 'prepared', COMMIT: 'idle', ABORT: 'idle' }, color: '#4db6ac' },
-                voted_abort: { on: { ABORT: 'idle' }, color: '#ef9a9a' },
-                prepared: { on: { COMMIT: 'idle', ABORT: 'idle' }, color: '#fdd835' }
+                voted_commit: { on: { PREPARE: 'prepared', COMMIT: 'idle', ABORT: 'idle', TIMEOUT: 'idle' }, color: '#4db6ac' },
+                voted_abort: { on: { ABORT: 'idle', TIMEOUT: 'idle' }, color: '#ef9a9a' },
+                prepared: { on: { COMMIT: 'idle', ABORT: 'idle', TIMEOUT: 'idle' }, color: '#fdd835' }
             }
         });
         dumpState({ fsm: fsm.serialize(), data: null, pendingTx: null, pendingData: null, history: [] });
@@ -33,15 +33,27 @@ function onTimer(tick) {
         s.voteTick = tick - 30; // guarantees tick - voteTick > 25 on this very tick
     }
 
-    // If blocked waiting for coordinator, poll peers instead of hard-forcing Split Brain.
+    // In 3PC, blocked cohorts DO NOT poll peers. They act autonomously on timeout.
     // Use 25 ticks to give the Coordinator's 18-tick abort timeout priority.
     if ((fsm.state === 'voted_commit' || fsm.state === 'voted_abort' || fsm.state === 'prepared') && s.voteTick !== undefined && (tick - s.voteTick > 25)) {
-        s.voteTick = tick; // Reset to avoid spam
-        const peers = allServerIds.filter(id => id !== serverId);
-        for (const peer of peers) {
-            sendMessage(peer, { type: 'DECISION_REQUEST', txId: s.pendingTx });
+        s.voteTick = undefined; // Stop timing out
+
+        if (fsm.state === 'prepared') {
+            // Autonomous Auto-Commit! At least one node reached prepared, so everyone voted YES.
+            if (fsm.can('TIMEOUT')) fsm.transition('TIMEOUT');
+            s.history.push('TX' + s.pendingTx + ':commit (autonomous)');
+            s.pendingTx = null;
+            s.pendingData = null;
+        } else {
+            // Autonomous Auto-Abort! We timed out before receiving PREPARE.
+            if (fsm.can('TIMEOUT')) fsm.transition('TIMEOUT');
+            s.history.push('TX' + s.pendingTx + ':abort (autonomous)');
+            s.pendingTx = null;
+            s.pendingData = null;
         }
     }
+
+    s.fsm = fsm.serialize();
 
     dumpState(s);
 }
@@ -70,14 +82,6 @@ function onMessage(message) {
             fsm.transition('PREPARE');
             s.voteTick = s.tick;
             sendMessage(message.from, { type: 'ACK_PREPARE', txId: m.txId });
-        }
-    }
-
-    if (m.type === 'DECISION_REQUEST') {
-        if (s.history.includes('TX' + m.txId + ':commit')) {
-            sendMessage(message.from, { type: 'COMMIT', txId: m.txId, peer: true });
-        } else if (s.history.includes('TX' + m.txId + ':abort')) {
-            sendMessage(message.from, { type: 'ABORT', txId: m.txId, peer: true });
         }
     }
 

@@ -326,27 +326,34 @@ If the **Coordinator crashes** while cohorts are waiting in the `voted` state, c
 
 # Three-Phase Commit (3PC)
 
-3PC adds an **extra intermediate phase** between voting and committing, plus **timeouts on both sides** that allow cohorts to proceed autonomously if the coordinator fails.
+Even under **strong assumptions** about the network (synchronicity, no message loss), **2PC remains blocking**. Why? Because of the **State Ambiguity** problem:
 
-**Key assumption**: 3PC requires a synchronous model and assumes no message loss (communication failures aren't possible). This means it is primarily used in controlled LAN environments.
+In 2PC, the state `VOTED_YES` is ambiguous. If the coordinator crashes while you are waiting in that state, you have no way to know if it logged a `COMMIT` or an `ABORT` onto its private disk before dying. If the survivors erroneously "autonomous-abort" while the coordinator actually committed, **atomicity is broken**.
 
-| Phase | Who Acts | What Happens |
-|---|---|---|
-| **Propose** | Coordinator | Sends proposed value, collects votes |
-| **Prepare** | Coordinator | If all commit: sends PREPARE. If any abort: sends ABORT immediately. |
-| **Commit** | Coordinator | Sends COMMIT after all cohorts ACK the PREPARE |
+3PC solves this by splitting that one ambiguous state into two, inserting a **replicated decision buffer**.
+
+| Phase | Coordinator Action | Cohort Knowledge | Safe Autonomous Action |
+|---|---|---|---|
+| **1. Propose** | Broadcasts `PROPOSE` | "I am voting `YES`" | **Abort** (Nobody committed) |
+| **2. Prepare** | Broadcasts `PREPARE` | "**Everyone** voted `YES`" | **Abort** (Nobody committed yet) |
+| **3. Commit** | Broadcasts `COMMIT` | "**Everyone** is prepared" | **Commit** (Nobody can abort now) |
 
 ---
 
-# 3PC Timeout Rules
+# Why 3PC? The Decision Paradox
 
-| Phase of Failure | Action |
-|---|---|
-| Propose phase (coordinator or cohort timeout) | **Abort** |
-| Prepare phase (coordinator or cohort timeout) | **Abort** |
-| Commit phase (coordinator or cohort timeout) | **Commit** |
+### ❌ The 2PC Dilemma
+You voted `YES`. The Coordinator crashed. You ask your peers: they also voted `YES`. 
+**Can you commit?** No. The Coordinator might have crashed *after* deciding `ABORT` locally.
+**Can you abort?** No. The Coordinator might have crashed *after* deciding `COMMIT` locally.
+Result: **Paralysis.**
 
-> *The key insight: once a cohort enters the **prepared** state, it knows that all other cohorts have voted commit. It is now safe to commit unilaterally after a timeout — no cohort that voted abort can ever be in the prepared state.*
+### ✅ The 3PC Solution
+By adding the `PREPARE` round-trip, we ensure that:
+1.  **No node commits** unless *every* node has received a `PREPARE` message.
+2.  **No node receives a `PREPARE`** if *any* node voted `NO`.
+
+This means if you time out while in the `PREPARED` state, you possess **proof** that every other cohort is at least in the `VOTED` state and none of them could have voted `NO`. It is now mathematically safe to autonomous-commit.
 
 ---
 
@@ -379,7 +386,9 @@ If a network partition splits the cluster during the prepare phase:
 
 This results in a **split-brain**: some nodes committed while others aborted, leaving the system in an irreconcilable, contradictory state — all according to the protocol.
 
-### 3PC Pros & Cons
+---
+
+# 3PC Pros & Cons
 
 | ✅ Advantages | ❌ Disadvantages |
 |---|---|
@@ -397,47 +406,96 @@ Calvin uses a **deterministic transaction order**: all replicas receive the same
 
 ```static-timeline
 {
-  "zoom": 0.85,
-  "ticks": 58,
-  "trackHeight": 48,
-  "stateBandOffset": 10,
-  "servers": ["Sequencer", "Scheduler", "Worker", "Storage"],
+  "zoom": 0.8,
+  "ticks": 60,
+  "trackHeight": 40,
+  "labelWidth": 100,
+  "stateBandOffset": 4,
+  "servers": ["Client 1", "Client 2", "Client 3", "Client 4", "Sequencer", "Scheduler", "Worker A", "Worker B"],
   "states": [
-    { "server": "Sequencer",  "start": 2,  "end": 14, "state": "epoch: batch TXs", "color": "#ce93d8" },
-    { "server": "Sequencer",  "start": 15, "end": 28, "state": "replicate batch",   "color": "#ab47bc" },
-    { "server": "Scheduler",  "start": 22, "end": 35, "state": "deterministic plan","color": "#4fc3f7" },
-    { "server": "Worker",     "start": 33, "end": 48, "state": "collect read sets", "color": "#ffb74d" },
-    { "server": "Worker",     "start": 49, "end": 57, "state": "execute & persist", "color": "#81c784" },
-    { "server": "Storage",    "start": 52, "end": 57, "state": "committed",         "color": "#a5d6a7" }
+    { "server": "Client 4", "start": 0, "end": 5, "state": "req: Read A", "color": "#f1c80eff" },
+    { "server": "Client 2", "start": 2, "end": 7, "state": "req: Write D", "color": "rgba(241, 105, 14, 1)" },
+    { "server": "Client 3", "start": 4, "end": 9, "state": "req: Read B", "color": "#f1c80eff" },
+    { "server": "Client 1", "start": 6, "end": 11, "state": "req: Write A", "color": "rgba(241, 105, 14, 1)" },
+    { "server": "Sequencer", "start": 15, "end": 21, "state": "Read: A,B; Write: A,D", "color": "#ab47bc" },
+    { "server": "Scheduler", "start": 23, "end": 27, "state": "Read: A; Write: A", "color": "#4fc3f7" },
+    { "server": "Scheduler", "start": 29, "end": 33, "state": "Read: B; Write: D", "color": "#4fc3f7" },
+    { "server": "Worker A", "start": 30, "end": 50, "state": "Read: A; Write: A", "color": "#81c784" },
+    { "server": "Worker B", "start": 38, "end": 55, "state": "Read: B; Write: D", "color": "#81c784" }
   ],
   "messages": [
-    {"from": "Sequencer",  "to": "Scheduler", "sendTick": 16, "recvTick": 22},
-    {"from": "Scheduler",  "to": "Worker",    "sendTick": 30, "recvTick": 33},
-    {"from": "Worker",     "to": "Storage",   "sendTick": 50, "recvTick": 52}
+    { "from": "Client 4", "to": "Sequencer", "sendTick": 5, "recvTick": 15 },
+    { "from": "Client 2", "to": "Sequencer", "sendTick": 7, "recvTick": 17 },
+    { "from": "Client 3", "to": "Sequencer", "sendTick": 9, "recvTick": 19 },
+    { "from": "Client 1", "to": "Sequencer", "sendTick": 11, "recvTick": 21 },
+    { "from": "Sequencer", "to": "Scheduler", "sendTick": 22, "recvTick": 23 },
+    { "from": "Scheduler", "to": "Worker A", "sendTick": 27, "recvTick": 30 },
+    { "from": "Scheduler", "to": "Worker B", "sendTick": 33, "recvTick": 38 }
   ]
 }
 ```
 
-| Component | Responsibility |
-|---|---|
-| **Sequencer** | Establishes global transaction order; batches into time-window epochs and replicates them |
-| **Scheduler** | Executes parts of transactions in parallel, preserving the serial order from the sequencer |
-| **Worker** | Analyzes read/write sets; collects needed data records from remote nodes; executes locally |
+---
 
-> *Because all replicas receive the same inputs, they don't need to forward results to each other — they compute identical outputs independently.*
+# Calvin Architecture: Deterministic Parallelism
 
-**Used by**: FaunaDB | **Constraint**: Read and write sets must be known upfront; dynamic queries require workarounds.
+```static-diagram
+{
+  "width": 600,
+  "height": 280,
+  "nodes": [
+    { "id": "client", "x": 225, "y": 5, "label": "Client App", "type": "pill", "width": 150, "fill": "#f5f5f5" },
+    
+    { "id": "seq1", "x": 75, "y": 50, "label": "Sequencer", "width": 100, "fontSize": "11px" },
+    { "id": "seq2", "x": 425, "y": 50, "label": "Sequencer", "width": 100, "fontSize": "11px" },
+    
+    { "id": "sch1", "x": 75, "y": 100, "label": "Scheduler", "width": 100, "fontSize": "11px" },
+    { "id": "sch2", "x": 425, "y": 100, "label": "Scheduler", "width": 100, "fontSize": "11px" },
+    
+    { "id": "w1a", "x": 70, "y": 150, "label": "W1", "width": 50, "type": "pill", "fontSize": "9px" },
+    { "id": "w1b", "x": 130, "y": 150, "label": "W2", "width": 50, "type": "pill", "fontSize": "9px" },
+    { "id": "w2a", "x": 420, "y": 150, "label": "W1", "width": 50, "type": "pill", "fontSize": "9px" },
+    { "id": "w2b", "x": 480, "y": 150, "label": "W2", "width": 50, "type": "pill", "fontSize": "9px" },
+    
+    { "id": "st1", "x": 60, "y": 200, "label": "Storage A", "width": 130, "type": "cylinder", "fill": "#e3f2fd", "fontSize": "10px" },
+    { "id": "st2", "x": 410, "y": 200, "label": "Storage B", "width": 130, "type": "cylinder", "fill": "#e3f2fd", "fontSize": "10px" }
+  ],
+  "links": [
+    { "from": "client", "to": "seq1", "label": "TX" },
+    { "from": "client", "to": "seq2", "label": "TX" },
+    { "from": "seq1", "to": "seq2", "label": "Replication", "color": "#f06292" },
+    { "from": "seq1", "to": "sch1" },
+    { "from": "seq2", "to": "sch2" },
+    { "from": "sch1", "to": "w1a" },
+    { "from": "sch1", "to": "w1b" },
+    { "from": "sch2", "to": "w2a" },
+    { "from": "sch2", "to": "w2b" },
+    { "from": "w1a", "to": "st1" },
+    { "from": "w1b", "to": "st1" },
+    { "from": "w2a", "to": "st2" },
+    { "from": "w2b", "to": "st2" }
+  ],
+  "groups": [
+    { "x": 50, "y": 45, "width": 150, "height": 195, "label": "Partition 1", "dashed": true },
+    { "x": 400, "y": 45, "width": 150, "height": 195, "label": "Partition 2", "dashed": true }
+  ]
+}
+```
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">The Sequencer batches transactions into epochs every 25 ticks and broadcasts them to the Scheduler. The Scheduler splits each epoch between <b>Worker-A</b> (keys A, B) and <b>Worker-B</b> (keys C, D) by write-set. Both workers execute in parallel — observe that they never send messages to each other. This is the core Calvin insight: deterministic order removes the need for distributed coordination during execution.</p>
-</div>
+---
 
-<div style="text-align: center; margin-top: 30px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/calvin-sequencer/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #7b1fa2; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        Launch Calvin Demo
-    </button>
-</div>
+# Calvin Analysis: Planning vs. Recovery
+
+Unlike protocols that rely on **runtime coordination** (like 2PC or EPaxos), Calvin relies on **pre-runtime planning**.
+
+| Property | Calvin Philosophy | Why it's superior for writes |
+|---|---|---|
+| **Contention** | Deterministic order eliminates lock waiting | High throughput under hot-key contention |
+| **Commitment** | Replication *at the sequencer* is the commit point | No 2PC round-trip at the end of every TX |
+| **Fault Tolerance** | Deterministic replay from the log | A recovering node can catch up blindly |
+
+> [!IMPORTANT]
+> Because the logic is deterministic, a "Live Demo" usually adds little value—you are simply watching a pre-calculated plan unfold. High-fidelity static traces (Option 1) and structural diagrams (Option 2) allow for a deeper understanding of the **Batching and Dispatching** boundaries that define the system's performance.
 
 ---
 
@@ -450,7 +508,9 @@ Google **Spanner** (also CockroachDB, YugaByte DB) takes a contrasting approach:
 - **TrueTime** — a high-precision wall-clock API exposing an uncertainty bound. Allows introducing controlled delays so timestamps are guaranteed to be globally ordered.
 - **2PC across group leaders** for multi-shard transactions.
 
-### Spanner Operation Types
+---
+
+# Spanner Operation Types
 
 | Type | Locks? | Leader Required? |
 |---|---|---|
