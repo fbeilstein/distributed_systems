@@ -54,24 +54,23 @@ function onTimer(tick) {
         s.phaseStart = tick;
     }
 
-    // 2. State classes that simply drain the outbox one by one
+    // 2. State classes that simply drain the outbox ALL AT ONCE (broadcast)
     if (fsm.state === 'propose' || fsm.state === 'prepare' || fsm.state === 'committing' || fsm.state === 'aborting') {
-        if (s.outbox.length > 0) {
+        while (s.outbox.length > 0) {
             const t = s.outbox.pop();
             sendMessage(t.to, t.msg);
-        } else {
-            // Emptied the outbox, transition to next respective state
-            if (fsm.state === 'propose') {
-                fsm.transition('ALL_SENT');
-                s.phaseStart = tick; // reset timeout timer
-            }
-            else if (fsm.state === 'prepare') {
-                fsm.transition('ALL_SENT');
-                s.phaseStart = tick;
-            }
-            else if (fsm.state === 'committing' || fsm.state === 'aborting') {
-                fsm.transition('DONE');
-            }
+        }
+        // Emptied the outbox, transition to next respective state
+        if (fsm.state === 'propose') {
+            fsm.transition('ALL_SENT');
+            s.phaseStart = tick; // reset timeout timer
+        }
+        else if (fsm.state === 'prepare') {
+            fsm.transition('ALL_SENT');
+            s.phaseStart = tick;
+        }
+        else if (fsm.state === 'committing' || fsm.state === 'aborting') {
+            fsm.transition('DONE');
         }
     }
 
