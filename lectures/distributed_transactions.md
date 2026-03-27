@@ -137,12 +137,23 @@ The coordinator can be:
 # 2PC Execution
 
 **Phase 1 — Prepare**
+
+<div class="small-text">
+
 1. Coordinator sends a **PROPOSE** message to all cohorts.
 2. Each cohort decides if it can commit its local portion of the transaction.
 3. Cohorts reply with `VOTE_COMMIT` or `VOTE_ABORT`.
 
+</div>
+
 **Phase 2 — Commit or Abort**
+
+<div class="small-text">
+
 - If **all** cohorts vote commit → coordinator sends `COMMIT` to all.
+
+</div>
+
 ```static-timeline
 {
   "zoom": 0.85,
@@ -233,9 +244,9 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 - **TX 1** (odd txId): all three cohorts vote commit → full commit.
 - **TX 2** (even txId): DB-2 is configured to reject even-numbered transactions → abort path fires, and all cohorts roll back.
 
-<div style="background: #222; padding: 10px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Observe the Coordinator FSM cycling <b>idle → prepare → collecting → committing/aborting → idle</b>. When DB-2 sends VOTE_ABORT, the coordinator immediately broadcasts ABORT to all cohorts — even those that voted commit. That is the core atomicity guarantee of 2PC.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Observe the Coordinator FSM cycling <b>idle → prepare → collecting → committing/aborting → idle</b>. When DB-2 sends VOTE_ABORT, the coordinator immediately broadcasts ABORT to all cohorts — even those that voted commit. That is the core atomicity guarantee of 2PC.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -250,8 +261,12 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 
 **Scenario**: A cohort crashes before or after voting.
 
+<div class="small-text">
+
 - **Crash before voting** → Coordinator times out waiting for a vote → sends `ABORT` to all.
 - **Crash after voting commit** → Cohort recovers and must learn the coordinator's decision before serving data. It sends a `DECISION_REQUEST` to the coordinator (or peers) and replays the commit or abort.
+
+</div>
 
 ```static-timeline
 {
@@ -361,9 +376,9 @@ This means if you time out while in the `PREPARED` state, you possess **proof** 
 
 The sandbox shows the three-phase handshake: `PROPOSE → VOTE → PREPARE → ACK → COMMIT`. Notice the extra round-trip compared to 2PC.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Compare the FSM states to the 2PC demo. The coordinator passes through <b>propose → collect_votes → prepare → wait_acks → committing</b>. Cohorts pass through an extra <b>prepared</b> state between voted_commit and idle. This prepared state is what enables cohorts to commit autonomously after a timeout — the key non-blocking property.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Compare the FSM states to the 2PC demo. The coordinator passes through <b>propose → collect_votes → prepare → wait_acks → committing</b>. Cohorts pass through an extra <b>prepared</b> state between voted_commit and idle. This prepared state is what enables cohorts to commit autonomously after a timeout — the key non-blocking property.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -443,7 +458,7 @@ When a node is **removed**: only its keys move to its successor — again, rough
 
 <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
   <!-- The Ring -->
-  <circle cx="200" cy="200" r="150" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="8,4" />
+  <circle cx="200" cy="200" r="150" fill="none" stroke="var(--accent-color, rgba(255,0,255,0.8))" stroke-width="2" stroke-dasharray="8,4" />
 
   <!-- Server Nodes (Primitives) -->
   <!-- Server A -->

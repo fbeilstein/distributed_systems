@@ -2,6 +2,13 @@ import { SlideAddons } from './slides-addons.js';
 import './addons/static-timeline.js';
 import './addons/static-diagram.js';
 
+// --- Global API for HTML onclick handlers ---
+window.toggleTheme = toggleTheme;
+window.nextSlide = nextSlide;
+window.prevSlide = prevSlide;
+window.showDemo = showDemo;
+window.hideDemo = hideDemo;
+
 // Core Slide Engine State
 let currentSlideIndex = 0;
 let slides = [];
@@ -162,11 +169,11 @@ function showSlide(index) {
     updateCounter();
 }
 
-window.nextSlide = function () {
+function nextSlide() {
     showSlide(currentSlideIndex + 1);
 }
 
-window.prevSlide = function () {
+function prevSlide() {
     showSlide(currentSlideIndex - 1);
 }
 
@@ -214,7 +221,7 @@ function setupKeyboardNav() {
  * Demo Overlay Logic
  * Allows a markdown slide to contain: <button class="demo-btn" onclick="showDemo('failure-phi')">Open Demo</button>
  */
-window.showDemo = function (demoName) {
+function showDemo(demoName) {
     const overlay = document.getElementById('demo-overlay');
     const iframe = document.getElementById('demo-iframe');
     const title = document.getElementById('demo-title');
@@ -232,7 +239,7 @@ window.showDemo = function (demoName) {
     overlay.classList.remove('hidden');
 };
 
-window.hideDemo = function () {
+function hideDemo() {
     const overlay = document.getElementById('demo-overlay');
     const iframe = document.getElementById('demo-iframe');
 
@@ -241,4 +248,59 @@ window.hideDemo = function () {
     overlay.classList.add('hidden');
 };
 
+/**
+ * Theme Management
+ */
+function toggleTheme() {
+    const isLight = document.body.classList.toggle('light-theme');
+    const theme = isLight ? 'light' : 'dark';
+    localStorage.setItem('theme', theme);
 
+    // Update button icon
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+
+    // Broadcast to static timelines on the same page
+    window.dispatchEvent(new CustomEvent('theme-change', { detail: { theme } }));
+
+    // Broadcast to ALL iframes on the current page (including inline ones)
+    document.querySelectorAll('iframe').forEach(iframe => {
+        if (iframe.contentWindow) {
+            iframe.contentWindow.postMessage({ type: 'theme-change', theme }, '*');
+        }
+    });
+};
+
+// Initial theme load (Run immediately)
+(function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+    const isLight = savedTheme === 'light';
+
+    if (isLight) {
+        document.body.classList.add('light-theme');
+    } else {
+        document.body.classList.remove('light-theme');
+    }
+
+    // We must wait for DOM to be ready to find the button
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('theme-toggle');
+        if (btn) btn.textContent = isLight ? '☀️' : '🌙';
+    });
+})();
+
+// Re-broadcast theme when ANY iframe loads (handles inline iframes too)
+window.addEventListener('load', function (e) {
+    if (e.target.tagName && e.target.tagName.toLowerCase() === 'iframe') {
+        const isLight = document.body.classList.contains('light-theme');
+        e.target.contentWindow.postMessage({ type: 'theme-change', theme: isLight ? 'light' : 'dark' }, '*');
+    }
+}, true); // Use capture phase to catch iframe loads
+
+// Also listen for a specific request for theme (handshake)
+window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'get-theme') {
+        const isLight = document.body.classList.contains('light-theme');
+        event.source.postMessage({ type: 'theme-change', theme: isLight ? 'light' : 'dark' }, '*');
+    }
+});

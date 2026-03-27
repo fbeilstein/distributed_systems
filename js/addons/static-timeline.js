@@ -23,7 +23,7 @@ SlideAddons.register('static-timeline', (block) => {
             mockEngine.servers.push({
                 id: id,
                 name: name,
-                color: '#333',
+                color: null, // Let Timeline pick up --text-color dynamically
                 crashIntervals: []
             });
         });
@@ -77,11 +77,9 @@ SlideAddons.register('static-timeline', (block) => {
         const container = document.createElement('div');
         container.className = 'static-timeline-wrapper';
         container.style.overflowX = 'auto'; // allow horizontal scrolling for long diagrams
-        container.style.background = '#fafafa';
-        container.style.border = '1px solid #ddd';
-        container.style.borderRadius = '5px';
         container.style.marginTop = '20px';
         container.style.marginBottom = '20px';
+        container.style.transition = 'background 0.3s, border 0.3s';
 
         // Apply custom alignment formatting
         if (config.float) {
@@ -113,14 +111,14 @@ SlideAddons.register('static-timeline', (block) => {
         if (config.stateBandHeight !== undefined) timeline.stateBandHeight = config.stateBandHeight;
         if (config.labelWidth !== undefined) timeline.labelWidth = config.labelWidth;
 
-        timeline.resize(); // apply scale to canvas dimensions
+        if (config.zoom) timeline.zoom = config.zoom;
+        timeline.resize(); // apply scale and zoom to canvas dimensions
         timeline.draw();
 
-        // Apply overarching CSS reduction to physically shrink the rendered canvas
-        if (config.zoom) {
-            canvas.style.width = (canvas.width * config.zoom) + 'px';
-            canvas.style.height = (canvas.height * config.zoom) + 'px';
-        }
+        // Listen for theme changes to redraw
+        window.addEventListener('theme-change', () => {
+            timeline.draw();
+        });
 
     } catch (err) {
         console.error('Failed to parse static-timeline JSON:', err);

@@ -177,9 +177,9 @@ TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval
 
 *Locks are released starting from the primary. Readers that observe uncommitted locks can consult the primary lock to determine if the transaction succeeded and proceed accordingly.*
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch in the Demo</h4>
-    <p style="font-size: 1.1rem;">The Coordinator runs sequential transactions. Watch the <b>Shard-A</b> and <b>Shard-B</b> inspector: their <b>lock</b> field fills during Prewrite and clears on Commit. The Oracle's <b>ts</b> counter increments twice per transaction. Try crashing the Oracle mid-transaction to see the coordinator stall waiting for a timestamp.</p>
+<div class="callout-box">
+    <h4>What to watch in the Demo</h4>
+    <p>The Coordinator runs sequential transactions. Watch the <b>Shard-A</b> and <b>Shard-B</b> inspector: their <b>lock</b> field fills during Prewrite and clears on Commit. The Oracle's <b>ts</b> counter increments twice per transaction. Try crashing the Oracle mid-transaction to see the coordinator stall waiting for a timestamp.</p>
 </div>
 
 <div style="text-align: center; margin-top: 30px; margin-bottom: 40px;">

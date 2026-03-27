@@ -10,6 +10,32 @@ import { Interactions } from './interactions.js';
 import { StateInspector } from './state-inspector.js';
 import { CodeEditor, DEFAULT_CODE } from './code-editor.js';
 
+// --- Theme Management ---
+function applyTheme(theme) {
+    if (theme === 'dark') {
+        document.body.classList.add('dark-theme');
+        document.body.classList.remove('light-theme');
+    } else {
+        document.body.classList.add('light-theme');
+        document.body.classList.remove('dark-theme');
+    }
+    // Redraw timeline if it exists
+    if (window.currentTimeline) {
+        window.currentTimeline.draw();
+    }
+}
+
+window.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'theme-change') {
+        applyTheme(event.data.theme);
+    }
+});
+
+// Check if parent already has a theme set (for deep links/refreshes)
+if (window.parent !== window) {
+    window.parent.postMessage({ type: 'get-theme' }, '*');
+}
+
 // --- Parse URL Parameters (fallbacks only) ---
 const params = new URLSearchParams(window.location.search);
 const CODE_URL = params.get('code') || null;
@@ -189,6 +215,7 @@ async function init() {
 
     // Initialize components
     const timeline = new Timeline(canvas, tooltipEl);
+    window.currentTimeline = timeline; // Expose for theme switching
     if (config && config.trackHeight) {
         timeline.trackHeight = config.trackHeight;
     }

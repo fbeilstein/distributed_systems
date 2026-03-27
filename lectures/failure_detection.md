@@ -53,12 +53,12 @@ When a process appears unresponsive, the underlying failure may exist at two dis
 Because slowness may not always be distinguishable from true failure, failure detection algorithms face a permanent trade-off:
 
 <div style="display: flex; gap: 40px; margin-top: 40px;">
-    <div style="flex: 1; background: #331111; padding: 20px; border-radius: 8px;">
+    <div class="callout-box" style="flex: 1; border-color: #ff5555; background: rgba(176, 0, 0, 0.1); margin: 0;">
         <h3 style="color: #ff5555; margin-top:0;">False Positives</h3>
         Wrongly suspecting healthy, alive processes as dead (penalizes slow networks).
     </div>
-    <div style="flex: 1; background: #113311; padding: 20px; border-radius: 8px;">
-        <h3 style="color: #55ff55; margin-top:0;">Detection Latency</h3>
+    <div class="callout-box" style="flex: 1; border-color: #4CAF50; background: rgba(0, 176, 0, 0.1); margin: 0;">
+        <h3 style="color: #4CAF50; margin-top:0;">Detection Latency</h3>
         Delaying marking a truly unresponsive process as dead (penalizes system throughput).
     </div>
 </div>
@@ -117,11 +117,11 @@ Robust failure detectors are an essential prerequisite and integral component fo
 We can natively query the state of remote processes using two primary methods:
 
 <div style="display: flex; gap: 40px; margin-top: 20px;">
-    <div style="flex: 1; background: #222; padding: 20px; border-radius: 8px;">
+    <div class="callout-box" style="flex: 1; margin: 0;">
         <h3 style="color: #4CAF50; margin-top:0;">Heartbeats</h3>
         A process actively pushes messages notifying its peers that it is still running.
     </div>
-    <div style="flex: 1; background: #222; padding: 20px; border-radius: 8px;">
+    <div class="callout-box" style="flex: 1; margin: 0;">
         <h3 style="color: #2196F3; margin-top:0;">Pings</h3>
         A process actively pulls state by sending messages to a remote process, expecting a response within a specified timeout.
     </div>
@@ -147,9 +147,9 @@ However, there are massive downsides to this approach:
 
 In this demonstration, **Node 0** explicitly reaches out to nodes 1-4 with a `PING` payload. The targets then reply with an `ACK`.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">In a real P2P system, every node typically acts as both a monitor <i>and</i> a target, checking every other node simultaneously. To make our visualizer easier to read, our demo uses <b>Asymmetric Roles</b>: Node 0 acts as a dedicated Monitor, while Nodes 1-4 act as Targets that only respond to queries.</p>
+<div class="callout-box">
+    <h4>Real World vs. Sandbox Architecture</h4>
+    <p>In a real P2P system, every node typically acts as both a monitor <i>and</i> a target, checking every other node simultaneously. To make our visualizer easier to read, our demo uses <b>Asymmetric Roles</b>: Node 0 acts as a dedicated Monitor, while Nodes 1-4 act as Targets that only respond to queries.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
@@ -164,9 +164,9 @@ In this demonstration, **Node 0** explicitly reaches out to nodes 1-4 with a `PI
 
 Alternatively, in this demonstration, **Node 0** is completely silent. Nodes 1-4 unilaterally broadcast `HEARTBEAT` payloads at a fixed interval to Node 0. Node 0 just maintains a list of the last seen timestamps. If the gap between timestamps exceeds the strict `TIMEOUT` bounds configured, Node 0 marks the target as `suspect`, and eventually `failed`.
 
-<div style="background: #222; padding: 15px; border-radius: 8px; margin-top: 15px;">
-    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem; margin-bottom: 0;">Just like the pings demo, real-world heartbeats are <b>completely symmetric</b>. Every node broadcasts heartbeats to everyone else, and every node drops peers if they miss a heartbeat timeout. The demo restricts this visually to a dedicated Monitor purely to reduce visual noise on the timeline.</p>
+<div class="callout-box" style="margin-top: 15px;">
+    <h4>Real World vs. Sandbox Architecture</h4>
+    <p>Just like the pings demo, real-world heartbeats are <b>completely symmetric</b>. Every node broadcasts heartbeats to everyone else, and every node drops peers if they miss a heartbeat timeout. The demo restricts this visually to a dedicated Monitor purely to reduce visual noise on the timeline.</p>
 </div>
 
 <div style="text-align: center; margin-top: 15px;">
@@ -229,9 +229,9 @@ However, interpreting these counters can be incredibly tricky: we have to pick a
 
 # The Timeout-Free Sandbox Demo
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">Unlike our previous demos, the Timeout-Free demo runs in <b>True Symmetry</b>. Every single node runs the exact same <code>node.js</code> logic, acts identically, and manages its own independent counters. <br><br>The only visual "cheat" in the sandbox is that we globally stagger the initiation intervals so that only one node starts a gossip chain at a time, preventing the timeline UI from becoming a completely illegible spiderweb of crossing lines!</p>
+<div class="callout-box">
+    <h4>Real World vs. Sandbox Architecture</h4>
+    <p>Unlike our previous demos, the Timeout-Free demo runs in <b>True Symmetry</b>. Every single node runs the exact same <code>node.js</code> logic, acts identically, and manages its own independent counters. <br><br>The only visual "cheat" in the sandbox is that we globally stagger the initiation intervals so that only one node starts a gossip chain at a time, preventing the timeline UI from becoming a completely illegible spiderweb of crossing lines!</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
@@ -278,9 +278,9 @@ Outsourced heartbeats distribute the responsibility for checking process livenes
 
 # The SWIM Sandbox Demo
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">In a real SWIM cluster, every node executes the full protocol concurrently (selecting random targets and random witnesses constantly).<br><br>To make this comprehensible on a visual timeline, our Sandbox uses <b>Asymmetric Roles</b>: Node 0 is the dedicated Master, Node 4 is the dedicated Target, and Nodes 1-3 act as dedicated Witnesses to forward indirect pings when Node 0's direct timeout expires.</p>
+<div class="callout-box">
+    <h4>Real World vs. Sandbox Architecture</h4>
+    <p>In a real SWIM cluster, every node executes the full protocol concurrently (selecting random targets and random witnesses constantly).<br><br>To make this comprehensible on a visual timeline, our Sandbox uses <b>Asymmetric Roles</b>: Node 0 is the dedicated Master, Node 4 is the dedicated Target, and Nodes 1-3 act as dedicated Witnesses to forward indirect pings when Node 0's direct timeout expires.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
@@ -358,9 +358,9 @@ If $\Phi$ crosses an arbitrary threshold (e.g. $\Phi > 8$), we mark the node as 
 
 # The Phi-Accrual Sandbox Demo
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">Like the Pings and basic Heartbeats demos, real-world Phi-Accrual is <b>completely symmetric</b> (Every Cassandra node calculates a $\Phi$ matrix against every other Cassandra node). <br><br>The Sandbox visualization again uses <b>Asymmetric Roles</b>: Node 0 acts as the dedicated Monitoring Brain (running <code>monitor.js</code> and calculating the math), while Nodes 1-4 act as dumb Targets (running <code>target.js</code>) that simply broadcast heartbeats for Node 0 to analyze.</p>
+<div class="callout-box">
+    <h4>Real World vs. Sandbox Architecture</h4>
+    <p>Like the Pings and basic Heartbeats demos, real-world Phi-Accrual is <b>completely symmetric</b> (Every Cassandra node calculates a $\Phi$ matrix against every other Cassandra node). <br><br>The Sandbox visualization again uses <b>Asymmetric Roles</b>: Node 0 acts as the dedicated Monitoring Brain (running <code>monitor.js</code> and calculating the math), while Nodes 1-4 act as dumb Targets (running <code>target.js</code>) that simply broadcast heartbeats for Node 0 to analyze.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
@@ -415,9 +415,9 @@ $P_3$ physically crashes and its CPU halts.
 
 # The Gossip Sandbox Demo
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">In a true scalable Gossip implementation (like the paper), a node picks <b>one random neighbor</b> to exchange state with.<br><br>For illustrative purposes, our Sandbox demo runs a <b>Staggered Broadcast Gossip</b> --- distributes state to all active peers in a round-robin fashion. </p>
+<div class="callout-box">
+    <h4>Real World vs. Sandbox Architecture</h4>
+    <p>In a true scalable Gossip implementation (like the paper), a node picks <b>one random neighbor</b> to exchange state with.<br><br>For illustrative purposes, our Sandbox demo runs a <b>Staggered Broadcast Gossip</b> --- distributes state to all active peers in a round-robin fashion. </p>
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
@@ -464,9 +464,9 @@ This approach converts any individual process failure instantly into a massive, 
 
 # The FUSE Sandbox Demo
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">Our Sandbox uses a true Symmetric Architecture! Every node runs the exact same logic. <br><br><b>How to test FUSE:</b> Right-click Node-2 to instantly terminate its CPU. Notice how Node-1 (the target of Node-2's pings) eventually detects the failure. At that exact moment, Node-1's state transitions permanently to <span style="color: #e57373; font-weight: bold;">Inactive (Red)</span>. Because it's inactive, it stops replying to Node-0... and finally the entire cluster voluntarily cascades into the Inactive state!</p>
+<div class="callout-box">
+    <h4>Real World vs. Sandbox Architecture</h4>
+    <p>Our Sandbox uses a true Symmetric Architecture! Every node runs the exact same logic. <br><br><b>How to test FUSE:</b> Right-click Node-2 to instantly terminate its CPU. Notice how Node-1 (the target of Node-2's pings) eventually detects the failure. At that exact moment, Node-1's state transitions permanently to <span style="color: #e57373; font-weight: bold;">Inactive (Red)</span>. Because it's inactive, it stops replying to Node-0... and finally the entire cluster voluntarily cascades into the Inactive state!</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px;">

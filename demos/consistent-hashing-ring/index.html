@@ -6,6 +6,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Consistent Hashing - Presentation Sandbox</title>
     <link rel="stylesheet" href="style.css">
+    <script>
+        // --- Theme Support ---
+        window.theme = 'dark';
+        function applyTheme(t) {
+            window.theme = t;
+            if (t === 'light') {
+                document.body.classList.add('light-theme');
+            } else {
+                document.body.classList.remove('light-theme');
+            }
+            if (window.visualizer) {
+                window.visualizer.updateTheme();
+            }
+        }
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'theme-change') {
+                applyTheme(event.data.theme);
+            }
+        });
+        // Initial handshake
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'get-theme' }, '*');
+        }
+    </script>
 </head>
 
 <body>

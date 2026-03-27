@@ -137,9 +137,9 @@ While elegant in its simplicity, the Bully algorithm has two fatal flaws in prod
 
 # The Bully Sandbox Demo
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">Our interactive sandbox perfectly mirrors the academic Bully protocol in true symmetry. <br><br><b>How to test:</b> Right-click Node-4 (the highest rank) to kill the leader. Note how Node-0 detects it, tries to run, but is instantly bullied into submission by Node-1, who is in turn bullied by Node-2, until Node-3 successfully proves it is the highest surviving rank and seizes the throne!</p>
+<div class="callout-box">
+    <h4>Real World vs. Sandbox Architecture</h4>
+    <p>Our interactive sandbox perfectly mirrors the academic Bully protocol in true symmetry. <br><br><b>How to test:</b> Right-click Node-4 (the highest rank) to kill the leader. Note how Node-0 detects it, tries to run, but is instantly bullied into submission by Node-1, who is in turn bullied by Node-2, until Node-3 successfully proves it is the highest surviving rank and seizes the throne!</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -322,9 +322,9 @@ To prevent this **"Double Surrender Deadlock"**, algorithms use a strict, asymme
 
 # The Invitation Sandbox Demo
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">Real World vs. Sandbox Architecture</h4>
-    <p style="font-size: 1.2rem;">Our interactive sandbox perfectly mirrors the Invitation protocol. <br><br><b>How to test:</b> Launch the demo and watch how the 6 isolated nodes (who all start out as independent leaders) randomly send invitations to each other. Notice how they form pairwise clusters, evaluate sizes, and steadily collapse down into larger and larger groups until one massive unified cluster is formed!</p>
+<div class="callout-box">
+    <h4>Real World vs. Sandbox Architecture</h4>
+    <p>Our interactive sandbox perfectly mirrors the Invitation protocol. <br><br><b>How to test:</b> Launch the demo and watch how the 6 isolated nodes (who all start out as independent leaders) randomly send invitations to each other. Notice how they form pairwise clusters, evaluate sizes, and steadily collapse down into larger and larger groups until one massive unified cluster is formed!</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">

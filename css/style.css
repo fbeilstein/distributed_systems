@@ -1,8 +1,31 @@
-/* ==========================================================================
-   Distributed Systems Sandbox — Minimalist Style
-   ========================================================================== */
-
 /* --- Reset & Base --- */
+:root {
+  --bg-color: #f7f7f7;
+  --text-color: #222;
+  --accent-color: #2a7a8a;
+  --header-bg: #fff;
+  --card-bg: #fff;
+  --border-color: #ddd;
+  --shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --header-text: #333;
+  --secondary-bg: #fafafa;
+  --code-bg: #fff;
+}
+
+/* Dark Theme Overrides */
+body.dark-theme {
+  --bg-color: #1a1a1a;
+  --text-color: #e0e0e0;
+  --accent-color: #4CAF50;
+  --header-bg: #111;
+  --card-bg: #2d2d2d;
+  --border-color: #444;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --header-text: #fff;
+  --secondary-bg: #222;
+  --code-bg: #111;
+}
+
 *,
 *::before,
 *::after {
@@ -16,8 +39,9 @@ body {
   height: 100%;
   font-family: 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', monospace;
   font-size: 14px;
-  color: #222;
-  background: #f7f7f7;
+  color: var(--text-color);
+  background: var(--bg-color);
+  transition: background 0.3s, color 0.3s;
 }
 
 body {
@@ -31,16 +55,17 @@ body {
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  background: #fff;
-  border-bottom: 1px solid #ddd;
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+  transition: background 0.3s, border-bottom 0.3s;
 }
 
 #toolbar h1 {
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0.02em;
-  color: #333;
+  color: var(--header-text);
 }
 
 .toolbar-controls {
@@ -52,7 +77,7 @@ body {
 .toolbar-info {
   font-size: 12px;
   color: #777;
-  background: #f0f0f0;
+  background: var(--secondary-bg);
   padding: 3px 8px;
   border-radius: 3px;
 }
@@ -61,12 +86,12 @@ body {
   padding: 5px 12px;
   font-size: 12px;
   font-family: inherit;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border-color);
   border-radius: 3px;
-  background: #fff;
-  color: #333;
+  background: var(--card-bg);
+  color: var(--text-color);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
 #toolbar button:hover {
@@ -82,8 +107,8 @@ body {
 #timeline-container {
   flex: 1 1 50%;
   overflow: auto;
-  background: #fff;
-  border-bottom: 1px solid #ddd;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border-color);
   position: relative;
   min-height: 200px;
 }
@@ -97,14 +122,14 @@ body {
   display: none;
   position: fixed;
   z-index: 100;
-  background: #fff;
-  border: 1px solid #ccc;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   padding: 8px 10px;
   font-size: 11px;
   line-height: 1.5;
-  color: #333;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: var(--text-color);
+  box-shadow: var(--shadow);
   max-width: 300px;
   pointer-events: none;
 }
@@ -139,18 +164,18 @@ body {
   padding: 12px 16px;
   overflow-x: auto;
   overflow-y: hidden;
-  background: #fafafa;
+  background: var(--secondary-bg);
   min-height: 120px;
 }
 
 .state-card {
   flex: 0 0 auto;
   min-width: 180px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.3s;
   resize: horizontal;
   overflow: hidden;
   display: flex;
@@ -166,9 +191,9 @@ body {
   padding: 4px 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #555;
-  background: #f5f5f5;
-  border-bottom: 1px solid #eee;
+  color: var(--header-text);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border-color);
   border-radius: 4px 4px 0 0;
   display: flex;
   align-items: center;
@@ -285,10 +310,10 @@ body {
   width: 90%;
   max-width: 640px;
   max-height: 80vh;
-  background: #fff;
-  border: 1px solid #ccc;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
   border-radius: 6px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
 }

@@ -188,6 +188,11 @@ class Visualizer {
         this.animate();
     }
 
+    getThemeColor(varName, fallback) {
+        const style = getComputedStyle(this.canvas);
+        return style.getPropertyValue(varName).trim() || fallback;
+    }
+
     resize() {
         const parent = this.canvas.parentElement;
         this.canvas.width = parent.clientWidth * window.devicePixelRatio;
@@ -210,6 +215,10 @@ class Visualizer {
                 </div>
             `;
         });
+    }
+
+    updateTheme() {
+        this.draw();
     }
 
     animate() {
@@ -246,11 +255,12 @@ class Visualizer {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             const opacity = Math.min(1, stats.migrationPercent / 5 + 0.3);
-            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+            ctx.fillStyle = this.getThemeColor('--text-color', 'rgba(255, 255, 255, 1)');
+            ctx.globalAlpha = opacity;
             ctx.font = 'bold 44px Inter';
             ctx.fillText(`${stats.migrationPercent.toFixed(1)}%`, centerX, centerY - 10);
             ctx.font = '500 14px Inter';
-            ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.6})`;
+            ctx.globalAlpha = opacity * 0.6;
             ctx.fillText('RELOCATING DATA', centerX, centerY + 25);
             ctx.restore();
         }
@@ -281,7 +291,7 @@ class Visualizer {
             // 1b. Segment Border (Matching Python's edgecolor)
             ctx.save();
             ctx.lineWidth = 1;
-            ctx.strokeStyle = '#0f1115'; // Match background
+            ctx.strokeStyle = this.getThemeColor('--ring-border', '#0f1115');
             ctx.globalAlpha = 1.0;
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius - pieThickness / 2, startAngle, endAngle);
@@ -298,7 +308,7 @@ class Visualizer {
             ctx.moveTo(centerX + Math.cos(endAngle) * innerR, centerY + Math.sin(endAngle) * innerR);
             ctx.lineTo(centerX + Math.cos(endAngle) * outerR, centerY + Math.sin(endAngle) * outerR);
             ctx.lineWidth = 3;
-            ctx.strokeStyle = '#ffffff';
+            ctx.strokeStyle = this.getThemeColor('--text-color', '#ffffff');
             ctx.globalAlpha = 1.0;
             ctx.stroke();
 
@@ -320,11 +330,12 @@ class Visualizer {
             ctx.arc(centerX + Math.cos(angle) * kRadius, centerY + Math.sin(angle) * kRadius, 2, 0, Math.PI * 2);
 
             if (key.migrationTick > 0) {
-                ctx.fillStyle = '#ffffff';
+                ctx.fillStyle = this.getThemeColor('--text-color', '#ffffff');
                 ctx.shadowBlur = 10;
-                ctx.shadowColor = '#ffffff';
+                ctx.shadowColor = ctx.fillStyle;
             } else {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.fillStyle = this.getThemeColor('--text-color', '#ffffff');
+                ctx.globalAlpha = 0.4;
                 ctx.shadowBlur = 0;
             }
             ctx.fill();
@@ -338,7 +349,9 @@ let engine;
 document.addEventListener('DOMContentLoaded', () => {
     engine = new RingEngine();
     const canvas = document.getElementById('ring-canvas');
-    new Visualizer(canvas, engine);
+    if (window.theme === 'light') document.body.classList.add('light-theme');
+    window.visualizer = new Visualizer(canvas, engine);
+    window.engine = engine;
 
     // Initial 3 servers
     for (let i = 1; i <= 3; i++) {

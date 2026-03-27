@@ -211,9 +211,9 @@ Once a quorum of `ACCEPTED` responses arrive, **consensus is reached**. The deci
 
 This simulation demonstrates the complete Paxos flow — **two proposers start simultaneously** with different values. Their ballots collide, one gets NACKed and re-bids with a higher ballot, until eventually one wins the election and commits.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Observe the FSM states flipping: <b>idle → preparing → accepting → decided</b>. Watch Node-0 (ballot 1, value "A") and Node-1 (ballot 2, value "B") collide. Node-0 receives a NACK and bumps its ballot to outbid Node-1 — but Node-1 has already gathered promises, so Node-0's higher ballot forces Node-1 to restart. Eventually the higher ballot wins and broadcasts DECIDED to all.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Observe the FSM states flipping: <b>idle → preparing → accepting → decided</b>. Watch Node-0 (ballot 1, value "A") and Node-1 (ballot 2, value "B") collide. Node-0 receives a NACK and bumps its ballot to outbid Node-1 — but Node-1 has already gathered promises, so Node-0's higher ballot forces Node-1 to restart. Eventually the higher ballot wins and broadcasts DECIDED to all.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -350,9 +350,9 @@ The proposer committed value `'X'` to Acceptor-1, then crashed before reaching t
 
 > **Note**: all of this can happen without the original proposer knowing. If the client is connected only to Proposer-1, it may never learn the result of the Paxos round.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">In this demo, Proposer-1 crashes right after sending an ACCEPT to Acceptor-1. Watch Proposer-2 wake up, discover the partially-committed value during its PREPARE phase, and safely adopt it rather than overwriting it.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>In this demo, Proposer-1 crashes right after sending an ACCEPT to Acceptor-1. Watch Proposer-2 wake up, discover the partially-committed value during its PREPARE phase, and safely adopt it rather than overwriting it.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -390,9 +390,9 @@ Two proposers repeatedly outbid each other, preventing either from completing. N
 
 **Resolution**: **Random exponential backoff** — the proposer that lost the ballot waits a random amount of time before retrying, giving the other time to complete.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Watch two proposers intentionally collide. When they receive a NACK, they enter a randomized backoff state before retrying. One will eventually out-wait the other and secure the quorum!</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Watch two proposers intentionally collide. When they receive a NACK, they enter a randomized backoff state before retrying. One will eventually out-wait the other and secure the quorum!</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -488,9 +488,9 @@ Some Multi-Paxos implementations use **leases**:
 
 This simulation shows the optimization in action. The first round is a full Paxos (Prepare → Promise → Accept → Accepted → Decided). Subsequent rounds **skip the Prepare phase** — the leader sends ACCEPT directly, cutting latency in half.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Compare the number of message round-trips in round 1 vs. rounds 2 and 3. Round 1 has <b>two</b> round-trips (Prepare → Accept). Rounds 2 and 3 have <b>one</b> round-trip each (Accept only). The FSM shows the leader staying in `leader` state after the first win, transitioning back to `accepting` for each subsequent commit without going through `preparing`.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Compare the number of message round-trips in round 1 vs. rounds 2 and 3. Round 1 has <b>two</b> round-trips (Prepare → Accept). Rounds 2 and 3 have <b>one</b> round-trip each (Accept only). The FSM shows the leader staying in `leader` state after the first win, transitioning back to `accepting` for each subsequent commit without going through `preparing`.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -551,9 +551,9 @@ Two types of rounds exist:
 
 > **Quorum increase required**: to survive collisions, Fast Paxos needs **3f + 1** total acceptors (vs. **2f + 1** in classic) and a fast quorum of **2f + 1** (vs. **f + 1**).
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Watch the Coordinator open a fast round, and two proposers bypass it to send conflicting ACCEPT messages simultaneously. The Coordinator detects the collision from the split votes and successfully falls back to a Classic Paxos round to resolve it.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Watch the Coordinator open a fast round, and two proposers bypass it to send conflicting ACCEPT messages simultaneously. The Coordinator detects the collision from the split votes and successfully falls back to a Classic Paxos round to resolve it.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -623,9 +623,9 @@ Commands are executed **after all their dependencies** (and their dependencies' 
 }
 ```
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Watch two leaders propose conflicting commands (set_x and inc_x) simultaneously. Leader-1 commits immediately via the Fast Path, while Leader-2's replicas detect the conflict, forcing Leader-2 into the Slow Path to merge dependencies. Both execute sequentially in correct dependency order.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Watch two leaders propose conflicting commands (set_x and inc_x) simultaneously. Leader-1 commits immediately via the Fast Path, while Leader-2's replicas detect the conflict, forcing Leader-2 into the Slow Path to merge dependencies. Both execute sequentially in correct dependency order.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">

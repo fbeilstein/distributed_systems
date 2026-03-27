@@ -76,9 +76,9 @@ When a new prospective leader emerges, it executes three phases:
 
 > *ZAB's broadcast is highly efficient, requiring only two rounds of messages. It behaves like Two-Phase Commit without aborts.*
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Watch the prospective leader drive the cluster through Discovery (CEPOCH / ACK-E) to establish the highest Zxid, then Synchronization (NEWLEADER / ACK-LD) to align everyone's history. Only after a quorum is synced does it broadcast UPTODATE and begin sequencing regular proposals.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Watch the prospective leader drive the cluster through Discovery (CEPOCH / ACK-E) to establish the highest Zxid, then Synchronization (NEWLEADER / ACK-LD) to align everyone's history. Only after a quorum is synced does it broadcast UPTODATE and begin sequencing regular proposals.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -204,9 +204,9 @@ If the logs diverge, the leader systematically decrements its local `nextIndex` 
 
 > *The leader’s log is sacred. It is never overwritten or deleted, only appended to.*
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">This demo starts with a hardcoded, severe partition state: the Follower's log has entirely diverged from the Leader's in an older term. Watch the Leader's `AppendEntries` get rejected, forcing the Leader to iteratively step backwards until the logs align, at which point the follower's corrupt history is truncated and rewritten.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>This demo starts with a hardcoded, severe partition state: the Follower's log has entirely diverged from the Leader's in an older term. Watch the Leader's `AppendEntries` get rejected, forcing the Leader to iteratively step backwards until the logs align, at which point the follower's corrupt history is truncated and rewritten.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -221,9 +221,9 @@ If the logs diverge, the leader systematically decrements its local `nextIndex` 
 
 Observe the entire Raft life cycle: Follower timeouts, split votes, leader election, heartbeats, and client request replication.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Notice how Node-0 starts with a short election timeout, quickly becoming Candidate and then Leader. Watch the periodic heartbeats holding the followers back from starting new elections. If you inject a client request, observe the Leader appending it and rolling it out via outbox messages, waiting for ACKs to hit the commit threshold.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Notice how Node-0 starts with a short election timeout, quickly becoming Candidate and then Leader. Watch the periodic heartbeats holding the followers back from starting new elections. If you inject a client request, observe the Leader appending it and rolling it out via outbox messages, waiting for ACKs to hit the commit threshold.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -340,9 +340,9 @@ Since the log grows indefinitely, PBFT periodically generates **stable checkpoin
 * The primary waits for $2f + 1$ matching checkpoint responses from replicas.
 * This constitutes proof that the state is correct, allowing logs preceding the checkpoint to be safely truncated.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">A client pumps rapid requests through the 3-phase PBFT pipeline. Every 3 requests, the primary initiates a CHECKPOINT. Watch the replicas exchange hashes and aggressively garbage-collect their bloated logs once a 2f+1 quorum of matching checkpoints is gathered. The traitor node's fake hash is safely ignored!</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>A client pumps rapid requests through the 3-phase PBFT pipeline. Every 3 requests, the primary initiates a CHECKPOINT. Watch the replicas exchange hashes and aggressively garbage-collect their bloated logs once a 2f+1 quorum of matching checkpoints is gathered. The traitor node's fake hash is safely ignored!</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
@@ -357,9 +357,9 @@ Since the log grows indefinitely, PBFT periodically generates **stable checkpoin
 
 The sandbox includes a BFT demonstration featuring $f=1$ traitors out of a 4-node primary/replica system. The primary issues a valid request, but the traitor sends conflicting `PREPARE` messages to different nodes. The $2f+1$ quorum threshold successfully filters out the Byzantine interference and completes the commit safely.
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Notice how the malicious node (Replica-3, typically marked red in the UI) ignores standard protocol flows and broadcasts falsified PREPARE values. See how the honest nodes (Primary, Replica 1, Replica 2) cross-validate the responses, ignoring the outlier, hitting the threshold of 3 identical signatures, and proceeding through pre-prepared → prepared → committed safely.</p>
+<div class="callout-box">
+    <h4>What to watch</h4>
+    <p>Notice how the malicious node (Replica-3, typically marked red in the UI) ignores standard protocol flows and broadcasts falsified PREPARE values. See how the honest nodes (Primary, Replica 1, Replica 2) cross-validate the responses, ignoring the outlier, hitting the threshold of 3 identical signatures, and proceeding through pre-prepared → prepared → committed safely.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">

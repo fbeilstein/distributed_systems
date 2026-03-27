@@ -14,6 +14,9 @@ const ARROWHEAD_SIZE = 7;
 const HANDLE_RADIUS = 5;
 const MIN_SCALE = 4;
 const MAX_SCALE = 64;
+const STATE_LINE_HEIGHT = 12; // Height of text line
+const STATE_BAND_VPADDING = 6; // Total vertical padding (top+bottom)
+const STATE_BAND_HEIGHT = 8; // Global default height for single-line bands
 
 export class Timeline {
     constructor(canvas, tooltipEl) {
@@ -25,13 +28,16 @@ export class Timeline {
         this.scrubberTick = 0;
         this.hoveredMessage = null;
         this.scale = DEFAULT_PIXELS_PER_TICK;
+        this.zoom = 1.0;
 
         // Configurable Layout Properties
         this.trackHeight = TRACK_HEIGHT;
         this.trackPaddingTop = TRACK_PADDING_TOP;
         this.labelWidth = LABEL_WIDTH;
         this.stateBandOffset = STATE_BAND_OFFSET;
-        this.stateBandHeight = 14;
+        this.lineHeight = STATE_LINE_HEIGHT;
+        this.statePadding = STATE_BAND_VPADDING;
+        this.stateBandHeight = STATE_BAND_HEIGHT;
 
         // Shift+scroll to zoom
         this.canvas.addEventListener('wheel', (e) => {
@@ -55,6 +61,12 @@ export class Timeline {
         }, { passive: false });
     }
 
+    _getThemeColor(varName, fallback) {
+        const style = getComputedStyle(this.canvas);
+        const val = style.getPropertyValue(varName).trim();
+        return val || fallback;
+    }
+
     setEngine(engine) {
         this.engine = engine;
         this.maxTicks = engine.maxTicks;
@@ -68,8 +80,8 @@ export class Timeline {
         const height = this.trackPaddingTop + numServers * this.trackHeight + 40;
         this.canvas.width = width;
         this.canvas.height = height;
-        this.canvas.style.width = width + 'px';
-        this.canvas.style.height = height + 'px';
+        this.canvas.style.width = (width * this.zoom) + 'px';
+        this.canvas.style.height = (height * this.zoom) + 'px';
     }
 
     tickToX(tick) {
@@ -118,9 +130,10 @@ export class Timeline {
 
     _drawTickGrid(ctx) {
         ctx.save();
-        ctx.strokeStyle = '#e0e0e0';
+        ctx.strokeStyle = this._getThemeColor('--border-color', '#e0e0e0');
         ctx.lineWidth = 0.5;
-        ctx.fillStyle = '#999';
+        ctx.fillStyle = this._getThemeColor('--text-color', '#999');
+        ctx.globalAlpha = 1.0; // Force full visibility
         ctx.font = '10px monospace';
         ctx.textAlign = 'center';
 
@@ -141,7 +154,8 @@ export class Timeline {
             const y = this.serverToY(server.id);
 
             // Label
-            ctx.fillStyle = server.color || '#333';
+            ctx.fillStyle = server.color || this._getThemeColor('--text-color', '#333');
+            ctx.globalAlpha = 1.0;
             ctx.font = 'bold 12px monospace';
             ctx.textAlign = 'right';
             ctx.fillText(server.name, this.labelWidth - 10, y + 4);
@@ -153,16 +167,16 @@ export class Timeline {
             for (const [down, up] of intervals) {
                 // Draw normal segment before crash
                 if (lastTick < down) {
-                    this._drawTrackSegment(ctx, lastTick, down, y, false, server.color || '#888');
+                    this._drawTrackSegment(ctx, lastTick, down, y, false, server.color || this._getThemeColor('--text-color', '#888'));
                 }
                 // Draw crash segment
                 const end = up !== null ? up : this.maxTicks + 1;
-                this._drawTrackSegment(ctx, down, end, y, true, server.color || '#888');
+                this._drawTrackSegment(ctx, down, end, y, true, server.color || this._getThemeColor('--text-color', '#888'));
                 lastTick = end;
             }
             // Draw remaining normal segment
             if (lastTick <= this.maxTicks) {
-                this._drawTrackSegment(ctx, lastTick, this.maxTicks + 1, y, false, server.color || '#888');
+                this._drawTrackSegment(ctx, lastTick, this.maxTicks + 1, y, false, server.color || this._getThemeColor('--text-color', '#888'));
             }
         }
         ctx.restore();
@@ -174,7 +188,7 @@ export class Timeline {
 
         if (isCrashed) {
             // Crashed zone background
-            ctx.fillStyle = 'rgba(200, 200, 200, 0.15)';
+            ctx.fillStyle = this._getThemeColor('--panel-bg', 'rgba(200, 200, 200, 0.15)');
             ctx.fillRect(x1, y - this.trackHeight / 2 + 5, x2 - x1, this.trackHeight - 10);
 
             ctx.strokeStyle = '#bbb';
@@ -258,9 +272,8 @@ export class Timeline {
 
                 const stateStr = String(run.state || '');
                 const lines = stateStr.split('\n');
-                const lineHeight = 12; // Increased slightly for better vertical spacing
-                // Calculate height based on lines, ensuring a reasonable minimum for single-line states
-                const actualBandHeight = lines.length * lineHeight + 6;
+                // Use custom height if defined, otherwise calculate based on lines
+                const actualBandHeight = Math.max(this.stateBandHeight, lines.length * this.lineHeight + this.statePadding);
 
                 // Band rectangle
                 ctx.fillStyle = color;
@@ -277,14 +290,14 @@ export class Timeline {
                 const spanPx = x2 - x1;
                 if (spanPx > 24 && (!this.engine || !this.engine.hideStateLabels)) {
                     ctx.globalAlpha = 0.85;
-                    ctx.fillStyle = '#333';
+                    ctx.fillStyle = this._getThemeColor('--text-color', '#333');
                     lines.forEach((line, i) => {
                         const maxChars = Math.floor(spanPx / 6) - 1;
                         if (maxChars <= 0) return;
                         const clipped = line.length > maxChars
                             ? line.slice(0, Math.max(1, maxChars - 1)) + '…'
                             : line;
-                        ctx.fillText(clipped, x1 + 3, y + (i + 1) * lineHeight + 2);
+                        ctx.fillText(clipped, x1 + 3, y + (i + 1) * this.lineHeight + this.statePadding / 2 - 2);
                     });
                 }
             }
@@ -311,8 +324,9 @@ export class Timeline {
                 ctx.setLineDash([4, 3]);
                 ctx.globalAlpha = 0.5;
             } else {
-                ctx.strokeStyle = '#444';
-                ctx.fillStyle = '#444';
+                const color = this._getThemeColor('--text-color', '#444');
+                ctx.strokeStyle = color;
+                ctx.fillStyle = color;
                 ctx.lineWidth = isHovered ? 2.5 : 1.5;
                 ctx.setLineDash([]);
                 ctx.globalAlpha = 1;
@@ -356,8 +370,9 @@ export class Timeline {
 
     _drawScrubber(ctx) {
         const x = this.tickToX(this.scrubberTick);
+        const accent = this._getThemeColor('--accent-color', '#2a7a8a');
         ctx.save();
-        ctx.strokeStyle = '#2a7a8a';
+        ctx.strokeStyle = accent;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(x, this.trackPaddingTop - 15);
@@ -365,7 +380,7 @@ export class Timeline {
         ctx.stroke();
 
         // Scrubber handle (triangle at top)
-        ctx.fillStyle = '#2a7a8a';
+        ctx.fillStyle = accent;
         ctx.beginPath();
         ctx.moveTo(x - 8, this.trackPaddingTop - 20);
         ctx.lineTo(x + 8, this.trackPaddingTop - 20);
@@ -374,7 +389,7 @@ export class Timeline {
         ctx.fill();
 
         // Tick label
-        ctx.fillStyle = '#2a7a8a';
+        ctx.fillStyle = accent;
         ctx.font = 'bold 11px monospace';
         ctx.textAlign = 'center';
         ctx.fillText(`t=${this.scrubberTick}`, x, this.trackPaddingTop - 25);

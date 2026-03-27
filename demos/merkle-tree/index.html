@@ -5,13 +5,33 @@
     <meta charset="UTF-8">
     <title>Merkle Tree Demo</title>
     <style>
+        :root {
+            --bg-color: transparent;
+            --text-color: #e0e0e0;
+            --node-bg: #333;
+            --node-text: #4fc3f7;
+            --border-color: #555;
+            --input-bg: #252526;
+            --accent: #2196f3;
+        }
+
+        body.light-theme {
+            --text-color: #1d1d1f;
+            --node-bg: #f5f5f7;
+            --node-text: #2196f3;
+            --border-color: #d2d2d7;
+            --input-bg: #ffffff;
+            --accent: #007aff;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            background: transparent;
-            font-family: monospace;
+            background: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
-            color: #fff;
+            color: var(--text-color);
+            transition: color 0.3s;
         }
 
         .merkle-wrap {
@@ -19,22 +39,25 @@
             height: 350px;
             width: 100%;
             box-sizing: border-box;
+            background: rgba(0, 0, 0, 0.02);
+            border-radius: 12px;
         }
 
         .merkle-node {
             padding: 12px 10px;
-            background: #333;
-            color: #4fc3f7;
+            background: var(--node-bg);
+            color: var(--node-text);
             border-radius: 6px;
             min-width: 90px;
             text-align: center;
             font-weight: bold;
-            border: 2px solid #555;
+            border: 2px solid var(--border-color);
             transition: all 0.3s ease;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             position: absolute;
             transform: translate(-50%, -50%);
             z-index: 1;
+            font-family: monospace;
         }
 
         .merkle-node.changed {
@@ -47,9 +70,9 @@
 
         .merkle-input {
             width: 90px;
-            background: #252526;
-            color: #81c784;
-            border: 1px solid #555;
+            background: var(--input-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
             padding: 12px;
             border-radius: 6px;
             text-align: center;
@@ -59,63 +82,131 @@
             transition: border-color 0.2s;
             position: absolute;
             transform: translate(-50%, -50%);
-            z-index: 1;
         }
 
         .merkle-input:focus {
-            border-color: #4fc3f7;
+            border-color: var(--accent);
+        }
+
+        .label {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.05rem;
+            opacity: 0.6;
+            color: var(--text-color);
+        }
+
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        line {
+            stroke: var(--border-color);
+            stroke-width: 2;
+            opacity: 0.4;
         }
     </style>
 </head>
 
 <body>
     <div class="merkle-wrap">
-        <svg style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:0; pointer-events:none;">
-            <line x1="50%" y1="60" x2="25%" y2="140" stroke="#555" stroke-width="3" />
-            <line x1="50%" y1="60" x2="75%" y2="140" stroke="#555" stroke-width="3" />
-            <line x1="25%" y1="140" x2="12.5%" y2="220" stroke="#555" stroke-width="3" />
-            <line x1="25%" y1="140" x2="37.5%" y2="220" stroke="#555" stroke-width="3" />
-            <line x1="75%" y1="140" x2="62.5%" y2="220" stroke="#555" stroke-width="3" />
-            <line x1="75%" y1="140" x2="87.5%" y2="220" stroke="#555" stroke-width="3" />
-            <line x1="12.5%" y1="220" x2="12.5%" y2="290" stroke="#444" stroke-width="2" stroke-dasharray="4" />
-            <line x1="37.5%" y1="220" x2="37.5%" y2="290" stroke="#444" stroke-width="2" stroke-dasharray="4" />
-            <line x1="62.5%" y1="220" x2="62.5%" y2="290" stroke="#444" stroke-width="2" stroke-dasharray="4" />
-            <line x1="87.5%" y1="220" x2="87.5%" y2="290" stroke="#444" stroke-width="2" stroke-dasharray="4" />
-        </svg>
-        <div
-            style="position:absolute; top:10px; width:100%; text-align:center; color:#888; font-style:italic; font-size: 1rem;">
-            Edit the data blocks below to watch cryptographic hashes ripple up the branches!</div>
-        <div id="m-root" class="merkle-node" style="left:50%; top:60px;">Root</div>
-        <div id="m-n1" class="merkle-node" style="left:25%; top:140px;">Hash 0-1</div>
-        <div id="m-n2" class="merkle-node" style="left:75%; top:140px;">Hash 2-3</div>
-        <div id="m-h1" class="merkle-node" style="color:#ffb74d; left:12.5%; top:220px; min-width:80px;">H0</div>
-        <div id="m-h2" class="merkle-node" style="color:#ffb74d; left:37.5%; top:220px; min-width:80px;">H1</div>
-        <div id="m-h3" class="merkle-node" style="color:#ffb74d; left:62.5%; top:220px; min-width:80px;">H2</div>
-        <div id="m-h4" class="merkle-node" style="color:#ffb74d; left:87.5%; top:220px; min-width:80px;">H3</div>
-        <input type="text" id="m-leaf-1" class="merkle-input" value="Data A" style="left:12.5%; top:290px;"
-            oninput="runMerkle()" onclick="this.select()">
-        <input type="text" id="m-leaf-2" class="merkle-input" value="Data B" style="left:37.5%; top:290px;"
-            oninput="runMerkle()" onclick="this.select()">
-        <input type="text" id="m-leaf-3" class="merkle-input" value="Data C" style="left:62.5%; top:290px;"
-            oninput="runMerkle()" onclick="this.select()">
-        <input type="text" id="m-leaf-4" class="merkle-input" value="Data D" style="left:87.5%; top:290px;"
-            oninput="runMerkle()" onclick="this.select()">
+        <svg id="merkle-lines"></svg>
+
+        <div class="label" style="top: 15%; left: 50%;">Merkle Root Hash</div>
+        <div id="m-root" class="merkle-node"
+            style="top: 25%; left: 50%; color: var(--accent); border-color: var(--accent);">00000000</div>
+
+        <div class="label" style="top: 40%; left: 30%;">Branch Hash</div>
+        <div id="m-n1" class="merkle-node" style="top: 50%; left: 30%;">00000000</div>
+
+        <div class="label" style="top: 40%; left: 70%;">Branch Hash</div>
+        <div id="m-n2" class="merkle-node" style="top: 50%; left: 70%;">00000000</div>
+
+        <div id="m-h1" class="merkle-node" style="top: 72%; left: 15%;">00000000</div>
+        <div id="m-h2" class="merkle-node" style="top: 72%; left: 38.3%;">00000000</div>
+        <div id="m-h3" class="merkle-node" style="top: 72%; left: 61.6%;">00000000</div>
+        <div id="m-h4" class="merkle-node" style="top: 72%; left: 85%;">00000000</div>
+
+        <input type="text" id="m-leaf-1" class="merkle-input" style="top: 90%; left: 15%;" value="A"
+            oninput="runMerkle()">
+        <input type="text" id="m-leaf-2" class="merkle-input" style="top: 90%; left: 38.3%;" value="B"
+            oninput="runMerkle()">
+        <input type="text" id="m-leaf-3" class="merkle-input" style="top: 90%; left: 61.6%;" value="C"
+            oninput="runMerkle()">
+        <input type="text" id="m-leaf-4" class="merkle-input" style="top: 90%; left: 85%;" value="D"
+            oninput="runMerkle()">
     </div>
 
     <script>
-        function mHash(str) {
-            let h = 0;
-            for (let i = 0; i < str.length; i++) h = Math.imul(31, h) + str.charCodeAt(i) | 0;
-            return Math.abs(h).toString(16).padStart(8, '0');
+        // --- Theme Support ---
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'theme-change') {
+                if (event.data.theme === 'light') {
+                    document.body.classList.add('light-theme');
+                } else {
+                    document.body.classList.remove('light-theme');
+                }
+            }
+        });
+        // Initial handshake
+        if (window.parent !== window) {
+            window.parent.postMessage({ type: 'get-theme' }, '*');
+        }
+
+        function mHash(s) {
+            let hash = 0;
+            for (let i = 0; i < s.length; i++) {
+                hash = ((hash << 5) - hash) + s.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash).toString(16).padStart(8, '0').toUpperCase();
+        }
+
+        function drawLines() {
+            const svg = document.getElementById('merkle-lines');
+            svg.innerHTML = '';
+
+            function connect(id1, id2) {
+                const el1 = document.getElementById(id1);
+                const el2 = document.getElementById(id2);
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", el1.style.left);
+                line.setAttribute("y1", el1.style.top);
+                line.setAttribute("x2", el2.style.left);
+                line.setAttribute("y2", el2.style.top);
+                svg.appendChild(line);
+            }
+
+            connect('m-root', 'm-n1');
+            connect('m-root', 'm-n2');
+            connect('m-n1', 'm-h1');
+            connect('m-n1', 'm-h2');
+            connect('m-n2', 'm-h3');
+            connect('m-n2', 'm-h4');
+            connect('m-h1', 'm-leaf-1');
+            connect('m-h2', 'm-leaf-2');
+            connect('m-h3', 'm-leaf-3');
+            connect('m-h4', 'm-leaf-4');
         }
 
         function runMerkle() {
             const l1 = document.getElementById('m-leaf-1');
-            if (!l1) return;
+            const l2 = document.getElementById('m-leaf-2');
+            const l3 = document.getElementById('m-leaf-3');
+            const l4 = document.getElementById('m-leaf-4');
+
             const h1 = mHash(l1.value);
-            const h2 = mHash(document.getElementById('m-leaf-2').value);
-            const h3 = mHash(document.getElementById('m-leaf-3').value);
-            const h4 = mHash(document.getElementById('m-leaf-4').value);
+            const h2 = mHash(l2.value);
+            const h3 = mHash(l3.value);
+            const h4 = mHash(l4.value);
 
             const n1 = mHash(h1 + h2);
             const n2 = mHash(h3 + h4);
@@ -125,19 +216,22 @@
                 const el = document.getElementById(id);
                 if (el.textContent !== val) {
                     el.textContent = val;
-                    if (!el.hasAttribute('data-init')) {
-                        el.setAttribute('data-init', 'true');
-                    } else {
+                    if (el.hasAttribute('data-init')) {
                         el.classList.add('changed');
                         setTimeout(() => el.classList.remove('changed'), 400);
                     }
+                    el.setAttribute('data-init', 'true');
                 }
             }
 
             setNode('m-h1', h1); setNode('m-h2', h2); setNode('m-h3', h3); setNode('m-h4', h4);
             setNode('m-n1', n1); setNode('m-n2', n2); setNode('m-root', root);
         }
-        runMerkle();
+
+        window.onload = () => {
+            drawLines();
+            runMerkle();
+        };
     </script>
 </body>
 
