@@ -549,7 +549,13 @@ This simulation natively models the exact **"Retry Problem"**: Client 1 attempts
     </button>
 </div>
 
+---
 
+# Witness Replicas
+
+Storing many full copies of a dataset across replicas can be costly. We can improve storage economics by using **Witness Replicas**.
+
+A **Witness** stores *only* the data version to participate in a quorum, without storing the full payload. This approach is used in systems like **Cloud Spanner** and **Apache Cassandra** to achieve quorums across regions efficiently.
 
 ---
 

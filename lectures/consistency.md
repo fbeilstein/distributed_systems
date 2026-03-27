@@ -140,11 +140,9 @@ Many production deployments natively implement causality through a specialized f
 
 # Vector Clocks
 
-Establishing **causal order** mathematically allows a distributed system to organically reconstruct the sequence of events even if physical network messages are brutally delivered out of order! 
+Establishing **causal order** mathematically allows a distributed system to organically reconstruct the sequence of events even if physical network messages are brutally delivered out of order. 
 
-It allows databases to intelligently fill the gaps between the messages, and explicitly avoid publishing operation results globally in case some critical causal dependencies are still actively missing.
-
-Many highly scalable databases, such as **[Dynamo](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf)** and **[Riak](https://riak.com/posts/technical/why-vector-clocks-are-hard/)**, fundamentally rely on **Vector Clocks** for establishing this causal order natively across the cluster.
+Many highly scalable databases, such as **[Dynamo](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf)** and **[Riak](https://riak.com/posts/technical/why-vector-clocks-are-hard/)**, use **Vector Clocks** to establish this causal order across a cluster.
 
 ---
 
@@ -197,7 +195,7 @@ To successfully implement Causal Consistency explicitly natively using Vectors, 
 
 Vector clocks definitively physically mathematically tell you that a conflict *has strictly occurred*, but they absolutely **do not** structurally propose exactly *how* to logically definitively resolve it (since conflict resolution semantics are virtually always business-specific). 
 
-Because of this intense structural overhead across the wire, some famously *eventually consistent* databases (like **Apache Cassandra**) explicitly *do not* structurally mechanically theoretically formally order operations causally natively, and unapologetically forcefully use a beautifully simple **Last-Write-Wins (LWW)** wall-clock rule for mathematically conflict resolution instead!
+Because of this intense structural overhead across the wire, some systems (like **Apache Cassandra**) use the simpler **Last-Write-Wins (LWW)** rule for conflict resolution based on physical timestamps instead.
 
 ---
 
@@ -235,7 +233,7 @@ In case of a conflicting concurrent write, the definition of the "latest value" 
 
 The delivery service guarantees nothing more than an open-ended "eventually." 
 
-However, in massive-scale industrial practice, this relaxed asynchronous model works incredibly well. Countless highly performant modern databases routinely running extreme transaction loads are explicitly described as eventually consistent (most notably, **Apache Cassandra**).
+In massive-scale industrial practice, this relaxed asynchronous model (famously used by **Apache Cassandra**) works incredibly well for highly performant systems.
 
 ---
 

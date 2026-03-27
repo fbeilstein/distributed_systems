@@ -256,30 +256,36 @@ export class Timeline {
                     color = assignedFallbacks[run.state];
                 }
 
+                const stateStr = String(run.state || '');
+                const lines = stateStr.split('\n');
+                const lineHeight = 12; // Increased slightly for better vertical spacing
+                // Calculate height based on lines, ensuring a reasonable minimum for single-line states
+                const actualBandHeight = lines.length * lineHeight + 6;
+
                 // Band rectangle
                 ctx.fillStyle = color;
                 ctx.globalAlpha = 0.35;
-                ctx.fillRect(x1, y, x2 - x1, this.stateBandHeight);
+                ctx.fillRect(x1, y, x2 - x1, actualBandHeight);
 
                 // Border
                 ctx.globalAlpha = 0.6;
                 ctx.strokeStyle = color;
                 ctx.lineWidth = 1;
-                ctx.strokeRect(x1, y, x2 - x1, this.stateBandHeight);
+                ctx.strokeRect(x1, y, x2 - x1, actualBandHeight);
 
                 // Label (only if run spans enough pixels)
                 const spanPx = x2 - x1;
                 if (spanPx > 24 && (!this.engine || !this.engine.hideStateLabels)) {
                     ctx.globalAlpha = 0.85;
                     ctx.fillStyle = '#333';
-                    ctx.font = '9px monospace';
-                    ctx.textAlign = 'left';
-                    const label = run.state;
-                    const maxChars = Math.floor(spanPx / 6) - 1;
-                    const clipped = label.length > maxChars
-                        ? label.slice(0, Math.max(1, maxChars - 1)) + '…'
-                        : label;
-                    ctx.fillText(clipped, x1 + 3, y + this.stateBandHeight - 3);
+                    lines.forEach((line, i) => {
+                        const maxChars = Math.floor(spanPx / 6) - 1;
+                        if (maxChars <= 0) return;
+                        const clipped = line.length > maxChars
+                            ? line.slice(0, Math.max(1, maxChars - 1)) + '…'
+                            : line;
+                        ctx.fillText(clipped, x1 + 3, y + (i + 1) * lineHeight + 2);
+                    });
                 }
             }
         }

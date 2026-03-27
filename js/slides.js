@@ -219,9 +219,15 @@ window.showDemo = function (demoName) {
     const iframe = document.getElementById('demo-iframe');
     const title = document.getElementById('demo-title');
 
-    // The main engine index.html runs the sandboxes. We load it into the iframe, requesting a specific demo.
-    iframe.src = `index.html?code=${demoName}`;
-    title.textContent = `Demo: ${demoName}`;
+    // If demoName is an HTML file, load it directly. 
+    // Otherwise (if it's a JSON path or short name), route it through the sandbox engine.
+    if (demoName.endsWith('.html')) {
+        iframe.src = demoName;
+    } else {
+        iframe.src = `index.html?code=${demoName}`;
+    }
+
+    title.textContent = `Interactive Demo: ${demoName.split('/').pop()}`;
 
     overlay.classList.remove('hidden');
 };

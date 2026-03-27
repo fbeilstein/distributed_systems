@@ -398,148 +398,6 @@ This results in a **split-brain**: some nodes committed while others aborted, le
 
 ---
 
-# Distributed Transactions: Calvin
-
-**Problem**: Minimize the total time transactions hold locks by agreeing on execution order *before* acquiring locks.
-
-Calvin uses a **deterministic transaction order**: all replicas receive the same input sequence and produce identical outputs — eliminating the need for distributed locking or cross-replica coordination during execution.
-
-```static-timeline
-{
-  "zoom": 0.8,
-  "ticks": 60,
-  "trackHeight": 40,
-  "labelWidth": 100,
-  "stateBandOffset": 4,
-  "servers": ["Client 1", "Client 2", "Client 3", "Client 4", "Sequencer", "Scheduler", "Worker A", "Worker B"],
-  "states": [
-    { "server": "Client 4", "start": 0, "end": 5, "state": "req: Read A", "color": "#f1c80eff" },
-    { "server": "Client 2", "start": 2, "end": 7, "state": "req: Write D", "color": "rgba(241, 105, 14, 1)" },
-    { "server": "Client 3", "start": 4, "end": 9, "state": "req: Read B", "color": "#f1c80eff" },
-    { "server": "Client 1", "start": 6, "end": 11, "state": "req: Write A", "color": "rgba(241, 105, 14, 1)" },
-    { "server": "Sequencer", "start": 15, "end": 21, "state": "Read: A,B; Write: A,D", "color": "#ab47bc" },
-    { "server": "Scheduler", "start": 23, "end": 27, "state": "Read: A; Write: A", "color": "#4fc3f7" },
-    { "server": "Scheduler", "start": 29, "end": 33, "state": "Read: B; Write: D", "color": "#4fc3f7" },
-    { "server": "Worker A", "start": 30, "end": 50, "state": "Read: A; Write: A", "color": "#81c784" },
-    { "server": "Worker B", "start": 38, "end": 55, "state": "Read: B; Write: D", "color": "#81c784" }
-  ],
-  "messages": [
-    { "from": "Client 4", "to": "Sequencer", "sendTick": 5, "recvTick": 15 },
-    { "from": "Client 2", "to": "Sequencer", "sendTick": 7, "recvTick": 17 },
-    { "from": "Client 3", "to": "Sequencer", "sendTick": 9, "recvTick": 19 },
-    { "from": "Client 1", "to": "Sequencer", "sendTick": 11, "recvTick": 21 },
-    { "from": "Sequencer", "to": "Scheduler", "sendTick": 22, "recvTick": 23 },
-    { "from": "Scheduler", "to": "Worker A", "sendTick": 27, "recvTick": 30 },
-    { "from": "Scheduler", "to": "Worker B", "sendTick": 33, "recvTick": 38 }
-  ]
-}
-```
-
----
-
-# Calvin Architecture: Deterministic Parallelism
-
-```static-diagram
-{
-  "width": 600,
-  "height": 280,
-  "nodes": [
-    { "id": "client", "x": 225, "y": 5, "label": "Client App", "type": "pill", "width": 150, "fill": "#f5f5f5" },
-    
-    { "id": "seq1", "x": 75, "y": 50, "label": "Sequencer", "width": 100, "fontSize": "11px" },
-    { "id": "seq2", "x": 425, "y": 50, "label": "Sequencer", "width": 100, "fontSize": "11px" },
-    
-    { "id": "sch1", "x": 75, "y": 100, "label": "Scheduler", "width": 100, "fontSize": "11px" },
-    { "id": "sch2", "x": 425, "y": 100, "label": "Scheduler", "width": 100, "fontSize": "11px" },
-    
-    { "id": "w1a", "x": 70, "y": 150, "label": "W1", "width": 50, "type": "pill", "fontSize": "9px" },
-    { "id": "w1b", "x": 130, "y": 150, "label": "W2", "width": 50, "type": "pill", "fontSize": "9px" },
-    { "id": "w2a", "x": 420, "y": 150, "label": "W1", "width": 50, "type": "pill", "fontSize": "9px" },
-    { "id": "w2b", "x": 480, "y": 150, "label": "W2", "width": 50, "type": "pill", "fontSize": "9px" },
-    
-    { "id": "st1", "x": 60, "y": 200, "label": "Storage A", "width": 130, "type": "cylinder", "fill": "#e3f2fd", "fontSize": "10px" },
-    { "id": "st2", "x": 410, "y": 200, "label": "Storage B", "width": 130, "type": "cylinder", "fill": "#e3f2fd", "fontSize": "10px" }
-  ],
-  "links": [
-    { "from": "client", "to": "seq1", "label": "TX" },
-    { "from": "client", "to": "seq2", "label": "TX" },
-    { "from": "seq1", "to": "seq2", "label": "Replication", "color": "#f06292" },
-    { "from": "seq1", "to": "sch1" },
-    { "from": "seq2", "to": "sch2" },
-    { "from": "sch1", "to": "w1a" },
-    { "from": "sch1", "to": "w1b" },
-    { "from": "sch2", "to": "w2a" },
-    { "from": "sch2", "to": "w2b" },
-    { "from": "w1a", "to": "st1" },
-    { "from": "w1b", "to": "st1" },
-    { "from": "w2a", "to": "st2" },
-    { "from": "w2b", "to": "st2" }
-  ],
-  "groups": [
-    { "x": 50, "y": 45, "width": 150, "height": 195, "label": "Partition 1", "dashed": true },
-    { "x": 400, "y": 45, "width": 150, "height": 195, "label": "Partition 2", "dashed": true }
-  ]
-}
-```
-
----
-
-# Calvin Analysis: Planning vs. Recovery
-
-Unlike protocols that rely on **runtime coordination** (like 2PC or EPaxos), Calvin relies on **pre-runtime planning**.
-
-| Property | Calvin Philosophy | Why it's superior for writes |
-|---|---|---|
-| **Contention** | Deterministic order eliminates lock waiting | High throughput under hot-key contention |
-| **Commitment** | Replication *at the sequencer* is the commit point | No 2PC round-trip at the end of every TX |
-| **Fault Tolerance** | Deterministic replay from the log | A recovering node can catch up blindly |
-
-> [!IMPORTANT]
-> Because the logic is deterministic, a "Live Demo" usually adds little value—you are simply watching a pre-calculated plan unfold. High-fidelity static traces (Option 1) and structural diagrams (Option 2) allow for a deeper understanding of the **Batching and Dispatching** boundaries that define the system's performance.
-
----
-
-# Distributed Transactions: Spanner
-
-Google **Spanner** (also CockroachDB, YugaByte DB) takes a contrasting approach: **per-shard consensus with 2PC across shards**.
-
-**Key Ingredients**:
-- **Paxos groups** per partition (shard). Each group has a long-lived leader.
-- **TrueTime** — a high-precision wall-clock API exposing an uncertainty bound. Allows introducing controlled delays so timestamps are guaranteed to be globally ordered.
-- **2PC across group leaders** for multi-shard transactions.
-
----
-
-# Spanner Operation Types
-
-| Type | Locks? | Leader Required? |
-|---|---|---|
-| Read-write transaction | Yes (2PL) | Yes |
-| Read-only transaction | No | No — any up-to-date replica |
-| Snapshot read | No | Only for latest timestamp |
-
-> *Each data record carries a commit timestamp. Multiple timestamped versions can coexist, making snapshot reads lock-free.*
-
-**External consistency**: If transaction T1 commits before T2 starts, T1's timestamp is strictly less than T2's — even across shards.
-
----
-
-# Calvin vs. Spanner
-
-| Property | Calvin | Spanner |
-|---|---|---|
-| Consensus scope | Global (single sequencer) | Per-shard (decentralized) |
-| Distributed commit | Deterministic ordering | Two-phase commit |
-| Query model | NoSQL only (pre-declared read/write sets) | Full SQL |
-| Real-world systems | FaunaDB | CockroachDB, YugaByte DB |
-| **Read performance** | High latency / lower throughput | Low latency / high throughput |
-| **Write — distributed TX** | Low latency / high throughput for contended data | Low latency only for single-shard TX |
-| **Fault tolerance** | Leader failure impacts all data | Failure impacts subset of data |
-| Clock skew | No problem | Requires TrueTime |
-| License | Proprietary | Open-source |
-
----
-
 # Database Partitioning
 
 Storing all records on a single node is unrealistic for most modern applications. **Partitioning** divides data into smaller, manageable segments.
@@ -551,7 +409,9 @@ To use partitions effectively:
 - When nodes are added/removed, the database must **repartition** — ideally relocating data *before* updating routing metadata.
 - Some databases perform **auto-sharding**: dynamic placement algorithms using read/write load and data volume metrics.
 
-### The Hash-Mod Problem
+---
+
+# The Hash-Mod Problem
 
 A naive strategy: `node = hash(key) mod N`
 
@@ -563,36 +423,79 @@ When `N` changes (a node is added or removed):
 
 # Consistent Hashing
 
+<div style="display: flex; align-items: flex-start; gap: 30px;">
+<div style="flex: 1;">
+
 **Consistent hashing** solves the hash-mod problem with minimal key migration when the cluster size changes.
 
 **The idea**: map both keys and nodes onto the same large virtual ring of size $M \gg N$.
 
-$$\text{owner} = \text{first node clockwise from } \text{hash}(\text{key}) \mod M$$
+$$
+  \text{owner} = \text{first node clockwise from } \textbf{hash}(\text{key}) \mod M
+$$
 
 When a node is **added**: only the keys between its predecessor and its new position migrate — a fraction of $1/N$ of all keys.
 
 When a node is **removed**: only its keys move to its successor — again, roughly $1/N$.
 
-<center>
-<img src="https://miro.medium.com/max/828/1*YUc0c0oOM-OzQDLHj48yYg.png" style="background-color: white; padding: 16px; border-radius: 10px; max-width: 70%; margin-top: 16px;">
-</center>
+</div>
+<div style="width: 400px; flex-shrink: 0; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1);">
+
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <!-- The Ring -->
+  <circle cx="200" cy="200" r="150" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="2" stroke-dasharray="8,4" />
+
+  <!-- Server Nodes (Primitives) -->
+  <!-- Server A -->
+  <rect x="170" y="30" width="60" height="30" rx="6" fill="#4caf50" />
+  <text x="200" y="50" text-anchor="middle" fill="white" font-size="12" font-weight="bold" font-family="Inter, sans-serif">Node A</text>
+  
+  <!-- Server B -->
+  <rect x="320" y="185" width="60" height="30" rx="6" fill="#2196f3" />
+  <text x="350" y="205" text-anchor="middle" fill="white" font-size="12" font-weight="bold" font-family="Inter, sans-serif">Node B</text>
+  
+  <!-- Server C -->
+  <rect x="170" y="340" width="60" height="30" rx="6" fill="#ff9800" />
+  <text x="200" y="360" text-anchor="middle" fill="white" font-size="12" font-weight="bold" font-family="Inter, sans-serif">Node C</text>
+  
+  <!-- Server D -->
+  <rect x="20" y="185" width="60" height="30" rx="6" fill="#f44336" />
+  <text x="50" y="205" text-anchor="middle" fill="white" font-size="12" font-weight="bold" font-family="Inter, sans-serif">Node D</text>
+
+  <!-- Keys (Hash Results) -->
+  <!-- K1 maps to B -->
+  <circle cx="290" cy="90" r="6" fill="#fff" stroke="#333" stroke-width="1" />
+  <text x="305" y="85" fill="#aaa" font-size="10" font-family="Inter, sans-serif">k1</text>
+  <path d="M 295 95 Q 320 120 340 180" fill="none" stroke="rgba(33, 150, 243, 0.5)" stroke-width="2" stroke-dasharray="4,2" marker-end="url(#arrowhead)" />
+  
+  <!-- K2 maps to C -->
+  <circle cx="290" cy="310" r="6" fill="#fff" stroke="#333" stroke-width="1" />
+  <text x="305" y="325" fill="#aaa" font-size="10" font-family="Inter, sans-serif">k2</text>
+  <path d="M 290 316 Q 270 340 235 350" fill="none" stroke="rgba(255, 152, 0, 0.5)" stroke-width="2" stroke-dasharray="4,2" marker-end="url(#arrowhead)" />
+
+  <!-- K3 maps to A -->
+  <circle cx="60" cy="90" r="6" fill="#fff" stroke="#333" stroke-width="1" />
+  <text x="45" y="85" fill="#aaa" font-size="10" font-family="Inter, sans-serif">k3</text>
+  <path d="M 65 85 Q 100 50 165 45" fill="none" stroke="rgba(76, 175, 80, 0.5)" stroke-width="2" stroke-dasharray="4,2" marker-end="url(#arrowhead)" />
+
+  <!-- Definitions for arrows -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="rgba(255,255,255,0.4)" />
+    </marker>
+  </defs>
+</svg>
+
+</div>
+</div>
 
 ---
 
-# Consistent Hashing Live Demo
+# Consistent Hashing: Interactive Ring
 
-The sandbox visualizes a 4-node consistent hashing ring. At tick 30, a **virtual node joins** at ring position 500. At tick 70, it **leaves** and key ownership shifts back.
+<p style="font-size: 0.85rem; color: #aaa; margin-bottom: -15px;">Sandbox with 1,000 keys. Click <b>Add Server</b> to observe the <b>minimal-disruption</b> guarantee: only a small fraction of keys (red) migrate to the new server. The <b>Gap-Aware</b> placement algorithm ensures balanced distribution. <i>Note: In production (e.g. Dynamo), these "servers" can be virtual units to balance load.</i></p>
 
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">Observe the <b>myRange</b> field on each node as the virtual node joins and leaves. Only nodes adjacent to the newcomer on the ring need to update their ranges. The other nodes are completely unaffected — this is the minimal-disruption guarantee of consistent hashing.</p>
-</div>
-
-<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/consistent-hashing/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        Launch Consistent Hashing Demo
-    </button>
-</div>
+<iframe src="demos/consistent-hashing-ring/index.html" style="width: 100%; height: 500px; border: none; border-radius: 12px; margin-top: 20px;"></iframe>
 
 ---
 
@@ -604,32 +507,41 @@ Under SI, all reads within a transaction see a **consistent snapshot** taken at 
 
 ✅ SI prevents **read skew** and ensures repeatable reads of committed data.
 
-### Read Skew (prevented by SI)
+---
+
+# Read Skew (prevented by SI)
 
 ```static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
-  "trackHeight": 48,
+  "trackHeight": 64,
   "stateBandOffset": 10,
-  "servers": ["T1: Auditor", "T2: Transfer", "A1 (50$)", "A2 (50$)"],
+  "servers": ["Reader", "DB", "Writer"],
   "states": [
-    { "server": "A1 (50$)",     "start": 0,  "end": 30, "state": "50$",            "color": "#e0e0e0" },
-    { "server": "A1 (50$)",     "start": 31, "end": 57, "state": "30$",            "color": "#ffb74d" },
-    { "server": "A2 (50$)",     "start": 0,  "end": 40, "state": "50$",            "color": "#e0e0e0" },
-    { "server": "A2 (50$)",     "start": 41, "end": 57, "state": "70$",            "color": "#ffb74d" },
-    { "server": "T1: Auditor",  "start": 3,  "end": 20, "state": "read A1=50$",    "color": "#81c784" },
-    { "server": "T1: Auditor",  "start": 42, "end": 55, "state": "read A2=70$ ❌", "color": "#ef5350" },
-    { "server": "T2: Transfer", "start": 22, "end": 42, "state": "move 20$: A1→A2","color": "#4fc3f7" }
+    { "server": "DB", "start": 0, "end": 22, "state": "A=100\nB=100", "color": "#e0e0e0" },
+    { "server": "DB", "start": 23, "end": 36, "state": "A=80\nB=100", "color": "#ffb74d" },
+    { "server": "DB", "start": 37, "end": 49, "state": "A=80\nB=120", "color": "#ffb74d" },
+    { "server": "DB", "start": 50, "end": 57, "state": "A+B=200", "color": "#ef5350" },
+    { "server": "Reader", "start": 2, "end": 10, "state": "Read A", "color": "#81c784" },
+    { "server": "Reader", "start": 11, "end": 40, "state": "A = 100", "color": "#81c784" },
+    { "server": "Reader", "start": 41, "end": 49, "state": "A = 100\nRead B", "color": "#81c784" },
+    { "server": "Reader", "start": 50, "end": 57, "state": "A + B = 220 ❌", "color": "#ef5350" },
+    { "server": "Writer", "start": 15, "end": 26, "state": "write A <- 80", "color": "#4fc3f7" },
+    { "server": "Writer", "start": 30, "end": 40, "state": "write B <- 120", "color": "#4fc3f7" }
   ],
   "messages": [
-    {"from": "T2: Transfer", "to": "A1 (50$)", "sendTick": 25, "recvTick": 31},
-    {"from": "T2: Transfer", "to": "A2 (50$)", "sendTick": 33, "recvTick": 41}
+    { "from": "Reader", "to": "DB", "sendTick": 3, "recvTick": 6, "label": "Read A" },
+    { "from": "DB", "to": "Reader", "sendTick": 8, "recvTick": 11, "label": "A=100" },
+    { "from": "Writer", "to": "DB", "sendTick": 19, "recvTick": 23, "label": "Set A=80" },
+    { "from": "Writer", "to": "DB", "sendTick": 33, "recvTick": 37, "label": "Set B=120" },
+    { "from": "Reader", "to": "DB", "sendTick": 41, "recvTick": 44, "label": "Read B" },
+    { "from": "DB", "to": "Reader", "sendTick": 46, "recvTick": 49, "label": "B=120" }
   ]
 }
 ```
 
-*(T1 reads A1=50 before the transfer, then reads A2=70 after T2 committed. It now sees A1+A2=120 — the invariant is violated. SI prevents this by fixing T1's snapshot at start.)*
+*(T1 reads A=100, then T2 transfers 20 dollars from A to B and commits. Finally, T1 reads B=120. T1 sees a total of 220, violating the invariant that the total must be 200. SI prevents this by ensuring T1 only sees the state at its start time.)*
 
 ---
 
@@ -640,84 +552,31 @@ SI does **not** prevent **write skew**: a situation where each transaction indiv
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 58,
-  "trackHeight": 48,
+  "ticks": 50,
+  "trackHeight": 64,
   "stateBandOffset": 10,
-  "servers": ["T1: Withdraw A1", "T2: Withdraw A2", "A1 (100$)", "A2 (150$)"],
+  "servers": ["Doctors Status", "D1", "D2"],
   "states": [
-    { "server": "A1 (100$)",       "start": 0,  "end": 39, "state": "100$",             "color": "#e0e0e0" },
-    { "server": "A1 (100$)",       "start": 40, "end": 57, "state": "-100$",            "color": "#ef5350" },
-    { "server": "A2 (150$)",       "start": 0,  "end": 45, "state": "150$",             "color": "#e0e0e0" },
-    { "server": "A2 (150$)",       "start": 46, "end": 57, "state": "-50$",             "color": "#ef5350" },
-    { "server": "T1: Withdraw A1", "start": 5,  "end": 18, "state": "read sum=250 ✅",  "color": "#81c784" },
-    { "server": "T1: Withdraw A1", "start": 22, "end": 40, "state": "write A1=-100$",   "color": "#ffb74d" },
-    { "server": "T2: Withdraw A2", "start": 8,  "end": 20, "state": "read sum=250 ✅",  "color": "#81c784" },
-    { "server": "T2: Withdraw A2", "start": 27, "end": 46, "state": "write A2=-50$",    "color": "#ffb74d" }
+    { "server": "Doctors Status", "start": 0, "end": 25, "state": "D1: On\nD2: On", "color": "#e0e0e0" },
+    { "server": "Doctors Status", "start": 26, "end": 38, "state": "D1: Off\nD2: On", "color": "#ffb74d" },
+    { "server": "Doctors Status", "start": 39, "end": 50, "state": "D1: Off\nD2: Off", "color": "#ef5350" },
+    { "server": "D1", "start": 5, "end": 18, "state": "Read D2 Status", "color": "#81c784" },
+    { "server": "D1", "start": 21, "end": 26, "state": "D1 → Off", "color": "#ffb74d" },
+    { "server": "D2", "start": 6, "end": 20, "state": "Read D1 Status", "color": "#4fc3f7" },
+    { "server": "D2", "start": 34, "end": 39, "state": "D2 → Off", "color": "#ffb74d" }
+  ],
+  "messages": [
+    { "from": "D1", "to": "Doctors Status", "sendTick": 7, "recvTick": 11 },
+    { "from": "Doctors Status", "to": "D1", "sendTick": 14, "recvTick": 18 },
+    { "from": "D2", "to": "Doctors Status", "sendTick": 8, "recvTick": 12 },
+    { "from": "Doctors Status", "to": "D2", "sendTick": 16, "recvTick": 20 },
+    { "from": "D1", "to": "Doctors Status", "sendTick": 21, "recvTick": 26 },
+    { "from": "D2", "to": "Doctors Status", "sendTick": 34, "recvTick": 39 }
   ]
 }
 ```
 
-*(Both T1 and T2 read a valid sum at snapshot time. Each writes only its own account. Individually, both find the invariant satisfied. Combined: A1+A2 = -150$ < 0 — constraint violated.)*
-
----
-
-# Percolator: Transactional API on Bigtable
-
-**Percolator** implements snapshot isolation on top of **Bigtable** using a client-driven two-phase commit. Each transaction consults a **timestamp oracle** (globally monotonic clock) twice: once at start, once at commit.
-
-| Column | Purpose |
-|---|---|
-| **Data** | Actual record payload |
-| **Locks** | Tracks lock holder (one is designated *primary*) |
-| **Write metadata** | Points to the latest committed data timestamp |
-
-### Percolator Commit Flow
-
-**Phase 1 — Prewrite**: Acquire locks on all cells to be written. The primary lock is set first. If any conflict is detected → abort.
-
-**Phase 2 — Commit**: Starting with the primary lock, replace locks with write records. Publish changes by updating write metadata to point at the new data timestamp.
-
-> *Only one transaction can hold a lock at a time, and all state transitions use conditional mutations (atomic read-modify-write in a single RPC). This eliminates race conditions without a distributed lock manager.*
-
-**Used by**: TiDB (Titanium DB — MySQL-compatible, strongly consistent, horizontally scalable)
-
----
-
-# Percolator: State Walk-Through
-
-**Initial state** (after previous transaction at timestamp 0):
-
-| Account | Timestamp | Data | Lock | Write Metadata |
-|---|---|---|---|---|
-| A1 | 1 | 100$ | — | latest @ t=0 |
-| A2 | 1 | 200$ | — | latest @ t=0 |
-
-**After Prewrite** (new transaction, start timestamp = 1):
-
-| Account | Timestamp | Data | Lock | Write Metadata |
-|---|---|---|---|---|
-| A1 | 1 | 100$ | **primary** | latest @ t=0 |
-| A2 | 1 | 200$ | primary @ A1 | latest @ t=0 |
-
-**After Commit** (commit timestamp = 2):
-
-| Account | Timestamp | Data | Lock | Write Metadata |
-|---|---|---|---|---|
-| A1 | 2 | 150$ | — | latest @ t=1 |
-| A2 | 2 | 150$ | — | latest @ t=1 |
-
-*Locks are released starting from the primary. Readers that observe uncommitted locks can consult the primary lock to determine if the transaction succeeded and proceed accordingly.*
-
-<div style="background: #222; padding: 20px; border-radius: 8px; margin-top: 20px;">
-    <h4 style="margin-top: 0; color: #ff9800;">What to watch</h4>
-    <p style="font-size: 1.1rem;">The Coordinator runs three sequential transactions. Watch the <b>Shard-A</b> and <b>Shard-B</b> inspector: their <b>lock</b> field fills during Prewrite and clears on Commit. The Oracle's <b>ts</b> counter increments twice per transaction (start + commit). The coordinator's <b>log</b> field narrates each step. Try crashing the Oracle mid-transaction to see the coordinator stall waiting for a timestamp.</p>
-</div>
-
-<div style="text-align: center; margin-top: 30px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/percolator/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #00695c; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        Launch Percolator Demo
-    </button>
-</div>
+*(**Invariant**: At least one doctor is on call at any time. Both transactions read a valid snapshot seeing the other doctor 'On Call', so they can go home. But after they write 'Off', the combined result is [Off, Off] — zero doctors are on call, a violation of the global invariant. This is **Write Skew**.)*
 
 ---
 
@@ -729,7 +588,9 @@ The need for **coordination** can be completely eliminated when the operations t
 
 Because any two valid states can be safely merged, **I-Confluent** operations improve scalability dramatically by removing cross-partition synchronization.
 
-### Requirements for Coordination-Free Systems
+---
+
+# Requirements for Coordination-Free Systems
 
 <small>
 
@@ -742,46 +603,16 @@ Because any two valid states can be safely merged, **I-Confluent** operations im
 
 </small>
 
----
+# Summary: Transaction Foundations
 
-# RAMP Transactions
+<small>
 
-**Read-Atomic Multi-Partition (RAMP)** transactions implement coordination avoidance using multiversion concurrency control and in-flight write metadata.
-
-**The key problem RAMP solves**: *fractured reads* — when a transaction observes only a *subset* of updates made by another concurrent transaction.
-
-RAMP provides:
-- **Synchronization independence**: one client's transaction will never stall or abort another's.
-- **Partition independence**: clients only contact partitions whose data is relevant to their transaction.
-
-RAMP introduces the **read-atomic isolation level**: all or none of a transaction's updates are visible to concurrent readers.
-
----
-
-# RAMP Transactions
-
-### How It Works
-
-1. Writes are **buffered** and installed using two-phase commit.
-2. RAMP distributes **transaction metadata** alongside writes — a reader can detect concurrent in-flight writes by inspecting metadata.
-3. If a reader finds that the latest version it observed is part of a larger atomic write, it fetches the remaining parts from other partitions using the metadata, ensuring it sees a complete snapshot.
-
-> *RAMP offers atomic write visibility **without** mutual exclusion. Transactions proceed in parallel, never blocking each other.*
-
----
-
-# Lecture Summary
-
-We traced the full landscape of distributed transaction protocols — from foundational primitives to production-grade database architectures.
-
-| Protocol / System | Key Idea | Main Trade-off |
+| Protocol | Key Idea | Main Trade-off |
 |---|---|---|
 | **2PC** | Coordinator-driven two-round commit | Blocks if coordinator crashes mid-vote |
 | **3PC** | Extra prepare phase with timeouts | Split-brain under network partitions |
-| **Calvin** | Deterministic global ordering | Pre-declared read/write sets only |
-| **Spanner** | Per-shard Paxos + 2PC + TrueTime | Higher cost for multi-shard transactions |
-| **Percolator** | SI + client-driven 2PC on Bigtable | Timestamp oracle is a potential bottleneck |
-| **RAMP** | Coordination-free via metadata | Read-atomic isolation only (not serializable) |
+
+</small>
 
 ---
 
