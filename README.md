@@ -9,6 +9,7 @@
 * [Replication](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/replication.md)
 * [Consistency](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/consistency.md)
 * [Anti-Entropy and Dissemination](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/anti_entropy.md)
+* [Distributed Transactions](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/distributed_transactions.md)
 
 ## Demos
 
@@ -44,12 +45,13 @@
 * [Bitmap Version Vectors](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/bitmap-version-vectors/demo.json)
 * [Gossip Dissemination](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/gossip-dissemination/demo.json)
 * [Plumtree](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/plum/demo.json)
+* [Merkle Tree](https://fbeilstein.github.io/distributed_systems/demos/merkle-tree/index.html)
 
 ### Distributed Transactions
 
 * [2 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/2pc/demo.json)
 * [3 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/3pc/demo.json)
-* [Consistent Hashing](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/consistent-hashing/demo.json)
+* [Consistent Hashing](https://fbeilstein.github.io/distributed_systems/demos/consistent-hashing-ring/index.html)
 
 ### Consensus
 
