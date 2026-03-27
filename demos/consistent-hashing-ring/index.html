@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consistent Hashing - Presentation Sandbox</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <section id="canvas-container">
+        <canvas id="ring-canvas"></canvas>
+    </section>
+
+    <aside id="sidebar">
+        <div class="control-group">
+            <span class="label">Cluster Topology</span>
+            <div class="btn-row">
+                <button onclick="addNode()">+ Server</button>
+                <button class="secondary" onclick="removeNode()">- Server</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <span class="label">Virtual Nodes per Server (Max 5)</span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <input type="range" id="vnode-slider" min="1" max="5" value="1" oninput="updateVNodes(this.value)">
+                <span id="vnode-display" class="stat-value">1</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <span class="label">Server Load (1,000 Keys)</span>
+            <div id="legend-container"></div>
+        </div>
+    </aside>
+
+    <script src="ring.js"></script>
+</body>
+
+</html>
