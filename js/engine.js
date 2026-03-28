@@ -5,7 +5,7 @@
  */
 
 import { PRNG } from './prng.js';
-import { executeHandler } from './server-runtime.js';
+import { StatefulRuntime } from './server-runtime.js';
 
 /** Default timeline length */
 export const DEFAULT_MAX_TICKS = 100;
@@ -88,6 +88,7 @@ export class Engine {
         this.history = [];           // SimState[] indexed by tick
         this.userOverrides = new Map(); // key → { arrivalTick, lost }
         this.onChange = null;        // callback when recomputation is done
+        this.config = {};
     }
 
     /**
@@ -147,17 +148,21 @@ export class Engine {
     /**
      * Main simulation: recompute the entire timeline from scratch.
      */
-    recompute() {
+    recompute(config) {
+        if (config) this.config = config;
         const prng = new PRNG(this.seed);
         const allServerIds = this.servers.map(s => s.id);
         const messages = [];
         const history = [];
 
-        // Server states: persistent across ticks, preserved across crashes
-        const serverStates = new Map();
+        // Initialize StatefulRuntimes for all servers
+        const runtimes = new Map();
+        for (const server of this.servers) {
+            runtimes.set(server.id, new StatefulRuntime(server.id, allServerIds, server.code, prng, this.config));
+        }
+
         const serverWasUp = new Map();
         for (const s of this.servers) {
-            serverStates.set(s.id, {});
             serverWasUp.set(s.id, false);
         }
 
@@ -165,26 +170,18 @@ export class Engine {
             for (const server of this.servers) {
                 const up = isServerUp(server, tick);
                 const wasUp = serverWasUp.get(server.id);
+                const rt = runtimes.get(server.id);
 
                 if (!up) {
                     serverWasUp.set(server.id, false);
                     continue;
                 }
 
-                const currentState = serverStates.get(server.id);
-
                 // If just became up (first tick or recovery), call onUp
                 if (!wasUp) {
-                    const result = executeHandler('onUp', server.code, {
-                        serverId: server.id,
-                        tick,
-                        state: currentState,
-                        allServerIds,
-                        prng
-                    });
-                    serverStates.set(server.id, result.state);
+                    const result = rt.execute('onUp', tick);
                     if (result.error) {
-                        serverStates.set(server.id, { ...result.state, __error__: result.error });
+                        rt.currentState = { ...rt.currentState, __error__: result.error };
                     }
                     // Process outbox
                     for (const out of result.outbox) {
@@ -195,16 +192,9 @@ export class Engine {
 
                 // Call onTimer
                 {
-                    const result = executeHandler('onTimer', server.code, {
-                        serverId: server.id,
-                        tick,
-                        state: serverStates.get(server.id),
-                        allServerIds,
-                        prng
-                    }, tick);
-                    serverStates.set(server.id, result.state);
+                    const result = rt.execute('onTimer', tick, tick);
                     if (result.error) {
-                        serverStates.set(server.id, { ...result.state, __error__: result.error });
+                        rt.currentState = { ...rt.currentState, __error__: result.error };
                     }
                     for (const out of result.outbox) {
                         this._addMessage(messages, out, prng);
@@ -216,16 +206,9 @@ export class Engine {
                     m => m.to === server.id && m.arrivalTick === tick && !m.lost
                 );
                 for (const msg of arriving) {
-                    const result = executeHandler('onMessage', server.code, {
-                        serverId: server.id,
-                        tick,
-                        state: serverStates.get(server.id),
-                        allServerIds,
-                        prng
-                    }, { from: msg.from, payload: msg.payload });
-                    serverStates.set(server.id, result.state);
+                    const result = rt.execute('onMessage', tick, { from: msg.from, payload: msg.payload });
                     if (result.error) {
-                        serverStates.set(server.id, { ...result.state, __error__: result.error });
+                        rt.currentState = { ...rt.currentState, __error__: result.error };
                     }
                     for (const out of result.outbox) {
                         this._addMessage(messages, out, prng);
@@ -235,10 +218,10 @@ export class Engine {
                 serverWasUp.set(server.id, true);
             }
 
-            // Snapshot the state at this tick
+            // Snapshot the state at this tick for visualization
             const snapshot = {};
-            for (const s of this.servers) {
-                snapshot[s.id] = JSON.parse(JSON.stringify(serverStates.get(s.id)));
+            for (const server of this.servers) {
+                snapshot[server.id] = JSON.parse(JSON.stringify(runtimes.get(server.id).currentState));
             }
             history.push({
                 tick,
@@ -294,6 +277,7 @@ export class Engine {
             arrivalTick,
             payload: outgoing.payload,
             lost,
+            color: outgoing.color || 'black',
         });
     }
 

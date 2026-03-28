@@ -32,6 +32,7 @@ class State {
   onTimer(tick) {}
   onMessage(msg) {}
 
+  // --- Timeout Helpers ---
   addTimeout(ticks, callbackMethodName) {
     this._timeout = ticks;
     this._timeoutCallback = callbackMethodName;
@@ -68,6 +69,15 @@ class Automat {
         // Seed initial color from getState() if not already defined
         const [_, color] = s.getState();
         if (!this._colors[name]) this._colors[name] = color;
+
+        // Static Graph Discovery (Optional)
+        if (typeof s.canTransition === 'function') {
+           const targets = s.canTransition();
+           if (Array.isArray(targets)) {
+              if (!this._graph[name]) this._graph[name] = {};
+              targets.forEach(t => { this._graph[name][t] = t; });
+           }
+        }
       } else {
         // Compatibility for raw objects
         this._isLegacy = true; 
@@ -87,7 +97,8 @@ class Automat {
     if (!this.current) return;
     if (this.current._timeout !== null) {
       if (--this.current._timeout <= 0) {
-        const cb = this.current[this.current._timeoutCallback];
+        const cbName = this.current._timeoutCallback;
+        const cb = this.current[cbName];
         this.current._timeout = null;
         if (typeof cb === 'function') cb.call(this.current);
       }
@@ -100,7 +111,31 @@ class Automat {
     this.current.onTimer(tick);
   }
 
-  onMessage(msg) { if (this.current) this.current.onMessage(msg); }
+  onMessage(msg) { 
+    if (!this.current) return;
+    const type = msg.payload && msg.payload.type;
+    
+    // 1. Explicit Registration
+    if (typeof this.current.registerMessageTypes === 'function') {
+      const map = this.current.registerMessageTypes();
+      if (map && type in map) {
+        const handler = map[type];
+        if (typeof handler === 'function') return handler.call(this.current, msg);
+        if (typeof handler === 'string' && typeof this.current[handler] === 'function') {
+          return this.current[handler](msg);
+        }
+      }
+    }
+
+    // 2. Naming Convention (Optional / If not handled above)
+    const conventionName = type ? \`on\${type}\` : null;
+    if (conventionName && typeof this.current[conventionName] === 'function') {
+      return this.current[conventionName](msg);
+    }
+
+    // 3. General Fallback
+    this.current.onMessage(msg); 
+  }
 
   transition(targetName) {
     const next = (this._graph[this.stateName] && this._graph[this.stateName][targetName]) || targetName;
@@ -125,7 +160,6 @@ class Automat {
       stateData[n] = { _timeout: s._timeout, _timeoutCallback: s._timeoutCallback };
     }
     const [display, color] = this.current ? this.current.getState() : [this.stateName, '#ccc'];
-    // Ensure this._colors is synced for the visualizer mapping
     if (this.stateName) this._colors[this.stateName] = color;
 
     return {
@@ -140,37 +174,11 @@ class Automat {
   }
 
   static run(handlerName, arg, ...states) {
-    let s = loadState();
-    const config = { states }; 
-    if (!s.fsm) {
-       const a = new Automat(config);
-       if (a.current && a.current.onEnter) a.current.onEnter();
-       s.fsm = a.serialize(); 
-       s.state = s.fsm.state; s.color = s.fsm.color;
-       dumpState(s);
-       if (handlerName === 'onUp') { 
-           a.onUp(); s = loadState(); s.fsm = a.serialize(); 
-           s.state = s.fsm.state; s.color = s.fsm.color;
-           dumpState(s); return; 
-       }
-    }
-    const a = new Automat(config);
-    const d = s.fsm;
-    a.stateName = d.stateName;
-    a._graph = d.graph || {};
-    a._colors = d.colors || {};
-    a.current = a.states[a.stateName];
-    a._pendingTimeouts = d.pendingTimeouts || [];
-    if (d.stateData) {
-       for (const [n, data] of Object.entries(d.stateData)) {
-          if (a.states[n]) Object.assign(a.states[n], data);
-       }
-    }
-    if (handlerName === 'onTimer') a.onTimer(arg);
-    else if (handlerName === 'onMessage') a.onMessage(arg);
-    else if (handlerName === 'onUp') a.onUp();
-    s = loadState(); s.fsm = a.serialize(); 
-    s.state = s.fsm.state; s.color = s.fsm.color;
+    const s = loadState();
+    const a = new Automat({ initial: s.stateName, states: states });
+    if (typeof a[handlerName] === 'function') a[handlerName](arg);
+    const res = a.serialize();
+    s.stateName = res.stateName;
     dumpState(s);
   }
 

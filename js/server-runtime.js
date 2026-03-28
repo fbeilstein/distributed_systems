@@ -2,75 +2,101 @@
  * server-runtime.js
  * Executes user-provided JS functions (onUp, onTimer, onMessage) in a controlled scope.
  * Provides the API: loadState(), dumpState(state), sendMessage(target, payload).
- * Also injects the Automat FSM class for demos that use state machines.
+ * Supports persistent context for "Live Object" (OOP) simulation.
  */
 
 import { AUTOMAT_SOURCE } from './automat.js';
 
-/**
- * Run a server handler function in a sandboxed scope.
- * @param {string} handlerName - 'onUp', 'onTimer', or 'onMessage'
- * @param {string} code - The user-provided function body string
- * @param {object} context - { serverId, tick, state, outbox, allServerIds, prng }
- * @param {*} arg - argument passed to the handler (tick for onTimer, message for onMessage)
- * @returns {{ state: object, outbox: Array, error: string|null }}
- */
-export function executeHandler(handlerName, code, context, arg) {
-    let currentState = JSON.parse(JSON.stringify(context.state));
-    const outbox = [];
-    let error = null;
+export class StatefulRuntime {
+    constructor(serverId, allServerIds, code, prng, config) {
+        this.serverId = serverId;
+        this.allServerIds = [...allServerIds];
+        this.code = code;
+        this.prng = prng;
+        this.config = config || {};
+        this.tick = 0;
+        this.currentState = {};
+        this.outbox = [];
+        this.error = null;
 
-    // Build the API functions
-    const loadState = () => JSON.parse(JSON.stringify(currentState));
-    const dumpState = (state) => {
-        currentState = JSON.parse(JSON.stringify(state));
-    };
-    const sendMessage = (target, payload, timeout, callback) => {
-        outbox.push({
-            from: context.serverId,
-            to: target,
-            payload: JSON.parse(JSON.stringify(payload || {})),
-            sendTick: context.tick,
-            timeout: timeout,
-            callback: callback
-        });
-    };
-    // Stateless deterministic hash based on tick and serverId
-    const getRandom = (min, max) => {
-        const seedBase = context.prng ? context.prng.seed : 42;
-        // Create a unique deterministic pseudo-seed for this exact moment
-        let h = seedBase ^ context.tick ^ (context.serverId * 0x9E3779B9);
-
-        // Simple Mulberry32 hash to scramble the bits
-        h = Math.imul(h ^ (h >>> 15), 1 | h);
-        h ^= h + Math.imul(h ^ (h >>> 7), 61 | h);
-        const floatVal = ((h ^ (h >>> 14)) >>> 0) / 4294967296;
-
-        return Math.floor(floatVal * (max - min + 1) + min);
-    };
-
-    try {
-        // Wrap user code: inject Automat class, then user functions, then call handler
-        const wrappedCode = `
-      const __currentTick__ = ${context.tick};
-      ${AUTOMAT_SOURCE}
-      ${code}
-      if (typeof ${handlerName} === 'function') {
-        ${handlerName}(${arg !== undefined ? '__arg__' : ''});
-      }
-    `;
-
-        const fn = new Function(
-            'loadState', 'dumpState', 'sendMessage', 'getRandom', 'prng',
-            'serverId', 'allServerIds', '__arg__',
-            wrappedCode
-        );
-
-        fn(loadState, dumpState, sendMessage, getRandom, context.prng, context.serverId, context.allServerIds, arg);
-    } catch (e) {
-        error = e.message || String(e);
+        // The "Sandbox" - created once per recompute
+        this._initSandbox();
     }
 
-    return { state: currentState, outbox, error };
+    _initSandbox() {
+        const loadState = () => JSON.parse(JSON.stringify(this.currentState));
+        const dumpState = (state) => { this.currentState = JSON.parse(JSON.stringify(state)); };
+        const sendMessage = (target, payload, color = 'black', timeout, callback) => {
+            this.outbox.push({
+                from: this.serverId,
+                to: target,
+                payload: JSON.parse(JSON.stringify(payload || {})),
+                sendTick: this.tick,
+                color: color,
+                timeout: timeout,
+                callback: callback
+            });
+        };
+        const broadcast = (targets, payload, at_once = true, color = 'black') => {
+            if (!Array.isArray(targets)) return;
+            targets.forEach((to, index) => {
+                const sendTick = at_once ? this.tick : this.tick + index;
+                this.outbox.push({
+                    from: this.serverId,
+                    to: to,
+                    payload: JSON.parse(JSON.stringify(payload || {})),
+                    sendTick: sendTick,
+                    color: color
+                });
+            });
+        };
+        const getRandom = (min, max) => {
+            const seedBase = this.prng ? this.prng.seed : 42;
+            let h = seedBase ^ this.tick ^ (this.serverId * 0x9E3779B9);
+            h = Math.imul(h ^ (h >>> 15), 1 | h);
+            h ^= h + Math.imul(h ^ (h >>> 7), 61 | h);
+            const floatVal = ((h ^ (h >>> 14)) >>> 0) / 4294967296;
+            return Math.floor(floatVal * (max - min + 1) + min);
+        };
+
+        try {
+            // The wrapper returns the compiled handlers and the local scope
+            const wrappedCode = `
+                ${AUTOMAT_SOURCE}
+                ${this.code}
+                return {
+                    onUp: typeof onUp === 'function' ? onUp : null,
+                    onTimer: typeof onTimer === 'function' ? onTimer : null,
+                    onMessage: typeof onMessage === 'function' ? onMessage : null
+                };
+            `;
+            const factory = new Function('loadState', 'dumpState', 'sendMessage', 'broadcast', 'getRandom', 'serverId', 'allServerIds', 'config', wrappedCode);
+            this.handlers = factory(loadState, dumpState, sendMessage, broadcast, getRandom, this.serverId, this.allServerIds, this.config);
+        } catch (e) {
+            this.error = e.message || String(e);
+        }
+    }
+
+    execute(handlerName, tick, arg) {
+        this.tick = tick;
+        this.outbox = [];
+        if (this.error) return { state: this.currentState, outbox: [], error: this.error };
+
+        // Force a "Hard Reboot" (fresh closure) on onUp to clear transient memory
+        if (handlerName === 'onUp') {
+            this._initSandbox();
+        }
+
+        try {
+            const handler = this.handlers[handlerName];
+            if (typeof handler === 'function') {
+                handler(arg);
+            }
+        } catch (e) {
+            this.error = e.message || String(e);
+        }
+
+        return { state: this.currentState, outbox: this.outbox, error: this.error };
+    }
 }
 

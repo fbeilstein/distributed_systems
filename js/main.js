@@ -271,7 +271,7 @@ async function init() {
     });
 
     // Run initial simulation
-    engine.recompute();
+    engine.recompute(config);
     timeline.resize();
     timeline.draw();
     stateInspector.update(0);

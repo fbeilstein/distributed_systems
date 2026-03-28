@@ -325,7 +325,7 @@ export class Timeline {
                 ctx.setLineDash([4, 3]);
                 ctx.globalAlpha = 0.5;
             } else {
-                const color = this._getThemeColor('--text-color', '#444');
+                const color = msg.color || this._getThemeColor('--text-color', '#444');
                 ctx.strokeStyle = color;
                 ctx.fillStyle = color;
                 ctx.lineWidth = isHovered ? 2.5 : 1.5;
