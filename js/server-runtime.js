@@ -25,12 +25,14 @@ export function executeHandler(handlerName, code, context, arg) {
     const dumpState = (state) => {
         currentState = JSON.parse(JSON.stringify(state));
     };
-    const sendMessage = (target, payload) => {
+    const sendMessage = (target, payload, timeout, callback) => {
         outbox.push({
             from: context.serverId,
             to: target,
             payload: JSON.parse(JSON.stringify(payload || {})),
             sendTick: context.tick,
+            timeout: timeout,
+            callback: callback
         });
     };
     // Stateless deterministic hash based on tick and serverId
@@ -50,6 +52,7 @@ export function executeHandler(handlerName, code, context, arg) {
     try {
         // Wrap user code: inject Automat class, then user functions, then call handler
         const wrappedCode = `
+      const __currentTick__ = ${context.tick};
       ${AUTOMAT_SOURCE}
       ${code}
       if (typeof ${handlerName} === 'function') {

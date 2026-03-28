@@ -247,6 +247,7 @@ export class Timeline {
                         startTick: tick,
                         endTick: tick,
                         colors: fsmData.colors || {},
+                        color: fsmData.color, // Capture explicit color
                     };
                 }
             }
@@ -260,8 +261,8 @@ export class Timeline {
                 const x1 = this.tickToX(run.startTick);
                 const x2 = this.tickToX(run.endTick + 1);
 
-                // Get color: author-defined or fallback
-                let color = run.colors[run.state];
+                // Get color: explicit property, author-defined map, or fallback
+                let color = run.color || run.colors[run.state];
                 if (!color) {
                     if (!assignedFallbacks[run.state]) {
                         assignedFallbacks[run.state] = fallbackPalette[fallbackIdx % fallbackPalette.length];
