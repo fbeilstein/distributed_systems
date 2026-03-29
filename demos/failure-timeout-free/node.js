@@ -1,105 +1,101 @@
 // Timeout-Free Failure Detector (Aguilera, Chen, Toueg 1997)
-// Nodes propagate heartbeat chains. Failure is detected by comparing
-// counters across peers — no fixed timeout needed.
+// Comparison of counters across heartbeat chains to detect failures.
 
 const DELAY_BETWEEN_PINGS = 15;
 const NUM_NODES = config.nodes || 4;
 const INITIATION_INTERVAL = DELAY_BETWEEN_PINGS * NUM_NODES;
 const SUSPICION_THRESHOLD = 2;
 const PEERS = allServerIds.filter(id => id !== serverId);
+const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#1abc9c', '#e67e22'];
+
+/** ---------------- ALGORITHM HELPERS ---------------- **/
+
+const getPathColor = (seq, idx) => COLORS[(serverId + seq + idx) % COLORS.length];
+
+function startGossipWave(s) {
+    s.seqNum++;
+    const chainId = `${serverId}:${s.seqNum}`;
+    s.seenInChain[chainId] = [serverId];
+    s.ui_state = 'Initiating Wave';
+    s.ui_color = 'green';
+
+    PEERS.forEach((target, i) => {
+        const color = getPathColor(s.seqNum, i);
+        sendMessage(target, { type: 'HB', chainId, path: [serverId], color }, color);
+    });
+}
+
+function detectFailures(s) {
+    const maxVal = Math.max(0, ...Object.values(s.counters));
+    for (const id of PEERS) {
+        const lag = maxVal - (s.counters[id] || 0);
+        s.alive[id] = lag < SUSPICION_THRESHOLD;
+        s[`S${id}`] = `${s.alive[id] ? '✅ OK' : '⚠️ SUSPECT'} (lag: ${lag})`;
+    }
+}
+
+function processHB(s, m) {
+    if (!s.seenInChain[m.chainId]) s.seenInChain[m.chainId] = [];
+    const participants = s.seenInChain[m.chainId];
+
+    let learnedSomething = false;
+    for (const pid of m.path) {
+        if (!participants.includes(pid)) {
+            participants.push(pid);
+            if (pid !== serverId) s.counters[pid] = (s.counters[pid] || 0) + 1;
+            learnedSomething = true;
+        }
+    }
+    return learnedSomething;
+}
+
+function forwardHB(s, m) {
+    let nextPath = [...m.path];
+    if (!nextPath.includes(serverId)) {
+        nextPath.push(serverId);
+        if (!s.seenInChain[m.chainId].includes(serverId)) s.seenInChain[m.chainId].push(serverId);
+    }
+
+    const targets = PEERS.filter(id => !nextPath.includes(id));
+    if (targets.length > 0) broadcast(targets, { ...m, path: nextPath }, m.color, true);
+}
+
+/** ---------------- ENGINE HOOKS ---------------- **/
 
 function onUp() {
-    let s = loadState();
+    const s = loadState();
     if (Object.keys(s).length === 0) {
-        const counters = {};
-        const alive = {};
-        for (const id of PEERS) {
-            counters[id] = 0;
-            alive[id] = true;
-        }
-        s = {
-            alive,
-            counters,
-            seenParticipants: {},
-            seqNum: 0,
-            ui_state: 'Idle',
-            ui_color: '#3182bd'
-        };
-    }
-    dumpState(s);
-}
-
-function onTimer(tick) {
-    let s = loadState();
-
-    // Staggered initiation
-    const isOurTurn = (tick % INITIATION_INTERVAL === (serverId * DELAY_BETWEEN_PINGS) % INITIATION_INTERVAL);
-
-    if (isOurTurn) {
-        s.seqNum++;
-        const msgId = `${serverId}-${s.seqNum}`;
-        if (!s.seenParticipants) s.seenParticipants = {};
-        s.seenParticipants[msgId] = [serverId];
-
-        s.ui_state = 'Initiating';
-        s.ui_color = '#2ca02c';
-
-        broadcast(PEERS, { type: 'HB', id: msgId, path: [serverId] }, 'black', false);
+        const counters = {}, alive = {};
+        PEERS.forEach(id => { counters[id] = 0; alive[id] = true; });
+        dumpState({ counters, alive, seenInChain: {}, seqNum: 0, ui_state: 'Idle', ui_color: '#3182bd' });
     } else {
-        s.ui_state = 'Idle';
-        s.ui_color = '#3182bd';
+        dumpState(s);
     }
+}
 
-    // Failure detection: compare counters
-    let maxPeerCounter = 0;
-    for (const id in s.counters) {
-        if (s.counters[id] > maxPeerCounter) maxPeerCounter = s.counters[id];
-    }
-    for (const idStr in s.counters) {
-        const id = parseInt(idStr);
-        if (maxPeerCounter - s.counters[id] >= SUSPICION_THRESHOLD) {
-            s.alive[id] = false;
-        } else {
-            s.alive[id] = true;
-        }
-    }
+function onTimer(t) {
+    const s = loadState();
+    s.tick = t;
 
-    for (const id of PEERS)
-        s[`S${id}`] = s.alive[id] ? '✅ OK' : '⚠️ SUSPECT';
+    // 1. INITIATION: Staggered turns for each node to start a new gossip wave.
+    const isOurTurn = (t % INITIATION_INTERVAL === (serverId * DELAY_BETWEEN_PINGS) % INITIATION_INTERVAL);
+    if (isOurTurn) startGossipWave(s);
+    else { s.ui_state = 'Idle'; s.ui_color = '#3182bd'; }
 
+    // 2. DETECTION: Suspect peers whose counters lag behind the global maximum activity.
+    detectFailures(s);
     dumpState(s);
 }
 
-function onMessage(message) {
-    let s = loadState();
-    const m = message.payload;
-    if (m.type !== 'HB') { dumpState(s); return; }
+function onMessage(msg) {
+    if (msg.payload.type !== 'HB') return;
+    const s = loadState();
 
-    if (!s.seenParticipants) s.seenParticipants = {};
-    if (!s.seenParticipants[m.id]) s.seenParticipants[m.id] = [];
+    // 3. UPDATE: Track new participants in this heartbeat chain.
+    const learned = processHB(s, msg.payload);
 
-    let hasNewInfo = false;
-    for (const pid of m.path) {
-        if (!s.seenParticipants[m.id].includes(pid)) {
-            s.seenParticipants[m.id].push(pid);
-            if (pid !== serverId) {
-                s.counters[pid] = (s.counters[pid] || 0) + 1;
-            }
-            hasNewInfo = true;
-        }
-    }
-
-    if (hasNewInfo) {
-        let newPath = [...m.path];
-        if (!newPath.includes(serverId)) {
-            newPath.push(serverId);
-            if (!s.seenParticipants[m.id].includes(serverId)) {
-                s.seenParticipants[m.id].push(serverId);
-            }
-        }
-        const targets = PEERS.filter(id => !newPath.includes(id));
-        broadcast(targets, { type: 'HB', id: m.id, path: newPath }, 'black', false);
-    }
+    // 4. GOSSIP: forward to remaining peers if we learned something new.
+    if (learned) forwardHB(s, msg.payload);
 
     dumpState(s);
 }
