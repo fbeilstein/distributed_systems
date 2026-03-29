@@ -10,16 +10,20 @@
     ],
     "servers": [
         {
-            "codeFile": "master.js"
+            "id": 0,
+            "codeFile": "monitor.js"
         },
         {
-            "codeFile": "slave.js"
+            "id": 1,
+            "codeFile": "target.js"
         },
         {
-            "codeFile": "slave.js"
+            "id": 2,
+            "codeFile": "target.js"
         },
         {
-            "codeFile": "slave.js"
+            "id": 3,
+            "codeFile": "target.js"
         }
     ]
 }

@@ -296,7 +296,11 @@ export class StateInspector {
      */
     _formatValue(val, path = '') {
         if (val === null) return document.createTextNode('null');
-        if (typeof val !== 'object') return document.createTextNode(String(val));
+        if (typeof val !== 'object') {
+            const span = document.createElement('span');
+            span.innerHTML = String(val);
+            return span;
+        }
 
         const isArray = Array.isArray(val);
         const keys = Object.keys(val);
