@@ -2,6 +2,7 @@
     "nodes": 4,
     "seed": 11,
     "ticks": 120,
+    "nameWidth": 80,
     "names": [
         "Monitor",
         "Target-1",

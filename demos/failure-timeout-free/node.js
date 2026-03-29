@@ -1,57 +1,38 @@
 // Timeout-Free Failure Detector (Aguilera, Chen, Toueg 1997)
-// Enhanced with Automat FSM for visual segmentation.
-// IDLE (Blue): Passive listening or forwarding heartbeats.
-// INIT (Green): Specifically initiating a new heartbeat chain.
+// Nodes propagate heartbeat chains. Failure is detected by comparing
+// counters across peers — no fixed timeout needed.
 
 const DELAY_BETWEEN_PINGS = 15;
-const NUM_NODES = 4;
+const NUM_NODES = config.nodes || 4;
 const INITIATION_INTERVAL = DELAY_BETWEEN_PINGS * NUM_NODES;
 const SUSPICION_THRESHOLD = 2;
-
-// FSM Definition: 'IDLE' for passive/forwarding, 'INIT' for active initiation
-const fsmDef = {
-    initial: 'IDLE',
-    states: {
-        'IDLE': { on: { 'START_INIT': 'INIT' }, color: '#3182bd' },
-        'INIT': { on: { 'DONE_INIT': 'IDLE' }, color: '#2ca02c' }
-    }
-};
+const PEERS = allServerIds.filter(id => id !== serverId);
 
 function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
-        const initialCounters = {};
-        for (const id of allServerIds) {
-            if (parseInt(id) !== serverId) initialCounters[id] = 0;
+        const counters = {};
+        const alive = {};
+        for (const id of PEERS) {
+            counters[id] = 0;
+            alive[id] = true;
         }
-
-        const fsm = new Automat(fsmDef);
-
-        dumpState({
-            alive: allServerIds.reduce((acc, id) => { acc[id] = true; return acc; }, {}),
-            counters: initialCounters,
+        s = {
+            alive,
+            counters,
             seenParticipants: {},
-            outbox: [],
             seqNum: 0,
-            fsm: fsm.serialize()
-        });
+            ui_state: 'Idle',
+            ui_color: '#3182bd'
+        };
     }
-}
-
-function processOutbox(s) {
-    if (s.outbox && s.outbox.length > 0) {
-        const msg = s.outbox.shift();
-        sendMessage(msg.to, msg.payload);
-    }
+    dumpState(s);
 }
 
 function onTimer(tick) {
     let s = loadState();
-    if (!s.fsm) return;
 
-    const fsm = Automat.deserialize(s.fsm);
-
-    // 1. Staggered Initiation (Staggered every 15 ticks)
+    // Staggered initiation
     const isOurTurn = (tick % INITIATION_INTERVAL === (serverId * DELAY_BETWEEN_PINGS) % INITIATION_INTERVAL);
 
     if (isOurTurn) {
@@ -60,23 +41,16 @@ function onTimer(tick) {
         if (!s.seenParticipants) s.seenParticipants = {};
         s.seenParticipants[msgId] = [serverId];
 
-        // Transition to INIT state only when we are the SOURCE of the chain
-        fsm.transition('START_INIT');
+        s.ui_state = 'Initiating';
+        s.ui_color = '#2ca02c';
 
-        const path = [serverId];
-        const targets = allServerIds.filter(id => id !== serverId);
-        for (const target of targets) {
-            s.outbox.push({ to: target, payload: { type: 'HB', id: msgId, path: path } });
-        }
+        broadcast(PEERS, { type: 'HB', id: msgId, path: [serverId] }, 'black', false);
+    } else {
+        s.ui_state = 'Idle';
+        s.ui_color = '#3182bd';
     }
 
-    // 2. FSM Maintenance
-    // Return to IDLE after we finish flushing the INITIATION outbox
-    if (fsm.state === 'INIT' && s.outbox.length === 0) {
-        fsm.transition('DONE_INIT');
-    }
-
-    // 3. Balanced Failure Detection
+    // Failure detection: compare counters
     let maxPeerCounter = 0;
     for (const id in s.counters) {
         if (s.counters[id] > maxPeerCounter) maxPeerCounter = s.counters[id];
@@ -90,18 +64,16 @@ function onTimer(tick) {
         }
     }
 
-    s.fsm = fsm.serialize();
-    processOutbox(s);
+    for (const id of PEERS)
+        s[`S${id}`] = s.alive[id] ? '✅ OK' : '⚠️ SUSPECT';
+
     dumpState(s);
 }
 
 function onMessage(message) {
     let s = loadState();
     const m = message.payload;
-    if (m.type !== 'HB') return;
-
-    // Note: Forwarding does NOT trigger INIT state now.
-    // Forwarding occurs in the IDLE state to distinguish it from initiation.
+    if (m.type !== 'HB') { dumpState(s); return; }
 
     if (!s.seenParticipants) s.seenParticipants = {};
     if (!s.seenParticipants[m.id]) s.seenParticipants[m.id] = [];
@@ -125,11 +97,8 @@ function onMessage(message) {
                 s.seenParticipants[m.id].push(serverId);
             }
         }
-
-        const targets = allServerIds.filter(id => !newPath.includes(id));
-        for (const target of targets) {
-            s.outbox.push({ to: target, payload: { type: 'HB', id: m.id, path: newPath } });
-        }
+        const targets = PEERS.filter(id => !newPath.includes(id));
+        broadcast(targets, { type: 'HB', id: m.id, path: newPath }, 'black', false);
     }
 
     dumpState(s);
