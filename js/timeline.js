@@ -75,6 +75,9 @@ export class Timeline {
 
     resize() {
         if (!this.engine) return;
+        // Dynamically evaluate labelWidth just in case engine.config loaded after setEngine
+        this.labelWidth = (this.engine.config && this.engine.config.nameWidth) ? this.engine.config.nameWidth : LABEL_WIDTH;
+
         const numServers = this.engine.servers.length;
         const width = this.labelWidth + (this.maxTicks + 2) * this.scale;
         const height = this.trackPaddingTop + numServers * this.trackHeight + 40;
@@ -226,11 +229,12 @@ export class Timeline {
             for (let tick = 0; tick < this.engine.history.length; tick++) {
                 const snapshot = this.engine.history[tick];
                 const sState = snapshot.serverStates[server.id];
-                const fsmData = sState && sState.fsm;
-                const fsmState = fsmData ? fsmData.state : null;
+                // Decoupled UI overrides: Prefer explicit ui_state/ui_color, fallback to legacy fsm
+                const uiState = (sState && sState.ui_state !== undefined) ? sState.ui_state : (sState && sState.fsm ? sState.fsm.state : null);
+                const uiColor = (sState && sState.ui_color !== undefined) ? sState.ui_color : (sState && sState.fsm ? sState.fsm.color : null);
 
-                if (fsmState === null) {
-                    // No FSM state at this tick — close current run
+                if (uiState === null) {
+                    // No state at this tick — close current run
                     if (currentRun) {
                         runs.push(currentRun);
                         currentRun = null;
@@ -238,16 +242,16 @@ export class Timeline {
                     continue;
                 }
 
-                if (currentRun && currentRun.state === fsmState) {
+                if (currentRun && currentRun.state === String(uiState)) {
                     currentRun.endTick = tick;
                 } else {
                     if (currentRun) runs.push(currentRun);
                     currentRun = {
-                        state: fsmState,
+                        state: String(uiState),
                         startTick: tick,
                         endTick: tick,
-                        colors: fsmData.colors || {},
-                        color: fsmData.color, // Capture explicit color
+                        colors: (sState && sState.fsm) ? (sState.fsm.colors || {}) : {},
+                        color: uiColor, // Capture explicit color
                     };
                 }
             }

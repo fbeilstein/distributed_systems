@@ -31,18 +31,20 @@ export class Interactions {
 
     _getCanvasPos(e) {
         const rect = this.canvas.getBoundingClientRect();
+        const scaleX = this.canvas.width / rect.width;
+        const scaleY = this.canvas.height / rect.height;
         return {
-            x: e.clientX - rect.left,
-            y: e.clientY - rect.top,
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY,
         };
     }
 
     _onMouseDown(e) {
         const { x, y } = this._getCanvasPos(e);
 
-        // Check arrowhead first (higher priority)
         const msg = this.timeline.hitTestArrowhead(x, y);
         if (msg) {
+            console.log("MOUSE DOWN: hit arrow head", { id: msg.id, type: msg.payload?.type, from: msg.from, to: msg.to, send: msg.sendTick, arrive: msg.arrivalTick });
             this.dragging = { type: 'arrow', message: msg };
             this.canvas.style.cursor = 'ew-resize';
             e.preventDefault();
@@ -79,10 +81,19 @@ export class Interactions {
                 this.timeline.resize();
                 this.timeline.draw();
                 // Re-find the message after recomputation (id may change)
+                const typeStr = msg.payload ? msg.payload.type : "";
                 const newMsg = this.engine.messages.find(
-                    m => m.from === msg.from && m.to === msg.to && m.sendTick === msg.sendTick
+                    m => m.from === msg.from && m.to === msg.to && m.sendTick === msg.sendTick && (m.payload ? m.payload.type : "") === typeStr
                 );
-                if (newMsg) this.dragging.message = newMsg;
+
+                console.log("MOUSE MOVE: recomputed! old msg id", msg.id, "new msg id", newMsg ? newMsg.id : "NOT FOUND", "target arrive", tick);
+
+                if (newMsg) {
+                    this.dragging.message = newMsg;
+                } else {
+                    this.dragging = null;
+                    this.canvas.style.cursor = 'default';
+                }
                 this.onScrubberChange(this.timeline.scrubberTick);
             }
             return;

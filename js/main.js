@@ -4,11 +4,11 @@
  * JSON config is the primary source of truth. URL params are only fallbacks.
  */
 
-import { Engine } from './engine.js';
-import { Timeline } from './timeline.js';
-import { Interactions } from './interactions.js';
-import { StateInspector } from './state-inspector.js';
-import { CodeEditor, DEFAULT_CODE } from './code-editor.js';
+import { Engine } from './engine.js?v=4';
+import { Timeline } from './timeline.js?v=4';
+import { Interactions } from './interactions.js?v=4';
+import { StateInspector } from './state-inspector.js?v=4';
+import { CodeEditor, DEFAULT_CODE } from './code-editor.js?v=4';
 
 // --- Theme Management ---
 function applyTheme(theme) {

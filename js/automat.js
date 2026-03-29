@@ -89,6 +89,10 @@ class Automat {
       }
     }
     this.current = this.states[this.stateName];
+    // Trigger onEnter for the initial state if this is a fresh start (not deserialized)
+    if (!def.skipInitialEnter && this.current && this.current.onEnter) {
+       this.current.onEnter();
+    }
   }
 
   onUp() { if (this.current) this.current.onUp(); }
@@ -100,7 +104,9 @@ class Automat {
         const cbName = this.current._timeoutCallback;
         const cb = this.current[cbName];
         this.current._timeout = null;
-        if (typeof cb === 'function') cb.call(this.current);
+        if (typeof cb === 'function') {
+           cb.call(this.current);
+        }
       }
     }
     const rem = [];
@@ -175,7 +181,7 @@ class Automat {
 
   static run(handlerName, arg, ...states) {
     const s = loadState();
-    const a = new Automat({ initial: s.stateName, states: states });
+    const a = new Automat({ initial: s.stateName, states: states, skipInitialEnter: !!s.stateName });
     if (typeof a[handlerName] === 'function') a[handlerName](arg);
     const res = a.serialize();
     s.stateName = res.stateName;
@@ -183,10 +189,83 @@ class Automat {
   }
 
   static deserialize(obj, stateInstances) {
-    const a = new Automat({ initial: obj.stateName, states: stateInstances, graph: obj.graph, colors: obj.colors });
+    const a = new Automat({ 
+        initial: obj.stateName, 
+        states: stateInstances, 
+        graph: obj.graph, 
+        colors: obj.colors,
+        skipInitialEnter: true 
+    });
     a._pendingTimeouts = obj.pendingTimeouts || [];
+    if (obj.stateData) {
+        for (const [name, data] of Object.entries(obj.stateData)) {
+            if (a.states[name]) {
+                a.states[name]._timeout = data._timeout;
+                a.states[name]._timeoutCallback = data._timeoutCallback;
+            }
+        }
+    }
     return a;
   }
   can(e) { return !!(this._graph[this.stateName] && this._graph[this.stateName][e]); }
 }
+
+class Machine {
+  constructor() {
+    this.states = [];
+    this._automat = null;
+  }
+
+  _hydrate() {
+    const s = loadState();
+    if (s.machineData) Object.assign(this, s.machineData);
+    
+    this._automat = s.fsm ? Automat.deserialize(s.fsm, this.states) : new Automat({ states: this.states });
+    for (const key in this._automat.states) {
+        this._automat.states[key].machine = this;
+    }
+  }
+
+  _persist() {
+    const s = loadState();
+    if (this._automat) {
+        s.fsm = this._automat.serialize();
+        s.ui_state = s.fsm.state;
+        s.ui_color = s.fsm.color;
+        s.ui_graph = s.fsm.graph;
+        s.ui_colors = s.fsm.colors;
+    }
+    const data = {};
+    for (const key of Object.keys(this)) {
+        if (key !== 'states' && key !== '_automat') {
+            data[key] = this[key];
+            s[key] = this[key]; // Expose to state inspector visually
+        }
+    }
+    s.machineData = data;
+    if (typeof this.syncUI === 'function') this.syncUI(s);
+    dumpState(s);
+  }
+
+  onUp() {
+    this._hydrate();
+    if (this._automat && this._automat.current && typeof this._automat.current.onUp === 'function') {
+        this._automat.current.onUp();
+    }
+    this._persist();
+  }
+
+  onTimer(t) {
+    this._hydrate();
+    if (this._automat) this._automat.onTimer(t);
+    this._persist();
+  }
+
+  onMessage(msg) {
+    this._hydrate();
+    if (this._automat) this._automat.onMessage(msg);
+    this._persist();
+  }
+}
 `;
+

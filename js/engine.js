@@ -158,7 +158,9 @@ export class Engine {
         // Initialize StatefulRuntimes for all servers
         const runtimes = new Map();
         for (const server of this.servers) {
-            runtimes.set(server.id, new StatefulRuntime(server.id, allServerIds, server.code, prng, this.config));
+            // Isolate PRNG per server to prevent cross-node butterfly effect timeline divergence
+            const serverPRNG = new PRNG(this.seed + server.id * 31337);
+            runtimes.set(server.id, new StatefulRuntime(server.id, allServerIds, server.code, serverPRNG, this.config));
         }
 
         const serverWasUp = new Map();
@@ -206,7 +208,12 @@ export class Engine {
                     m => m.to === server.id && m.arrivalTick === tick && !m.lost
                 );
                 for (const msg of arriving) {
-                    const result = rt.execute('onMessage', tick, { from: msg.from, payload: msg.payload });
+                    const result = rt.execute('onMessage', tick, {
+                        from: msg.from,
+                        sendTick: msg.sendTick,
+                        arrivalTick: msg.arrivalTick,
+                        payload: msg.payload
+                    });
                     if (result.error) {
                         rt.currentState = { ...rt.currentState, __error__: result.error };
                     }
@@ -252,8 +259,11 @@ export class Engine {
         // We do NOT want to skip if the types are DIFFERENT (e.g. REPLICATE vs SYNC_DATA_CHAIN)
         if (existing) return;
 
-        // Default latency: 1-5 ticks
-        let arrivalTick = outgoing.sendTick + prng.nextInt(1, 5);
+        // Use a deterministic hash for latency to prevent crash events on one node
+        // from advancing the PRNG and shifting latencies for unrelated nodes.
+        const typeHash = typeStr.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+        const msgHash = (outgoing.sendTick * 31 + outgoing.from * 17 + outgoing.to * 7 + typeHash + this.seed);
+        let arrivalTick = outgoing.sendTick + 1 + (msgHash % 5); // Default latency: 1-5 ticks
         let lost = false;
 
         const key = Engine.messageKey(outgoing.from, outgoing.to, outgoing.sendTick, typeStr);

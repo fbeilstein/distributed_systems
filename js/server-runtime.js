@@ -37,7 +37,7 @@ export class StatefulRuntime {
                 callback: callback
             });
         };
-        const broadcast = (targets, payload, at_once = true, color = 'black') => {
+        const broadcast = (targets, payload, color = 'black', at_once = true) => {
             if (!Array.isArray(targets)) return;
             targets.forEach((to, index) => {
                 const sendTick = at_once ? this.tick : this.tick + index;
@@ -71,7 +71,14 @@ export class StatefulRuntime {
                 };
             `;
             const factory = new Function('loadState', 'dumpState', 'sendMessage', 'broadcast', 'getRandom', 'serverId', 'allServerIds', 'config', wrappedCode);
-            this.handlers = factory(loadState, dumpState, sendMessage, broadcast, getRandom, this.serverId, this.allServerIds, this.config);
+            try {
+                // console.log(`[Runtime ${this.serverId}] Initializing sandbox...`);
+                this.handlers = factory(loadState, dumpState, sendMessage, broadcast, getRandom, this.serverId, this.allServerIds, this.config);
+                // console.log(`[Runtime ${this.serverId}] Initialized handlers:`, Object.keys(this.handlers).filter(k => !!this.handlers[k]));
+            } catch (e) {
+                console.error(`[Runtime ${this.serverId}] Factory failed:`, e);
+                this.error = e.message || String(e);
+            }
         } catch (e) {
             this.error = e.message || String(e);
         }
