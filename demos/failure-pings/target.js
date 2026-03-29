@@ -9,7 +9,6 @@ function onUp() {
 }
 
 function onMessage(msg) {
-    if (msg.payload.type === 'PING') {
+    if (msg.payload.type === 'PING')
         sendMessage(msg.from, { type: 'PONG' }, 'green');
-    }
 }
