@@ -75,8 +75,11 @@ export class Timeline {
 
     resize() {
         if (!this.engine) return;
-        // Dynamically evaluate labelWidth just in case engine.config loaded after setEngine
+        // Dynamically evaluate layout properties just in case engine.config loaded after setEngine
         this.labelWidth = (this.engine.config && this.engine.config.nameWidth) ? this.engine.config.nameWidth : LABEL_WIDTH;
+        if (this.engine.config && this.engine.config.firstTrackOffset) {
+            this.trackPaddingTop = this.engine.config.firstTrackOffset;
+        }
 
         const numServers = this.engine.servers.length;
         const width = this.labelWidth + (this.maxTicks + 2) * this.scale;
@@ -143,10 +146,10 @@ export class Timeline {
         for (let t = 0; t <= this.maxTicks; t += 5) {
             const x = this.tickToX(t);
             ctx.beginPath();
-            ctx.moveTo(x, this.trackPaddingTop - 15);
+            ctx.moveTo(x, 25); // Start grid lines just below numbers
             ctx.lineTo(x, this.canvas.height);
             ctx.stroke();
-            ctx.fillText(t.toString(), x, this.trackPaddingTop - 20);
+            ctx.fillText(t.toString(), x, 20); // Keep numbers at top
         }
         ctx.restore();
     }
@@ -380,16 +383,16 @@ export class Timeline {
         ctx.strokeStyle = accent;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(x, this.trackPaddingTop - 15);
+        ctx.moveTo(x, 25); // Start scrubber line at fixed Y
         ctx.lineTo(x, this.canvas.height);
         ctx.stroke();
 
         // Scrubber handle (triangle at top)
         ctx.fillStyle = accent;
         ctx.beginPath();
-        ctx.moveTo(x - 8, this.trackPaddingTop - 20);
-        ctx.lineTo(x + 8, this.trackPaddingTop - 20);
-        ctx.lineTo(x, this.trackPaddingTop - 10);
+        ctx.moveTo(x - 8, 20); // Handle top
+        ctx.lineTo(x + 8, 20);
+        ctx.lineTo(x, 30); // Handle bottom
         ctx.closePath();
         ctx.fill();
 
@@ -397,7 +400,7 @@ export class Timeline {
         ctx.fillStyle = accent;
         ctx.font = 'bold 11px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText(`t=${this.scrubberTick}`, x, this.trackPaddingTop - 25);
+        ctx.fillText(`t=${this.scrubberTick}`, x, 15); // Label at very top
         ctx.restore();
     }
 

@@ -219,6 +219,9 @@ async function init() {
     if (config && config.trackHeight) {
         timeline.trackHeight = config.trackHeight;
     }
+    if (config && config.firstTrackOffset !== undefined) {
+        timeline.trackPaddingTop = config.firstTrackOffset;
+    }
     if (config && config.stateBandOffset !== undefined) {
         timeline.stateBandOffset = config.stateBandOffset;
     }

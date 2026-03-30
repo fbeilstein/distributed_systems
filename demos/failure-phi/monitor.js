@@ -5,7 +5,7 @@
 
 const TARGET_IDS = allServerIds.filter(id => id !== 0);
 const WINDOW_SIZE = 10;
-const PHI_THRESHOLD = 8;
+const PHI_THRESHOLD = config.phiThreshold || 8;
 const MIN_STDDEV = 1.0;
 
 /** ---------------- MATH HELPERS ---------------- **/
@@ -87,7 +87,12 @@ function onTimer(t) {
     s.anyDead = anyDead;
     s.ui_state = anyDead ? 'Failure Detected' : 'Monitoring';
     s.ui_color = anyDead ? '#e57373' : '#fff59d';
-    s.monitor_view = scores.map(r => `${r.id}: φ=${r.phi} (${r.status})`).join(' | ');
+
+    // Persist raw phis for the custom renderer
+    s.phis = {};
+    scores.forEach(r => s.phis[r.id] = r.phi);
+
+    s.monitor_view = scores.map(r => `${r.id}: φ=${r.phi} (${r.status})`).join('<br>');
 
     dumpState(s);
 }
