@@ -1,38 +1,28 @@
+// Failure Detection — SWIM (Witness)
+// Relays PINGs from the Monitor to the Target.
+
+const MONITOR_ID = 0;
+
 function onUp() {
-    let s = loadState();
-    if (!s.outbox) {
-        dumpState({ outbox: [] });
-    }
+    dumpState({
+        ui_state: 'Witness: Ready',
+        ui_color: '#ce93d8'
+    });
 }
 
-function processOutbox(s) {
-    if (s.outbox && s.outbox.length > 0) {
-        const msg = s.outbox.shift();
-        sendMessage(msg.to, msg.payload);
-    }
-}
-
-function onTimer(tick) {
-    let s = loadState();
-    if (!s.outbox) s.outbox = [];
-    s.tick = tick;
-    processOutbox(s);
-    dumpState(s);
-}
-
-function onMessage(message) {
-    let s = loadState();
-    if (!s.outbox) s.outbox = [];
-    const m = message.payload;
-    const sender = m.from !== undefined ? m.from : message.from;
+function onMessage(msg) {
+    const m = msg.payload;
 
     if (m.type === 'PING_REQ') {
-        s.outbox.push({ to: m.target, payload: { type: 'PING_INDIRECT', requester: sender, from: serverId } });
-    }
-    else if (m.type === 'ACK_INDIRECT') {
-        s.outbox.push({ to: m.requester, payload: { type: 'ACK', from: m.target, indirect: true } });
+        // Relay ping request to target node
+        sendMessage(m.target, { type: 'PING', requester: msg.from }, 'orange');
     }
 
-    processOutbox(s);
-    dumpState(s);
+    if (m.type === 'PONG') {
+        // Propagate response back to the original requester (monitor)
+        // BUG FIX: Check for !== undefined as requester ID 0 is falsy
+        if (m.requester !== undefined) {
+            sendMessage(m.requester, { type: 'INDIRECT_PONG', witness: serverId }, 'green');
+        }
+    }
 }

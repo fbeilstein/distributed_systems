@@ -26,15 +26,13 @@ export class StatefulRuntime {
     _initSandbox() {
         const loadState = () => JSON.parse(JSON.stringify(this.currentState));
         const dumpState = (state) => { this.currentState = JSON.parse(JSON.stringify(state)); };
-        const sendMessage = (target, payload, color = 'black', timeout, callback) => {
+        const sendMessage = (target, payload, color = 'black') => {
             this.outbox.push({
                 from: this.serverId,
                 to: target,
                 payload: JSON.parse(JSON.stringify(payload || {})),
                 sendTick: this.tick,
-                color: color,
-                timeout: timeout,
-                callback: callback
+                color: color
             });
         };
         const broadcast = (targets, payload, color = 'black', at_once = true) => {

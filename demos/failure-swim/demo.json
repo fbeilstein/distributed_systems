@@ -3,27 +3,32 @@
     "seed": 33,
     "ticks": 130,
     "names": [
-        "Master",
+        "Monitor",
         "Witness-1",
         "Witness-2",
         "Witness-3",
-        "Slave"
+        "Target"
     ],
     "servers": [
         {
-            "codeFile": "master.js"
+            "id": 0,
+            "codeFile": "monitor.js"
         },
         {
+            "id": 1,
             "codeFile": "witness.js"
         },
         {
+            "id": 2,
             "codeFile": "witness.js"
         },
         {
+            "id": 3,
             "codeFile": "witness.js"
         },
         {
-            "codeFile": "slave.js"
+            "id": 4,
+            "codeFile": "target.js"
         }
     ]
 }
