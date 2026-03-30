@@ -25,7 +25,7 @@ export function createServer(id, name) {
 /**
  * Check if a server is up at a given tick.
  */
-function isServerUp(server, tick) {
+export function isServerUp(server, tick) {
     for (const [down, up] of server.crashIntervals) {
         if (tick >= down && (up === null || tick < up)) {
             return false;

@@ -5,7 +5,7 @@
  * Supports persistent context for "Live Object" (OOP) simulation.
  */
 
-import { AUTOMAT_SOURCE } from './automat.js';
+import { AUTOMAT_SOURCE } from './automat.js?v=10';
 
 export class StatefulRuntime {
     constructor(serverId, allServerIds, code, prng, config) {

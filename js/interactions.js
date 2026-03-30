@@ -7,7 +7,7 @@
  * - Double-click server track (toggle crash)
  */
 
-import { toggleCrash } from './engine.js';
+import { toggleCrash } from './engine.js?v=10';
 
 export class Interactions {
     constructor(timeline, engine, onScrubberChange) {

@@ -1,7 +1,4 @@
-/**
- * state-inspector.js
- * Renders server state cards in the bottom half as key-value tables.
- */
+import { isServerUp } from './engine.js?v=10';
 
 export class StateInspector {
     constructor(containerEl, engine, onEditCode) {
@@ -32,8 +29,9 @@ export class StateInspector {
         this.container.innerHTML = '';
 
         for (const server of this.engine.servers) {
+            const isDown = !isServerUp(server, this.currentTick);
             const card = document.createElement('div');
-            card.className = 'state-card';
+            card.className = 'state-card' + (isDown ? ' crashed' : '');
             card.dataset.serverId = server.id;
             if (savedWidths[server.id]) {
                 card.style.width = savedWidths[server.id];
@@ -60,6 +58,7 @@ export class StateInspector {
                 this._startRename(nameSpan, server);
             });
             headerInfo.appendChild(nameSpan);
+
 
             // State badge (decoupled)
             const serverState = simState ? simState.serverStates[server.id] : {};
