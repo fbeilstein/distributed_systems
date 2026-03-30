@@ -1,156 +1,109 @@
-/**
- * Phi-Accrual Failure Detector Monitor
- * - Interpretation: Uses a sliding window of historical intervals to calculate mean and variance. 
- *   Calculates Phi (φ) value based on the current interval using normal distribution CDF.
- * - Action: Mark as suspect/down if φ > threshold.
- */
+// Failure Detection — Phi Accrual Monitor (Master)
+// Tracks heartbeat intervals from targets and computes a phi score.
+// Uses Gaussian Cumulative Distribution Function (CDF) for accurate probability.
+// Pattern A — Plain Functions
 
-const WINDOW_SIZE = 10; // Number of recorded intervals
-const PHI_THRESHOLD = 40; // High threshold value set by user
+const TARGET_IDS = allServerIds.filter(id => id !== 0);
+const WINDOW_SIZE = 10;
+const PHI_THRESHOLD = 8;
+const MIN_STDDEV = 1.0;
 
-function onUp() {
-    let s = loadState();
-    if (!s.targets || !s.outbox) {
-        dumpState({
-            targets: {},
-            outbox: []
-        });
-    }
-}
+/** ---------------- MATH HELPERS ---------------- **/
 
-function processOutbox(s) {
-    if (s.outbox && s.outbox.length > 0) {
-        const msg = s.outbox.shift();
-        sendMessage(msg.to, msg.payload);
-    }
-}
-
-// Standard Error Function (ERF) approximation for normal distribution
 function erf(x) {
     const sign = (x >= 0) ? 1 : -1;
     x = Math.abs(x);
-    const a1 = 0.254829592;
-    const a2 = -0.284496736;
-    const a3 = 1.421413741;
-    const a4 = -1.453152027;
-    const a5 = 1.061405429;
-    const p = 0.3275911;
-
+    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
     const t = 1.0 / (1.0 + p * x);
     const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
     return sign * y;
 }
 
-function calculatePhi(tDiff, mean, stdDev) {
-    // Prevent divide by zero if stdDev is extremely small
-    const sigma = Math.max(stdDev, 1.0);
-
+function computePhi(tDiff, history) {
+    if (!history || history.length === 0) return 0;
+    const mean = history.reduce((a, b) => a + b, 0) / history.length;
+    const variance = history.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / history.length;
+    const stdDev = Math.sqrt(variance);
+    const sigma = Math.max(stdDev, MIN_STDDEV);
     const z = (tDiff - mean) / sigma;
     let phi;
-
     if (z > 4.0) {
         phi = ((z * z / 2.0) + Math.log(z * Math.sqrt(2 * Math.PI))) / Math.LN10;
     } else if (z > 0) {
         const cdf = 0.5 * (1 + Math.sign(z / Math.sqrt(2)) * erf(Math.abs(z / Math.sqrt(2))));
         let p_late = 1.0 - cdf;
         if (p_late <= 1e-10) p_late = 1e-10;
-        if (p_late >= 1.0) p_late = 1.0;
         phi = -Math.log10(p_late);
     } else {
         phi = 0.0;
     }
-
     return Math.min(phi, 100.0);
 }
 
-function onTimer(tick) {
-    let s = loadState();
-    s.tick = tick;
+function phiClassifier(phi) {
+    if (phi > PHI_THRESHOLD) return 'DEAD';
+    if (phi > 3) return 'SUSPICIOUS';
+    return 'OK';
+}
 
-    // Iterate over all known targets to calculate their current φ value
-    for (const [idStr, target] of Object.entries(s.targets)) {
-        // Can't calculate anything without history
-        if (target.intervals.length < 2) continue;
+/** ---------------- HANDLERS ---------------- **/
 
-        // Calculate Mean & Variance of window
-        let sum = 0;
-        for (let i = 0; i < target.intervals.length; i++) sum += target.intervals[i];
-        const mean = sum / target.intervals.length;
+function onUp() {
+    const s = {
+        intervals: {},
+        lastSeen: {},
+        anyDead: false,
+        monitor_view: 'Waiting for heartbeats...'
+    };
 
-        let varianceSum = 0;
-        for (let i = 0; i < target.intervals.length; i++) {
-            varianceSum += Math.pow(target.intervals[i] - mean, 2);
+    // Jumpstart: Pre-seed history with fake statistics to avoid lengthy collection
+    // Heartbeats arrive approximately every 10 ticks with 1-5 tick jitter.
+    TARGET_IDS.forEach(id => {
+        s.intervals[id] = [];
+        let prevDelay = getRandom(1, 5);
+        for (let i = 0; i < WINDOW_SIZE; i++) {
+            const nextDelay = getRandom(1, 5);
+            s.intervals[id].push(10 + nextDelay - prevDelay);
+            prevDelay = nextDelay;
         }
-        const variance = varianceSum / target.intervals.length;
-        // In local demo without real network jitter, heartbeats arrive perfectly on time (variance 0).
-        // If we drop messages, intervals jump (e.g., 10, 10, 20).
-        // Larger interval variance = lower Phi confidence calculation (correct for real networks).
-        // We enforce a minimum standard deviation exactly like before to avoid divide-by-zero, but let it grow naturally.
-        const stdDev = Math.max(Math.sqrt(variance), 1.0);
+        s.lastSeen[id] = 0;
+    });
 
-        // Calculate current Time since last heartbeat
-        const tDiff = tick - target.lastArrival;
-
-        // Determine Phi
-        const phi = calculatePhi(tDiff, mean, stdDev);
-        target.phi = phi; // Store for visual inspection in UI
-
-        // ACTION
-        if (phi > PHI_THRESHOLD) {
-            target.status = 'down';
-        } else {
-            target.status = 'up'; // Auto-recovery if delay suddenly shrinks
-        }
-    }
-
-    processOutbox(s);
     dumpState(s);
 }
 
-function onMessage(message) {
-    let s = loadState();
-    const m = message.payload;
-    const sender = m.from !== undefined ? m.from : message.from;
+function onTimer(t) {
+    const s = loadState();
+    let anyDead = false;
 
-    if (m.type === 'HEARTBEAT') {
-        if (!s.targets[sender]) {
-            // Pre-seed window simulating actual network latency characteristics from engine.js.
-            // Target sends every 10 ticks (HEARTBEAT_INTERVAL). Engine adds `getRandom(1, 5)`.
-            // The arrival interval is: (Next Send + Next Latency) - (Prev Send + Prev Latency)
-            // Interval = HEARTBEAT_INTERVAL + Next Latency - Prev Latency
-            const mockIntervals = [];
-            let prevDelay = getRandom(1, 5);
-            for (let i = 0; i < WINDOW_SIZE; i++) {
-                const nextDelay = getRandom(1, 5);
-                mockIntervals.push(10 + nextDelay - prevDelay);
-                prevDelay = nextDelay;
-            }
+    const scores = TARGET_IDS.map(id => {
+        const phi = computePhi(t - (s.lastSeen[id] || 0), s.intervals[id]);
+        const status = phiClassifier(phi);
+        if (status === 'DEAD') anyDead = true;
 
-            s.targets[sender] = {
-                intervals: mockIntervals,
-                lastArrival: null,
-                status: 'up',
-                phi: 0.0
-            };
-        }
+        return { id, phi: phi.toFixed(2), status };
+    });
 
-        const target = s.targets[sender];
+    s.anyDead = anyDead;
+    s.ui_state = anyDead ? 'Failure Detected' : 'Monitoring';
+    s.ui_color = anyDead ? '#e57373' : '#fff59d';
+    s.monitor_view = scores.map(r => `${r.id}: φ=${r.phi} (${r.status})`).join(' | ');
 
-        // Calculate interval and update sliding window
-        if (target.lastArrival !== null) {
-            const interval = s.tick - target.lastArrival;
-            target.intervals.push(interval);
-            if (target.intervals.length > WINDOW_SIZE) {
-                target.intervals.shift(); // Remove oldest
-            }
-        }
-
-        // Update last arrival and status
-        target.lastArrival = s.tick;
-        target.status = 'up';
-        target.phi = 0.0;
-    }
-
-    processOutbox(s);
     dumpState(s);
+}
+
+function onMessage(m) {
+    if (m.payload.type === 'HEARTBEAT') {
+        const s = loadState();
+        const arrival = m.arrivalTick;
+        const last = s.lastSeen[m.from];
+
+        if (last !== undefined) {
+            s.intervals[m.from].push(arrival - last);
+            if (s.intervals[m.from].length > WINDOW_SIZE) s.intervals[m.from].shift();
+        }
+
+        s.lastSeen[m.from] = arrival;
+        dumpState(s);
+    }
 }

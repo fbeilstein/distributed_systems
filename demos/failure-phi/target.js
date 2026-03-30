@@ -1,32 +1,16 @@
-const HEARTBEAT_INTERVAL = 10;
-const MONITOR_ID = 0;
+// Failure Detection — Phi Accrual Target
+// Sends periodic heartbeats to the monitor (node 0).
 
 function onUp() {
-    let s = loadState();
-    if (!s.outbox) {
-        dumpState({ outbox: [] });
-    }
+    dumpState({
+        ui_state: 'Active',
+        ui_color: '#81c784'
+    });
 }
 
-function processOutbox(s) {
-    if (s.outbox && s.outbox.length > 0) {
-        const msg = s.outbox.shift();
-        sendMessage(msg.to, msg.payload);
+function onTimer(t) {
+    // Send heartbeats every 10 ticks (approx)
+    if (t % 10 === serverId % 10) {
+        sendMessage(0, { type: 'HEARTBEAT' }, 'green');
     }
-}
-
-function onTimer(tick) {
-    let s = loadState();
-    s.tick = tick;
-
-    if (tick % HEARTBEAT_INTERVAL === 0) {
-        s.outbox.push({ to: MONITOR_ID, payload: { type: 'HEARTBEAT', from: serverId } });
-    }
-
-    processOutbox(s);
-    dumpState(s);
-}
-
-function onMessage(message) {
-    // Targets just blindly broadcast heartbeats, they don't process responses
 }
