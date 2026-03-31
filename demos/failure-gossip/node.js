@@ -1,120 +1,110 @@
-// Gossip-Based Failure Detection
-// Each node maintains a membership list. Every GOSSIP_INTERVAL ticks, it picks
-// a random peer and sends its full membership list (heartbeat counters).
-// If a node's counter hasn't increased in FAILURE_THRESHOLD gossip rounds, mark failed.
-
 const DELAY_BETWEEN_GOSSIPS = 5;
-const FAILURE_THRESHOLD = 2;  // rounds without counter increase = suspect
-const CLEANUP_THRESHOLD = 3;  // rounds after suspect = failed logic
+const FAILURE_THRESHOLD = 2; // rounds
+const CLEANUP_THRESHOLD = 3; // rounds
 
-// FSM Definition: 'IDLE' for passive listening, 'GOSSIP' for active broadcasting
-const fsmDef = {
-    initial: 'IDLE',
-    states: {
-        'IDLE': { on: { 'START_GOSSIP': 'GOSSIP' }, color: '#3182bd' },
-        'GOSSIP': { on: { 'DONE_GOSSIP': 'IDLE' }, color: '#ff7f0e' }
+/**
+ * DETERMINISTIC FIRING LOGIC
+ * Staggered Round-Robin: each node gossips at its own offset.
+ * Users can modify this to change dissemination patterns (e.g., probabilistic).
+ */
+function shouldGossip(tick) {
+    const GOSSIP_INTERVAL = DELAY_BETWEEN_GOSSIPS * allServerIds.length;
+    return tick % GOSSIP_INTERVAL === (serverId * DELAY_BETWEEN_GOSSIPS) % GOSSIP_INTERVAL;
+}
+
+/**
+ * MEMBERSHIP MERGING
+ * Updates local membership table with newer heartbeats from peers.
+ */
+function mergeMembership(localMembers, incomingMembers, currentTick) {
+    for (const [idStr, remote] of Object.entries(incomingMembers)) {
+        const id = parseInt(idStr);
+        const local = localMembers[id];
+        if (!local || remote.heartbeat > local.heartbeat) {
+            localMembers[id] = {
+                heartbeat: remote.heartbeat,
+                localTime: currentTick,
+                status: 'alive'
+            };
+        }
     }
-};
+}
+
+/**
+ * FAILURE DETECTION
+ * Evaluates node health based on the "freshness" of their local heartbeat.
+ */
+function updateFailureDetection(s, tick) {
+    const GOSSIP_INTERVAL = DELAY_BETWEEN_GOSSIPS * allServerIds.length;
+
+    for (const [idStr, mem] of Object.entries(s.members)) {
+        const id = parseInt(idStr);
+        if (id === serverId) continue;
+
+        const roundsSinceSeen = (tick - mem.localTime) / GOSSIP_INTERVAL;
+        if (roundsSinceSeen > CLEANUP_THRESHOLD) {
+            mem.status = 'failed';
+        } else if (roundsSinceSeen > FAILURE_THRESHOLD) {
+            mem.status = 'suspect';
+        } else {
+            // Only recover if not marked failed or if logic allows recovery
+            if (mem.status !== 'failed') mem.status = 'alive';
+        }
+    }
+
+    // Build status string for UI
+    s.membership = Object.entries(s.members)
+        .filter(([id]) => parseInt(id) !== serverId)
+        .map(([id, m]) => `S${id}:${m.status}`)
+        .join(' <br> ');
+}
+
+/** ---------------- HOOKS ---------------- **/
 
 function onUp() {
     let s = loadState();
     if (Object.keys(s).length === 0) {
         const members = {};
         for (const id of allServerIds) {
-            members[id] = {
-                heartbeat: 0,
-                localTime: 0,   // local tick when we last saw this counter increase
-                status: 'alive' // 'alive' | 'suspect' | 'failed'
-            };
+            members[id] = { heartbeat: 0, localTime: 0, status: 'alive' };
         }
-
-        const fsm = new Automat(fsmDef);
-
-        dumpState({
-            members,
-            round: 0,
-            lastGossipTick: -100,
-            fsm: fsm.serialize()
-        });
+        s = { members, lastGossipTick: -100, ui_state: 'Idle', ui_color: '#3182bd' };
     }
+    dumpState(s);
 }
 
 function onTimer(tick) {
     let s = loadState();
-    if (!s.fsm) return;
+    if (!s.members) return;
 
-    s.tick = tick;
-    const fsm = Automat.deserialize(s.fsm);
-
-    // Return to IDLE 1 tick after doing a broadcast
-    if (fsm.state === 'GOSSIP' && tick > s.lastGossipTick) {
-        fsm.transition('DONE_GOSSIP');
-    }
-
-    // Increment our own heartbeat counter each tick
+    // 1. Update own activity
     s.members[serverId].heartbeat++;
     s.members[serverId].localTime = tick;
     s.members[serverId].status = 'alive';
 
-    const numNodes = allServerIds.length;
-    const GOSSIP_INTERVAL = DELAY_BETWEEN_GOSSIPS * numNodes;
-
-    // Staggered Round-Robin Turn
-    if (tick % GOSSIP_INTERVAL === (serverId * DELAY_BETWEEN_GOSSIPS) % GOSSIP_INTERVAL) {
-        s.round++;
-
-        // Transition fsm to GOSSIP during our broadcast turn
-        fsm.transition('START_GOSSIP');
+    // 2. Scheduled Gossip logic
+    if (shouldGossip(tick)) {
         s.lastGossipTick = tick;
+        s.ui_state = 'Gossiping';
+        s.ui_color = '#ff7f0e';
 
-        // Broadcast to all other alive peers immediately
-        const alive = allServerIds.filter(id => id !== serverId && s.members[id] && s.members[id].status !== 'failed');
-        for (const target of alive) {
-            sendMessage(target, { type: 'GOSSIP', members: s.members });
-        }
-
-        // Check for failures: anyone whose heartbeat hasn't moved in enough global rounds
-        for (const [idStr, m] of Object.entries(s.members)) {
-            const id = parseInt(idStr);
-            if (id === serverId) continue;
-
-            const roundsSinceSeen = (tick - m.localTime) / GOSSIP_INTERVAL;
-            if (roundsSinceSeen > CLEANUP_THRESHOLD) {
-                m.status = 'failed';
-            } else if (roundsSinceSeen > FAILURE_THRESHOLD) {
-                m.status = 'suspect';
-            } else if (m.status !== 'failed') {
-                m.status = 'alive';
-            }
-        }
+        // Disseminate to all alive peers
+        const alive = allServerIds.filter(id => id !== serverId && s.members[id].status !== 'failed');
+        broadcast(alive, { type: 'GOSSIP', members: s.members }, 'black');
+    } else if (tick > s.lastGossipTick + 1) {
+        s.ui_state = 'Idle';
+        s.ui_color = '#3182bd';
     }
 
-    s.fsm = fsm.serialize();
+    // 3. Independent failure monitoring
+    updateFailureDetection(s, tick);
     dumpState(s);
 }
 
 function onMessage(message) {
+    if (message.payload.type !== 'GOSSIP') return;
+
     let s = loadState();
-    const m = message.payload;
-
-    if (m.type === 'GOSSIP') {
-        // Merge: take max heartbeat counter for each member
-        for (const [idStr, remote] of Object.entries(m.members)) {
-            const id = parseInt(idStr);
-            if (!s.members[id]) {
-                s.members[id] = { ...remote };
-            } else {
-                const local = s.members[id];
-                if (remote.heartbeat > local.heartbeat) {
-                    local.heartbeat = remote.heartbeat;
-                    local.localTime = s.tick;  // We just learned about a new value
-                    local.status = 'alive';    // Always resurrect if heartbeat increments!
-                }
-            }
-        }
-        // Removed GOSSIP_REPLY to prevent visual starburst clutter.
-        // Pure PUSH-based gossip anti-entropy is effective enough.
-    }
-
+    mergeMembership(s.members, message.payload.members, message.arrivalTick);
     dumpState(s);
 }
