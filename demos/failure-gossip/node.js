@@ -68,7 +68,7 @@ function onUp() {
         for (const id of allServerIds) {
             members[id] = { heartbeat: 0, localTime: 0, status: 'alive' };
         }
-        s = { members, lastGossipTick: -100, ui_state: 'Idle', ui_color: '#3182bd' };
+        s = { members, lastGossipTick: -100 };
     }
     dumpState(s);
 }
@@ -85,15 +85,10 @@ function onTimer(tick) {
     // 2. Scheduled Gossip logic
     if (shouldGossip(tick)) {
         s.lastGossipTick = tick;
-        s.ui_state = 'Gossiping';
-        s.ui_color = '#ff7f0e';
 
         // Disseminate to all alive peers
         const alive = allServerIds.filter(id => id !== serverId && s.members[id].status !== 'failed');
         broadcast(alive, { type: 'GOSSIP', members: s.members }, 'black');
-    } else if (tick > s.lastGossipTick + 1) {
-        s.ui_state = 'Idle';
-        s.ui_color = '#3182bd';
     }
 
     // 3. Independent failure monitoring

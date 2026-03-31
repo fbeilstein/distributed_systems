@@ -1,7 +1,8 @@
 {
     "nodes": 4,
     "seed": 44,
-    "ticks": 120,
+    "ticks": 180,
+    "customRenderFile": "render.js",
     "names": [
         "Node-0",
         "Node-1",
