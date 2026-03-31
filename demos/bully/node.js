@@ -1,182 +1,116 @@
-// Bully Algorithm — Leader Election
-// Nodes are numbered 0..N-1. Highest ID wins ("bullies" lower-ID nodes.
-// Protocol:
-//   1. Any node noticing absence of a heartbeat from the current leader starts ELECTION.
-//   2. It sends ELECTION to all nodes with higher IDs.
-//   3. If it gets OK (a bully response) from any higher node, it steps back.
-//   4. If it gets no OK within ELECTION_TIMEOUT, it declares itself COORDINATOR.
-//   5. Coordinator sends COORDINATOR msg to all lower nodes.
-//   6. Coordinator sends periodic HEARTBEAT so others detect its liveness.
+// --- TUNING PARAMETERS ---
+const HEARTBEAT_INTERVAL = 10;   // How often the leader sends a pulse
+const ELECTION_THRESHOLD = 20;   // Wait this long since last pulse before electing
+const COLLECTION_TIMEOUT = 12;   // Wait this long for ALIVE responses before victory
+// -------------------------
 
-const HEARTBEAT_INTERVAL = 10;
-const LEADER_TIMEOUT = 25;  // No heartbeat for this long → start election
-const ELECTION_TIMEOUT = 40;  // No OK response → declare victory
-const NO_LEADER = -1;
+const PEERS = allServerIds.filter(id => id !== serverId);
+const HIGHER_PRIORITY_NODES = allServerIds.filter(id => id > serverId);
 
-function onUp() {
-    let s = loadState();
-    if (Object.keys(s).length === 0) {
-        const fsm = new Automat({
-            initial: serverId === 4 ? 'leader' : 'follower',
-            states: {
-                follower: { on: { START_ELECTION: 'electing', BECOME_LEADER: 'leader' }, color: '#cfd8dc' },
-                electing: { on: { HIGHER_ID_ANSWERED: 'waiting', WON_ELECTION: 'leader', NEW_COORD: 'follower' }, color: '#ffb74d' },
-                waiting: { on: { NEW_COORD: 'follower', START_ELECTION: 'electing' }, color: '#fff59d' },
-                leader: { on: { BECOME_FOLLOWER: 'follower' }, color: '#81c784' }
-            }
-        });
-        dumpState({
-            fsm: fsm.serialize(),
-            leader: serverId === 4 ? 4 : NO_LEADER,  // Node 4 starts as leader
-            electionStartTick: null,
-            electing: false,
-            lastLeaderSeen: 0,
-            permutation: [2, 4, 1, 3, 0] // Random-looking permutation for pings
-        });
-    } else {
-        // Recovery: force a new election since we don't know current leader
-        const s2 = loadState();
-        const fsm = Automat.deserialize(s2.fsm);
-        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-        else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        s2.fsm = fsm.serialize();
-        s2.leader = NO_LEADER;
-        s2.electionStartTick = null;
-        s2.electing = false;
-        s2.lastLeaderSeen = 0;
-        if (!s2.permutation) s2.permutation = [2, 4, 1, 3, 0];
-        dumpState(s2);
-    }
+// for visuals only make first nodes more probable to start elections
+function election_timeout() {
+    return ELECTION_THRESHOLD + (serverId * 5) - getRandom(0, 10);
 }
 
-function onTimer(tick) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    s.tick = tick;
+/** BULLY STATE: Base class for shared handlers */
+class BullyState extends State {
+    wait_leader() { this.setTimeout(election_timeout(), 'onLeaderTimeout', 'leader'); }
 
-    // If leader, send periodic heartbeats to all followers simultaneously, but loop in random order
-    if (fsm.state === 'leader') {
-        if (tick % HEARTBEAT_INTERVAL === 0) {
-            for (const target of s.permutation) {
-                if (target !== serverId && target < allServerIds.length) {
-                    sendMessage(target, { type: 'HEARTBEAT', leader: serverId });
-                }
-            }
-        }
-        dumpState(s);
-        return;
+    onLEADER_HEARTBEAT(msg) {
+        const leader = msg.payload.leader;
+        this.machine.leaderId = leader;
+        this.transition('Follower', false);
+        this.wait_leader();
     }
 
-    // If electing and no OK received, declare victory
-    if (s.electing && s.electionStartTick !== null && tick - s.electionStartTick > ELECTION_TIMEOUT) {
-        // No higher node responded — we win!
-        s.leader = serverId;
-        if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-        s.electing = false;
-        s.electionStartTick = null;
-        for (const id of allServerIds) {
-            if (id !== serverId && id < serverId) {
-                sendMessage(id, { type: 'COORDINATOR', leader: serverId });
-            }
-        }
-        s.fsm = fsm.serialize();
-        dumpState(s);
-        return;
+    onELECTION(msg) {
+        sendMessage(msg.from, { type: 'ALIVE' }, 'blue');
+        this.wait_leader();
     }
 
-    // Non-leader: check if leader has been silent too long.
-    // Shift the timeout based on the random permutation so they don't all fire at once!
-    const offset = s.permutation ? s.permutation.indexOf(serverId) * 10 : 0;
-    if (!s.electing && tick - s.lastLeaderSeen > LEADER_TIMEOUT + offset && tick > 5) {
-        // Start election
-        s.electing = true;
-        s.electionStartTick = tick;
-        s.leader = NO_LEADER;
-        if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
+    onPROCEED() { this.transition('Leader'); }
+}
 
-        const higher = allServerIds.filter(id => id > serverId);
-        if (higher.length === 0) {
-            // We ARE the highest — immediately win
-            s.leader = serverId;
-            if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-            s.electing = false;
-            for (const id of allServerIds) {
-                if (id !== serverId) {
-                    sendMessage(id, { type: 'COORDINATOR', leader: serverId });
-                }
-            }
+/** FOLLOWER: Waiting for heartbeats or delegations */
+class Follower extends BullyState {
+    getState() { return ['Follower', '#cfd8dc']; }
+    canTransition() { return ['Electing', 'Leader']; }
+    onEnter() { this.wait_leader(); }
+    onLeaderTimeout() { this.transition('Electing'); }
+}
+
+/** ELECTING: The Handover Phase */
+class Electing extends BullyState {
+    getState() { return ['Electing', '#ffb74d']; }
+    canTransition() { return ['Leader', 'Follower']; }
+
+    onEnter() {
+        this.machine.highestResponder = serverId;
+        if (HIGHER_PRIORITY_NODES.length === 0) {
+            this.transition('Leader');
         } else {
-            for (const id of higher) {
-                sendMessage(id, { type: 'ELECTION', from: serverId });
-            }
+            broadcast(HIGHER_PRIORITY_NODES, { type: 'ELECTION' }, 'orange');
+            this.setTimeout(COLLECTION_TIMEOUT, 'onElectionTimeout', 'election');
         }
     }
 
-    s.fsm = fsm.serialize();
-    dumpState(s);
-}
-
-function onMessage(message) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    const m = message.payload;
-
-    if (m.type === 'HEARTBEAT') {
-        s.leader = m.leader;
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-        else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        s.electing = false;
-        s.electionStartTick = null;
-    }
-
-    else if (m.type === 'ELECTION') {
-        // Reply OK to the lower-ID node (bully it)
-        sendMessage(message.from, { type: 'OK', from: serverId });
-
-        // Start our own election if not already
-        if (!s.electing) {
-            s.electing = true;
-            s.electionStartTick = s.tick !== undefined ? s.tick : 0;
-            if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
-            const higher = allServerIds.filter(id => id > serverId);
-            if (higher.length === 0) {
-                // Immediately win
-                s.leader = serverId;
-                if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-                s.electing = false;
-                for (const id of allServerIds) {
-                    if (id !== serverId) {
-                        sendMessage(id, { type: 'COORDINATOR', leader: serverId });
-                    }
-                }
-            } else {
-                for (const id of higher) {
-                    sendMessage(id, { type: 'ELECTION', from: serverId });
-                }
-            }
+    onElectionTimeout() {
+        if (this.machine.highestResponder === serverId) {
+            this.transition('Leader');
+        } else {
+            sendMessage(this.machine.highestResponder, { type: 'PROCEED' }, 'red');
+            this.transition('Follower');
         }
     }
 
-    else if (m.type === 'OK') {
-        // Someone higher responded — stop our own election bid
-        // (they will handle it)
-        s.electing = false;
-        s.electionStartTick = null;
-        // Crucial: reset our timeout clock so we don't instantly complain again on the next tick!
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        if (fsm.can('HIGHER_ID_ANSWERED')) fsm.transition('HIGHER_ID_ANSWERED');
+    onALIVE(msg) {
+        if (msg.from > this.machine.highestResponder)
+            this.machine.highestResponder = msg.from;
     }
-
-    else if (m.type === 'COORDINATOR') {
-        s.leader = m.leader;
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-        else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        s.electing = false;
-        s.electionStartTick = null;
-    }
-
-    s.fsm = fsm.serialize();
-    dumpState(s);
 }
+
+/** LEADER: Victory and Heartbeats */
+class Leader extends BullyState {
+    getState() { return ['Leader', '#81c784']; }
+    canTransition() { return ['Follower']; }
+
+    onEnter() {
+        this.machine.leaderId = serverId;
+        this.onHeartbeatTick();
+    }
+
+    onHeartbeatTick() {
+        broadcast(PEERS, { type: 'LEADER_HEARTBEAT', leader: serverId }, 'green');
+        this.setTimeout(HEARTBEAT_INTERVAL, 'onHeartbeatTick');
+    }
+
+    onELECTION(msg) { sendMessage(msg.from, { type: 'ALIVE' }, 'blue'); }
+}
+
+class BullyMachine extends Machine {
+    constructor() {
+        super();
+        this.states = [new Follower(), new Electing(), new Leader()];
+        this.leaderId = null;
+        this.highestResponder = null;
+    }
+
+    // Force return as Follower after any crash/reboot
+    onUp() {
+        super.onUp();
+        if (this._automat) {
+            this._automat.transition('Follower');
+            this._persist();
+        }
+    }
+
+    syncUI() {
+        this.current_leader = this.leaderId === null ? 'None' : `Node-${this.leaderId}`;
+    }
+}
+
+const M = new BullyMachine();
+
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }

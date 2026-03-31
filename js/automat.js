@@ -16,8 +16,7 @@ export const AUTOMAT_SOURCE = `
 class State {
   constructor() {
     this.automat = null;
-    this._timeout = null;
-    this._timeoutCallback = null;
+    this._timeouts = {}; // { name: { ticks, callback } }
   }
   
   /** Subclasses should return [displayName, color] */
@@ -33,12 +32,24 @@ class State {
   onMessage(msg) {}
 
   // --- Timeout Helpers ---
-  addTimeout(ticks, callbackMethodName) {
-    this._timeout = ticks;
-    this._timeoutCallback = callbackMethodName;
+  setTimeout(ticks, callbackMethodName, name = 'default') {
+    this._timeouts[name] = { ticks: ticks, callback: callbackMethodName };
   }
-  clearTimeouts() { this._timeout = null; this._timeoutCallback = null; }
-  transition(targetName) { if (this.automat) this.automat.transition(targetName); }
+
+  clearTimeout(name = 'default') {
+    delete this._timeouts[name];
+  }
+
+  clearAllTimeouts() {
+    this._timeouts = {};
+  }
+
+  /** Future API: Get list of active timer names */
+  get activeTimers() {
+     return Object.keys(this._timeouts);
+  }
+
+  transition(targetName, reenter = true) { if (this.automat) this.automat.transition(targetName, reenter); }
 }
 
 class Automat {
@@ -105,11 +116,13 @@ class Automat {
   
   onTimer(tick) {
     if (!this.current) return;
-    if (this.current._timeout !== null) {
-      if (--this.current._timeout <= 0) {
-        const cbName = this.current._timeoutCallback;
+    const timers = this.current._timeouts;
+    for (const name in timers) {
+      const t = timers[name];
+      if (--t.ticks <= 0) {
+        const cbName = t.callback;
         const cb = this.current[cbName];
-        this.current._timeout = null;
+        delete timers[name];
         if (typeof cb === 'function') {
            cb.call(this.current);
         }
@@ -149,17 +162,23 @@ class Automat {
     this.current.onMessage(msg); 
   }
 
-  transition(targetName) {
+  transition(targetName, reenter = true) {
     const next = (this._graph[this.stateName] && this._graph[this.stateName][targetName]) || targetName;
     if (!this.states[next]) return false;
     
+    // Idempotency Guard: If we are already here and don't want to re-enter, do nothing.
+    if (next === this.stateName && !reenter) return true;
+
     // Track transition for graph visualizer if not already there (avoid self-links)
     if (!this._isLegacy && next !== this.stateName) {
       if (!this._graph[this.stateName]) this._graph[this.stateName] = {};
       this._graph[this.stateName][next] = next;
     }
 
-    if (this.current && this.current.onExit) this.current.onExit();
+    if (this.current) {
+      if (this.current.onExit) this.current.onExit();
+      this.current.clearAllTimeouts();
+    }
     this.stateName = next;
     this.current = this.states[next];
     if (this.current && this.current.onEnter) this.current.onEnter();
@@ -169,7 +188,7 @@ class Automat {
   serialize() {
     const stateData = {};
     for (const [n, s] of Object.entries(this.states)) {
-      stateData[n] = { _timeout: s._timeout, _timeoutCallback: s._timeoutCallback };
+      stateData[n] = { _timeouts: s._timeouts };
     }
     const [display, color] = this.current ? this.current.getState() : [this.stateName, '#ccc'];
     if (this.stateName) this._colors[this.stateName] = color;
@@ -206,8 +225,7 @@ class Automat {
     if (obj.stateData) {
         for (const [name, data] of Object.entries(obj.stateData)) {
             if (a.states[name]) {
-                a.states[name]._timeout = data._timeout;
-                a.states[name]._timeoutCallback = data._timeoutCallback;
+                a.states[name]._timeouts = data._timeouts || {};
             }
         }
     }

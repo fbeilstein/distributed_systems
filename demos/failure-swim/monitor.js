@@ -18,7 +18,7 @@ class SwimState extends State {
 
 class Monitoring extends SwimState {
     constructor() { super(); this.color = '#8bc34a'; }
-    onEnter() { this.addTimeout(SYNC_INTERVAL, 'startPing'); }
+    onEnter() { this.setTimeout(SYNC_INTERVAL, 'startPing'); }
     startPing() {
         sendMessage(TARGET_ID, { type: 'PING' }, 'blue');
         this.transition('pingpending');
@@ -28,7 +28,7 @@ class Monitoring extends SwimState {
 
 class PingPending extends SwimState {
     constructor() { super(); this.color = '#3498db'; }
-    onEnter() { this.addTimeout(DIRECT_TIMEOUT, 'onDirectTimeout'); }
+    onEnter() { this.setTimeout(DIRECT_TIMEOUT, 'onDirectTimeout'); }
     onDirectTimeout() { this.transition('indirectpolling'); }
     onMessage(msg) {
         if (msg.payload.type === 'PONG' && msg.from === TARGET_ID)
@@ -41,7 +41,7 @@ class IndirectPolling extends SwimState {
     constructor() { super(); this.color = '#ffb74d'; }
     onEnter() {
         broadcast(WITNESS_IDS, { type: 'PING_REQ', target: TARGET_ID }, 'orange');
-        this.addTimeout(INDIRECT_TIMEOUT, 'onIndirectTimeout');
+        this.setTimeout(INDIRECT_TIMEOUT, 'onIndirectTimeout');
     }
     onIndirectTimeout() { this.transition('failed'); }
     onMessage(msg) {
@@ -69,7 +69,7 @@ class SwimMonitor extends Machine {
     }
     onUp() {
         this._hydrate();
-        this._automat.current.addTimeout(PING_AFTER_UP, 'startPing');
+        this._automat.current.setTimeout(PING_AFTER_UP, 'startPing');
         this._persist();
     }
     syncUI(s) {
