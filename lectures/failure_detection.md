@@ -417,7 +417,7 @@ $P_3$ physically crashes and its CPU halts.
 
 <div class="callout-box">
     <h4>Real World vs. Sandbox Architecture</h4>
-    <p>In a true scalable Gossip implementation (like the paper), a node picks <b>one random neighbor</b> to exchange state with.<br><br>For illustrative purposes, our Sandbox demo runs a <b>Staggered Broadcast Gossip</b> --- distributes state to all active peers in a round-robin fashion. </p>
+    <p>In a true scalable Gossip implementation (like the paper), a node picks <b>one random neighbor</b> to exchange state with.<br><br>For illustrative purposes, our Sandbox demo defaults to a <b>Staggered Broadcast Gossip</b> for visual simplicity, but it can be toggled to true random peer selection in the source code. Additionally, notice the <b>Stacked Health Indicators</b> (Green/Yellow/Red) drawn above each track, providing a global view of every node's perception of the cluster.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
@@ -466,7 +466,7 @@ This approach converts any individual process failure instantly into a massive, 
 
 <div class="callout-box">
     <h4>Real World vs. Sandbox Architecture</h4>
-    <p>Our Sandbox uses a true Symmetric Architecture! Every node runs the exact same logic. <br><br><b>How to test FUSE:</b> Right-click Node-2 to instantly terminate its CPU. Notice how Node-1 (the target of Node-2's pings) eventually detects the failure. At that exact moment, Node-1's state transitions permanently to <span style="color: #e57373; font-weight: bold;">Inactive (Red)</span>. Because it's inactive, it stops replying to Node-0... and finally the entire cluster voluntarily cascades into the Inactive state!</p>
+    <p>Our Sandbox uses a true Symmetric Architecture! Every node runs the exact same logic. <br><br><b>How to test FUSE:</b> Double-click Node-2 to instantly terminate its CPU. Notice how Node-1 (the monitor of Node-2's heartbeats) eventually detects the failure. At that exact moment, Node-1's state transitions permanently to <span style="color: #e57373; font-weight: bold;">Fuse Blown (Red)</span>. Because its fuse is blown, it stops replying to Node-0... and finally the entire cluster voluntarily cascades into the blown state!</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
