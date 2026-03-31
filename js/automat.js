@@ -43,34 +43,36 @@ class State {
 
 class Automat {
   constructor(...args) {
-    let def;
+    let defStates, initialArg;
     const isConfig = (args.length === 1 && (args[0].states || args[0].initial));
     if (isConfig) {
-      def = args[0];
-      const stateList = Array.isArray(def.states) ? def.states : Object.values(def.states);
-      if (!def.initial && stateList.length > 0) def.initial = stateList[0].name;
+      defStates = Array.isArray(args[0].states) ? args[0].states : (args[0].states ? Object.values(args[0].states) : []);
+      initialArg = args[0].initial;
+      this._graph = args[0].graph || {};
+      this._colors = args[0].colors || {};
+      this.skipInitialEnter = !!args[0].skipInitialEnter;
     } else {
-      def = { states: args, initial: (args[0] && args[0].name) || 'unknown' };
+      defStates = args;
+      initialArg = null;
+      this._graph = {};
+      this._colors = {};
+      this.skipInitialEnter = false;
     }
 
-    this.stateName = def.initial;
-    this._graph = def.graph || {};
-    this._colors = def.colors || {};
     this._pendingTimeouts = [];
-
-    // Map states
     this.states = {};
-    const stateList = Array.isArray(def.states) ? def.states : (def.states ? Object.values(def.states) : []);
-    for (const s of stateList) {
-      if (s instanceof State) {
-        const name = s.name;
-        this.states[name] = s;
-        s.automat = this;
-        // Seed initial color from getState() if not already defined
-        const [_, color] = s.getState();
-        if (!this._colors[name]) this._colors[name] = color;
+    let resolvedInitialName = initialArg;
 
-        // Static Graph Discovery (Optional)
+    for (const s of defStates) {
+      if (s instanceof State) {
+        s.automat = this;
+        const [displayName, color] = s.getState();
+        const name = displayName || s.name || 'unknown';
+        this.states[name] = s;
+        if (!this._colors[name]) this._colors[name] = color;
+        if (!resolvedInitialName) resolvedInitialName = name;
+
+        // Discovery
         if (typeof s.canTransition === 'function') {
            const targets = s.canTransition();
            if (Array.isArray(targets)) {
@@ -81,16 +83,20 @@ class Automat {
       } else {
         // Compatibility for raw objects
         this._isLegacy = true; 
-        const name = s.name || Object.keys(def.states).find(k => def.states[k] === s);
+        const name = s.name || (typeof defStates === 'object' && Object.keys(defStates).find(k => defStates[k] === s)) || 'unknown';
         const ls = new State(); ls.automat = this;
         this.states[name] = ls;
         this._graph[name] = s.on || {};
         if (s.color) this._colors[name] = s.color;
+        if (!resolvedInitialName) resolvedInitialName = name;
       }
     }
+
+    this.stateName = resolvedInitialName;
     this.current = this.states[this.stateName];
+    
     // Trigger onEnter for the initial state if this is a fresh start (not deserialized)
-    if (!def.skipInitialEnter && this.current && this.current.onEnter) {
+    if (!this.skipInitialEnter && this.current && this.current.onEnter) {
        this.current.onEnter();
     }
   }

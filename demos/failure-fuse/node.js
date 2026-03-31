@@ -1,122 +1,82 @@
-// FUSE — Reversing Failure Detection
-// Protocol:
-//   1. Nodes monitor their peers with heartbeats (like basic pings).
-//   2. KEY DIFFERENCE: When a node detects ANY failure, it stops responding to
-//      ALL peers — effectively "failing itself" on purpose.
-//   3. This cascades: every other node now also detects a failure and stops.
-//   4. Result: the entire cluster reaches a consistent "failure detected" state
-//      without any explicit broadcast needed — it's self-reinforcing.
-//
-// Demo: Node 4 crashes at tick 30. Node 0 detects it, stops responding,
-//       which cascades to Node 1, 2, 3 — all stop by ~tick 75.
+// FUSE — Cascading Failure Detection
+// When a node detects ANY peer failure, it stops responding (blows its fuse).
+// This cascades through the cluster, creating consistent failure awareness.
 
 const PING_INTERVAL = 20;
 const TIMEOUT = PING_INTERVAL + 10;
+const SPACING = Math.floor(PING_INTERVAL / allServerIds.length);
+const PEERS = allServerIds.filter(id => id !== serverId);
 
-// FSM Definition: 'listen' for passive listening, 'ping' for active broadcasting, 'inactive' for blown fuse
-const fsmDef = {
-    initial: 'listen',
-    states: {
-        'listen': { on: { 'START_PING': 'ping', 'BLOW_FUSE': 'inactive' }, color: '#3182bd' }, // blue
-        'ping': { on: { 'DONE_PING': 'listen', 'BLOW_FUSE': 'inactive' }, color: '#ff7f0e' },  // orange
-        'inactive': { color: '#e57373' }                                                       // red
-    }
-};
-
-function onUp() {
-    let s = loadState();
-    if (Object.keys(s).length === 0) {
-        const fsm = new Automat(fsmDef);
-        const peers = {};
-        for (const id of allServerIds) {
-            if (id !== serverId) {
-                peers[id] = { lastSeen: 0, status: 'alive' };
-            }
-        }
-        dumpState({
-            fsm: fsm.serialize(),
-            peers,
-            lastPingTick: -100
-        });
-    }
+function shouldPing(tick) {
+    return tick % PING_INTERVAL === (serverId * SPACING) % PING_INTERVAL;
 }
 
-function onTimer(tick) {
-    let s = loadState();
-    if (!s.fsm) return;
+/** LISTEN: Normal operation, pinging and listening */
+class Listen extends State {
+    getState() { return ['Listen', '#3182bd']; }
+    canTransition() { return ['Fuse Blown']; }
 
-    const fsm = Automat.deserialize(s.fsm);
-    s.tick = tick;
+    onTimer(tick) {
+        this.machine.tick = tick;
+        // 1. Staggered Ping logic
+        if (shouldPing(tick))
+            broadcast(PEERS, { type: 'PING' }, 'black');
 
-    // If fuse is blown, we are "inactive" — don't send anything
-    if (fsm.state === 'inactive') {
-        dumpState(s);
-        return;
-    }
-
-    // Return to listen 1 tick after doing a ping broadcast
-    if (fsm.state === 'ping' && tick > s.lastPingTick) {
-        fsm.transition('DONE_PING');
-    }
-
-    // Send pings to all peers evenly staggered across the interval
-    const spacing = Math.floor(PING_INTERVAL / allServerIds.length);
-    if (tick % PING_INTERVAL === (serverId * spacing) % PING_INTERVAL) {
-        fsm.transition('START_PING');
-        s.lastPingTick = tick;
-
-        for (const id of allServerIds) {
-            if (id !== serverId) {
-                sendMessage(id, { type: 'PING' });
+        // 2. Failure Detection
+        for (const [idStr, p] of Object.entries(this.machine.peers)) {
+            const gap = tick - (p.lastSeen || 0);
+            if (gap > TIMEOUT) {
+                p.status = 'failed';
+                this.transition('Fuse Blown');
+                break;
             }
         }
     }
 
-    // Check for failures
-    for (const [idStr, p] of Object.entries(s.peers)) {
-        const gap = tick - p.lastSeen;
-        const wasFailed = p.status === 'failed';
-        if (gap > TIMEOUT) {
-            p.status = 'failed';
-        } else {
-            p.status = 'alive';
-        }
-
-        // FUSE: if we just detected a new failure, blow the fuse
-        if (p.status === 'failed' && !wasFailed) {
-            fsm.transition('BLOW_FUSE');
-            break;
-        }
+    registerMessageTypes() {
+        return {
+            'PING': (msg) => {
+                sendMessage(msg.from, { type: 'ACK' }, 'orange');
+            },
+            'ACK': (msg) => {
+                const p = this.machine.peers[msg.from];
+                if (p) {
+                    p.lastSeen = msg.arrivalTick;
+                    p.status = 'alive';
+                }
+            }
+        };
     }
-
-    s.fsm = fsm.serialize();
-    dumpState(s);
 }
 
-function onMessage(message) {
-    let s = loadState();
-    if (!s.fsm) return;
+/** BLOWN: Final state, totally inactive */
+class Blown extends State {
+    getState() { return ['Fuse Blown', '#e57373']; }
+    // No message handlers or timers in this state
+}
 
-    const fsm = Automat.deserialize(s.fsm);
-    const m = message.payload;
-
-    // If fuse is blown, ignore all messages (we are "inactive")
-    if (fsm.state === 'inactive') {
-        dumpState(s);
-        return;
-    }
-
-    if (m.type === 'PING') {
-        // Reply with ACK only if fuse is not blown
-        sendMessage(message.from, { type: 'ACK' });
-    }
-
-    if (m.type === 'ACK') {
-        if (s.peers[message.from]) {
-            s.peers[message.from].lastSeen = s.tick !== undefined ? s.tick : 0;
-            s.peers[message.from].status = 'alive';
+/** FUSE MACHINE */
+class FuseMachine extends Machine {
+    constructor() {
+        super();
+        this.states = [new Listen(), new Blown()];
+        this.peers = {};
+        for (const id of allServerIds) {
+            if (id !== serverId) {
+                this.peers[id] = { lastSeen: 0, status: 'alive' };
+            }
         }
     }
 
-    dumpState(s);
+    // Custom syncUI to show peer statuses in the State Inspector if needed
+    syncUI() {
+        const parts = Object.entries(this.peers).map(([id, p]) => `S${id}:${p.status}`);
+        this.membership = parts.join(' <br> ');
+    }
 }
+
+const M = new FuseMachine();
+
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }
