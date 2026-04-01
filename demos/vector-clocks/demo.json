@@ -1,5 +1,4 @@
 {
-    "nodes": 3,
     "seed": 14,
     "ticks": 110,
     "trackHeight": 105,
@@ -7,18 +6,13 @@
     "stateBandHeight": 40,
     "hideStateLabels": true,
     "customRenderFile": "render.js",
+    "firstTrackOffset": 10,
     "names": [
         "Node-0",
         "Node-1",
         "Node-2"
     ],
     "servers": [
-        {
-            "codeFile": "node.js"
-        },
-        {
-            "codeFile": "node.js"
-        },
         {
             "codeFile": "node.js"
         }
