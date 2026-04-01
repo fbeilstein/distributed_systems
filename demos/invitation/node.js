@@ -90,7 +90,6 @@ class Leader extends InvitationState {
     }
 
     onINVITE(msg) { this.evalInvite(msg.payload); }
-    onFORWARD(msg) { this.evalInvite(msg.payload); }
 
     evalInvite(m) {
         if (m.leader === this.machine.leader) return;
@@ -150,11 +149,10 @@ class Follower extends InvitationState {
 
     onINVITE(msg) {
         if (msg.payload.leader !== this.machine.leader) {
-            sendMessage(this.machine.leader, { ...msg.payload, type: 'FORWARD' });
+            // Unmodified INVITE payload is natively routed upstream to our leader directly
+            sendMessage(this.machine.leader, msg.payload, 'blue');
         }
     }
-
-    onFORWARD(msg) { this.onINVITE(msg); }
 
     onJOIN_ACK(msg) {
         // As a follower, we just pipe the ACK directly to our leader
