@@ -39,8 +39,11 @@ class RingState extends State {
     }
 
     onACK(msg) {
-        // Successful transmission verified, natively drop the retry hook
-        this.clearTimeout('ack_wait');
+        // Only clear the timeout if it came from the exact peer we polled
+        const currentTarget = (serverId + this.machine.targetOffset) % allServerIds.length;
+        if (msg.from === currentTarget) {
+            this.clearTimeout('ack_wait');
+        }
     }
 
     onELECTION(msg) {
@@ -48,20 +51,17 @@ class RingState extends State {
         const m = msg.payload;
 
         if (m.initiator === serverId) {
-            // The election token functionally completed the perfect loop back to us
             this.machine.leader = Math.max(...m.list);
 
-            // Mathematically lock the state
             this.transition(this.machine.leader === serverId ? 'Leader' : 'Follower');
-            // Inform everyone else in the ring of the election results (securely after transitioning so we own the ack_wait Timer)
             this.forwardRing('ELECTED', { initiator: serverId, leader: this.machine.leader });
         } else {
-            // Prevent infinity rings
             if (m.list.includes(serverId)) return;
 
-            m.list.push(serverId);
+            // Generate an explicitly isolated clone to avoid polluting JS Object references!
+            const copyPayload = { initiator: m.initiator, list: [...m.list, serverId] };
             this.transition('Candidate', false);
-            this.forwardRing('ELECTION', m);
+            this.forwardRing('ELECTION', copyPayload);
         }
     }
 
@@ -69,17 +69,13 @@ class RingState extends State {
         sendMessage(msg.from, { type: 'ACK' }, 'gray');
         const m = msg.payload;
 
-        if (m.initiator === serverId) {
-            // The pipeline explicitly completed the full confirmation loop natively. Done.
-            return;
-        }
+        if (m.initiator === serverId) return;
 
         this.machine.leader = m.leader;
         this.transition(this.machine.leader === serverId ? 'Leader' : 'Follower');
-        this.forwardRing('ELECTED', m);
+        this.forwardRing('ELECTED', { initiator: m.initiator, leader: m.leader });
     }
 
-    // Clean boot isolation natively forces an election hook timeout dynamically
     onUp() { this.transition('Follower'); }
 }
 
@@ -120,8 +116,8 @@ class Follower extends RingState {
     }
 
     onLeaderTimeout() {
-        // The master node failed! Restart logical election organically!
         this.transition('Candidate');
+        this.forwardRing('ELECTION', { initiator: serverId, list: [serverId] }); // Originates strictly upon actual timeouts!
     }
 }
 
@@ -131,10 +127,6 @@ class Candidate extends RingState {
 
     onEnter() {
         this.machine.leader = -1;
-        // Boot our election token!
-        this.forwardRing('ELECTION', { initiator: serverId, list: [serverId] });
-
-        // Safety protocol: if a ring gets disjointed over lag, naturally cancel out of election.
         this.setTimeout(80, 'onElectionJammed', 'jam_wait');
     }
 
