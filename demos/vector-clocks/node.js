@@ -1,100 +1,67 @@
-// Vector Clocks — Causality Tracking
-// Each node maintains a vector clock. On send: increment own counter.
-// On receive: merge by element-wise max, then increment own counter.
+// Vector Clocks — Functional Refactor
+// Rule: On any event (send/recv), increment own clock component. 
+// On receive: merge by element-wise max before incrementing.
 
 const N = allServerIds.length;
 
-function tick_vc(vc, id) {
-    const v = [...vc];
-    v[id]++;
-    return v;
-}
+const inc = (vc) => { vc[serverId]++; return vc; };
+const merge = (a, b) => a.map((v, i) => Math.max(v, b[i] || 0));
 
-function merge_vc(local, remote) {
-    return local.map((c, i) => Math.max(c, remote[i] !== undefined ? remote[i] : 0));
-}
-
-function update_display(s, color) {
-    if (color && s.tick !== undefined) {
-        s.flashColor = color;
-        s.flashTick = s.tick;
+function syncUI(s) {
+    s.ui_state = `[${s.vc.join(',')}]`;
+    const last = s.log[s.log.length - 1];
+    if (last && s.tick - last.tick < 12) {
+        if (last.event.includes('sent')) s.ui_color = '#ffb74d';
+        else if (last.event.includes('recv')) s.ui_color = '#4fc3f7';
+        else if (last.event.includes('ack')) s.ui_color = '#81c784';
+    } else {
+        s.ui_color = '#cfd8dc';
     }
-    let activeColor = '#cfd8dc';
-    if (s.flashTick !== undefined && s.tick !== undefined && s.tick - s.flashTick < 10) {
-        activeColor = s.flashColor;
-    }
-    const stateName = `[${s.vc.join(', ')}]`;
-    s.ui_state = stateName;
-    s.ui_color = activeColor;
 }
 
 function onUp() {
     let s = loadState();
-    if (Object.keys(s).length === 0) {
+    if (!s.vc) {
         s.vc = new Array(N).fill(0);
         s.log = [];
-        s.data = null;
-        s.flashTick = null;
-        s.flashColor = null;
-        update_display(s);
+        s.nextTick = 5 + getRandom(0, 15);
     }
+    syncUI(s);
     dumpState(s);
 }
 
 function onTimer(tick) {
     let s = loadState();
     s.tick = tick;
-    let didUpdate = false;
 
-    // ~4% chance per tick to send a message to a random peer
-    if (tick > 2 && getRandom(0, 24) === 0) {
-        let target = getRandom(0, N - 1);
-        if (target === serverId) target = (target + 1) % N;
+    if (tick >= s.nextTick) {
+        const target = (serverId + 1 + getRandom(0, N - 2)) % N;
+        s.vc = inc(s.vc);
+        const data = `val_${getRandom(10, 99)}`;
 
-        s.vc = tick_vc(s.vc, serverId);
-        s.data = `d_${serverId}_${getRandom(0, 99)}`;
-        s.log.push({ vc: [...s.vc], event: `write ${s.data}`, tick });
+        s.log.push({ tick, vc: [...s.vc], event: `sent ${data} to ${target}` });
+        sendMessage(target, { type: 'WRITE', vc: s.vc, data }, '#ffb74d');
 
-        // 70% UPDATE, 30% SYNC
-        if (getRandom(0, 9) > 2) {
-            sendMessage(target, { type: 'UPDATE', data: s.data, vc: s.vc });
-        } else {
-            sendMessage(target, { type: 'SYNC', vc: s.vc });
-        }
-
-        update_display(s, '#ffb74d');
-        didUpdate = true;
+        s.nextTick = tick + 20 + getRandom(0, 30);
     }
-
-    if (!didUpdate) update_display(s);
+    syncUI(s);
     dumpState(s);
 }
 
-function onMessage(message) {
+function onMessage(msg) {
     let s = loadState();
-    const m = message.payload;
-    s.tick = message.arrivalTick || s.tick;
+    const p = msg.payload;
+    s.tick = msg.arrivalTick;
 
-    if (m.type === 'UPDATE' || m.type === 'SYNC') {
-        s.vc = merge_vc(s.vc, m.vc);
-        s.vc = tick_vc(s.vc, serverId);
-
-        if (m.type === 'UPDATE') {
-            s.data = m.data;
-            s.log.push({ vc: [...s.vc], event: 'recv ' + m.data + ' from ' + message.from, tick: s.tick });
-            sendMessage(message.from, { type: 'ACK_VC', vc: s.vc });
-        } else {
-            s.log.push({ vc: [...s.vc], event: 'recv sync from ' + message.from, tick: s.tick });
-        }
-        update_display(s, '#4fc3f7');
+    if (p.type === 'WRITE') {
+        s.vc = inc(merge(s.vc, p.vc));
+        s.log.push({ tick: s.tick, vc: [...s.vc], event: `recv ${p.data} from ${msg.from}` });
+        sendMessage(msg.from, { type: 'ACK', vc: s.vc }, '#4fc3f7');
     }
-
-    else if (m.type === 'ACK_VC') {
-        s.vc = merge_vc(s.vc, m.vc);
-        s.vc = tick_vc(s.vc, serverId);
-        s.log.push({ vc: [...s.vc], event: 'recv ack from ' + message.from, tick: s.tick });
-        update_display(s, '#4fc3f7');
+    else if (p.type === 'ACK') {
+        s.vc = inc(merge(s.vc, p.vc));
+        s.log.push({ tick: s.tick, vc: [...s.vc], event: `ack from ${msg.from}` });
     }
-
+    syncUI(s);
     dumpState(s);
 }
