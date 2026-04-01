@@ -2,6 +2,7 @@
     "nodes": 6,
     "seed": 99,
     "ticks": 120,
+    "customRenderFile": "render.js",
     "names": [
         "Node-0",
         "Node-1",
@@ -11,21 +12,6 @@
         "Node-5"
     ],
     "servers": [
-        {
-            "codeFile": "node.js"
-        },
-        {
-            "codeFile": "node.js"
-        },
-        {
-            "codeFile": "node.js"
-        },
-        {
-            "codeFile": "node.js"
-        },
-        {
-            "codeFile": "node.js"
-        },
         {
             "codeFile": "node.js"
         }
