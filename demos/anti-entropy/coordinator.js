@@ -1,188 +1,141 @@
-const fsmDef = {
-    initial: 'IDLE',
-    states: {
-        'IDLE': { on: { 'WRITE': 'WRITING', 'READ': 'READING', 'HINTS': 'HAS_HINTS' }, color: '#cfd8dc' },
-        'WRITING': { on: { 'DONE': 'IDLE', 'HINTS': 'HAS_HINTS' }, color: '#ffb74d' },
-        'READING': { on: { 'DONE': 'IDLE', 'REPAIR': 'REPAIRING', 'HINTS': 'HAS_HINTS' }, color: '#4fc3f7' },
-        'HAS_HINTS': { on: { 'WRITE': 'WRITING', 'READ': 'READING', 'DONE': 'IDLE', 'FLUSHED': 'IDLE' }, color: '#ef5350' },
-        'REPAIRING': { on: { 'DONE': 'IDLE', 'HINTS': 'HAS_HINTS' }, color: '#ab47bc' }
-    }
-};
+// Anti-Entropy — Coordinator
+// Implements Hinted Handoff and Read Repair for eventual consistency.
 
-function onUp() {
-    let s = loadState();
-    if (!s.fsm) {
-        s.fsm = new Automat(fsmDef).serialize();
-        s.role = 'coordinator';
-        s.version = 0;
-        s.data = null;
-        s.pendingWrites = {};
-        s.waitingAcks = {};
-        s.ackTimer = 0;
-        s.outbox = [];
-        dumpState(s);
-    }
-}
-
-function processOutbox(s) {
-    if (s.outbox && s.outbox.length > 0) {
-        while (s.outbox.length > 0) {
-            const msg = s.outbox.shift();
-            sendMessage(msg.to, msg.payload);
-        }
-    }
-}
-
-function returnToIdleOrHint(s) {
-    let fsm = Automat.deserialize(s.fsm);
-    if (Object.keys(s.pendingWrites).length > 0) {
-        if (fsm.state !== 'HAS_HINTS') fsm.transition('HINTS');
-    } else {
-        fsm.transition('DONE');
-    }
-    s.fsm = fsm.serialize();
-}
-
-function onTimer(tick) {
-    let s = loadState();
-    if (!s.fsm) return;
-
-    let fsm = Automat.deserialize(s.fsm);
-
-    // Write v1 at tick 10
-    if (tick === 10) {
-        s.version = 1;
-        s.data = 'value_v1';
-        fsm.transition('WRITE');
-        s.fsm = fsm.serialize();
-
-        s.waitingAcks = { 1: true, 2: true, 3: true };
-        s.ackTimer = tick + 15;
-
-        const replicas = allServerIds.filter(id => id !== 0);
-        for (const r of replicas) {
-            s.outbox.push({ to: r, payload: { type: 'WRITE', data: s.data, version: s.version } });
-        }
+class CoordinatorMachine extends Machine {
+    constructor() {
+        super();
+        this.states = [new Idle(), new Writing(), new Reading(), new Repairing(), new HasHints()];
+        this.db = { x: { val: 10, v: 1 }, y: { val: 20, v: 1 } };
+        this.pendingHints = {}; // replicaId -> { val, v }
+        this.waitingAcks = {};
+        this.readReplies = {};
     }
 
-    // Write 1 Timeout Check -> Queues Hints
-    if (tick === s.ackTimer && Object.keys(s.waitingAcks).length > 0) {
-        for (const rid in s.waitingAcks) {
-            s.pendingWrites[rid] = { data: s.data, version: s.version };
-        }
-        s.waitingAcks = {};
-        returnToIdleOrHint(s);
+    syncUI() {
+        this.database = Object.entries(this.db).map(([k, o]) => `${k}:${o.val}(v${o.v})`).join(', ');
+        const hints = Object.keys(this.pendingHints);
+        this.hints = hints.length > 0 ? `To: ${hints.map(id => 'Node-' + id).join(', ')}` : 'None';
     }
 
-    // Read Request at tick 40 -> Validates Versions
-    if (tick === 40) {
-        if (fsm.state !== 'READING') fsm.transition('READ');
-        s.fsm = fsm.serialize();
-        s.readReplies = {};
-        s.readTimer = tick + 10;
-
-        const replicas = allServerIds.filter(id => id !== 0);
-        for (const r of replicas) {
-            s.outbox.push({ to: r, payload: { type: 'READ_REQUEST' } });
-        }
-    }
-
-    if (tick === s.readTimer && fsm.state === 'READING') {
-        // Processing read results -> Evaluates disparities
-        let latestVersion = s.version;
-        let latestData = s.data;
-        let needsRepair = [];
-
-        for (const rid in s.readReplies) {
-            const reply = s.readReplies[rid];
-            if (reply.version < latestVersion) {
-                needsRepair.push(rid);
-            } else if (reply.version >= latestVersion) {
-                // If it successfully replied with the fresh payload natively...
-                // We can dynamically clear any pending Hints that were trapped due to dropped WRITE ACK packets!
-                if (s.pendingWrites[rid]) delete s.pendingWrites[rid];
+    // Common recovery logic for all states (naming convention)
+    onRECOVERY_NOTICE(msg) {
+        const rid = msg.payload.replicaId;
+        const hint = this.pendingHints[rid];
+        if (hint) {
+            sendMessage(rid, { type: 'WRITE', ...hint, hinted: true }, '#f44336');
+            delete this.pendingHints[rid];
+            if (Object.keys(this.pendingHints).length === 0 && this.automat.state === 'HasHints') {
+                this.transition('Idle');
             }
         }
+    }
+}
 
-        if (needsRepair.length > 0) {
-            fsm.transition('REPAIR');
-            s.fsm = fsm.serialize();
-            for (let r of needsRepair) {
-                s.outbox.push({ to: parseInt(r), payload: { type: 'REPAIR', data: latestData, version: latestVersion } });
+class CoordinatorState extends State {
+    onUp() { this.transition('Idle'); }
 
-                // Discard the stored Hint since we dynamically read repaired it!
-                if (s.pendingWrites[r]) delete s.pendingWrites[r];
-            }
-            // Return to idle in 5 ticks
-            s.repairDoneTimer = tick + 5;
+    onTimer(tick) {
+        if (tick === 10) this.transition('Writing');
+        if (tick === 40) this.transition('Reading');
+        if (tick === 65) {
+            this.machine.db.x = { val: 15, v: 2 }; // Update V2
+            this.transition('Writing');
+        }
+    }
+
+    finish() {
+        if (Object.keys(this.machine.pendingHints).length > 0) this.transition('HasHints');
+        else this.transition('Idle');
+    }
+}
+
+class Idle extends CoordinatorState {
+    getState() { return ['Idle', '#cfd8dc']; }
+    canTransition() { return ['Writing', 'Reading', 'HasHints']; }
+}
+
+class Writing extends CoordinatorState {
+    getState() { return ['Writing', '#ffb74d']; }
+    canTransition() { return ['HasHints', 'Idle']; }
+
+    onEnter() {
+        const replicas = allServerIds.filter(id => id !== serverId);
+        this.machine.waitingAcks = {};
+        for (const id of replicas) {
+            this.machine.waitingAcks[id] = true;
+            sendMessage(id, { type: 'WRITE', ...this.machine.db.x }, '#ffb74d');
+        }
+        this.setTimeout(15, 'onAckTimeout', 'ack');
+    }
+
+    onWRITE_ACK(msg) {
+        delete this.machine.waitingAcks[msg.from];
+        if (Object.keys(this.machine.waitingAcks).length === 0) this.finish();
+    }
+
+    onAckTimeout() {
+        for (const id in this.machine.waitingAcks) {
+            this.machine.pendingHints[id] = { ...this.machine.db.x };
+        }
+        this.machine.waitingAcks = {};
+        this.finish();
+    }
+}
+
+class Reading extends CoordinatorState {
+    getState() { return ['Reading', '#4fc3f7']; }
+    canTransition() { return ['Repairing', 'HasHints', 'Idle']; }
+
+    onEnter() {
+        const replicas = allServerIds.filter(id => id !== serverId);
+        this.machine.readReplies = {};
+        for (const id of replicas) {
+            sendMessage(id, { type: 'READ_REQ' }, '#4fc3f7');
+        }
+        this.setTimeout(10, 'onReadTimeout', 'read');
+    }
+
+    onREAD_REPLY(msg) {
+        this.machine.readReplies[msg.from] = msg.payload;
+        // Optimization: if we saw a fresh version, we can clear the hint!
+        if (msg.payload.v >= this.machine.db.x.v) {
+            delete this.machine.pendingHints[msg.from];
+        }
+    }
+
+    onReadTimeout() {
+        const stalers = Object.keys(this.machine.readReplies).filter(id => {
+            return this.machine.readReplies[id].v < this.machine.db.x.v;
+        });
+
+        if (stalers.length > 0) {
+            this.machine.stalers = stalers;
+            this.transition('Repairing');
         } else {
-            returnToIdleOrHint(s);
+            this.finish();
         }
     }
-
-    if (tick === s.repairDoneTimer && fsm.state === 'REPAIRING') {
-        returnToIdleOrHint(s);
-    }
-
-    // Write v2 at tick 65
-    if (tick === 65) {
-        s.version = 2;
-        s.data = 'value_v2';
-
-        // Dynamically reset back sequentially prior to next WRITING phase avoiding overlaps
-        if (fsm.state !== 'IDLE') {
-            returnToIdleOrHint(s);
-            fsm = Automat.deserialize(s.fsm);
-        }
-        fsm.transition('WRITE');
-        s.fsm = fsm.serialize();
-
-        s.waitingAcks = { 1: true, 2: true, 3: true };
-        s.ackTimer = tick + 15;
-
-        const replicas = allServerIds.filter(id => id !== 0);
-        for (const r of replicas) {
-            s.outbox.push({ to: r, payload: { type: 'WRITE', data: s.data, version: s.version } });
-        }
-    }
-
-    processOutbox(s);
-    dumpState(s);
 }
 
-function onMessage(message) {
-    let s = loadState();
-    if (!s.fsm) return;
+class Repairing extends CoordinatorState {
+    getState() { return ['Repairing', '#ab47bc']; }
+    canTransition() { return ['HasHints', 'Idle']; }
 
-    let fsm = Automat.deserialize(s.fsm);
-    const m = message.payload;
-
-    if (m.type === 'WRITE_ACK') {
-        delete s.waitingAcks[message.from];
-        delete s.pendingWrites[message.from];
-
-        if (Object.keys(s.waitingAcks).length === 0) {
-            returnToIdleOrHint(s);
+    onEnter() {
+        for (const id of this.machine.stalers) {
+            sendMessage(parseInt(id), { type: 'REPAIR', ...this.machine.db.x }, '#ab47bc');
+            delete this.machine.pendingHints[id]; // Repaired!
         }
+        this.setTimeout(5, 'finish');
     }
-    else if (m.type === 'READ_REPLY') {
-        if (!s.readReplies) s.readReplies = {};
-        s.readReplies[message.from] = { version: m.version, data: m.data };
-    }
-    else if (m.type === 'RECOVERY_NOTICE') {
-        // Evaluates pending Hinton Handoff requests!
-        if (s.pendingWrites && s.pendingWrites[m.replicaId]) {
-            const pending = s.pendingWrites[m.replicaId];
-            s.outbox.push({ to: m.replicaId, payload: { type: 'WRITE', data: pending.data, version: pending.version, hinted: true } });
-            delete s.pendingWrites[m.replicaId];
-
-            if (Object.keys(s.pendingWrites).length === 0) {
-                if (fsm.state === 'HAS_HINTS') fsm.transition('FLUSHED');
-                s.fsm = fsm.serialize();
-            }
-        }
-    }
-
-    processOutbox(s);
-    dumpState(s);
 }
+
+class HasHints extends CoordinatorState {
+    getState() { return ['HasHints', '#ef5350']; }
+    canTransition() { return ['Idle', 'Writing', 'Reading']; }
+}
+
+const M = new CoordinatorMachine();
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }

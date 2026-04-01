@@ -1,71 +1,62 @@
-const fsmDef = {
-    initial: 'V0',
-    states: {
-        'V0': { on: { 'UP_V1': 'V1', 'UP_V2': 'V2' }, color: '#cfd8dc' },
-        'V1': { on: { 'UP_V2': 'V2' }, color: '#81c784' },
-        'V2': { on: {}, color: '#2e7d32' }
-    }
-};
+// Anti-Entropy — Replica
+// Responds to coordinator requests and reports recovery for Hint Handoff.
 
-function onUp() {
-    let s = loadState();
-    if (!s.fsm) {
-        let fsm = new Automat(fsmDef);
-        s.fsm = fsm.serialize();
-        s.role = 'replica';
-        s.version = 0;
-        s.data = null;
-        s.outbox = [];
-        dumpState(s);
-    } else {
-        // Recovered from crash!
-        let outbox = s.outbox || [];
-        outbox.push({ to: 0, payload: { type: 'RECOVERY_NOTICE', replicaId: serverId } });
-        s.outbox = outbox;
-        dumpState(s);
+class ReplicaMachine extends Machine {
+    constructor() {
+        super();
+        this.states = [new V0(), new V1(), new V2()];
+        this.v = 0;
+        this.val = null;
     }
-}
 
-function processOutbox(s) {
-    if (s.outbox && s.outbox.length > 0) {
-        while (s.outbox.length > 0) {
-            const msg = s.outbox.shift();
-            sendMessage(msg.to, msg.payload);
+    onUp() {
+        super.onUp();
+        if (this.v > 0) {
+            // Report recovery to coordinator (Node-0) to trigger Hint Handoff
+            sendMessage(0, { type: 'RECOVERY_NOTICE', replicaId: serverId }, '#9c27b0');
         }
     }
+
+    syncUI() {
+        this.database = this.v > 0 ? `val:${this.val}(v${this.v})` : 'Empty';
+    }
 }
 
-function onTimer(tick) {
-    let s = loadState();
-    if (!s.fsm) return;
-    processOutbox(s);
-    dumpState(s);
-}
+class ReplicaState extends State {
+    onWRITE(msg) { this.update(msg); }
+    onREPAIR(msg) { this.update(msg); }
 
-function onMessage(message) {
-    let s = loadState();
-    if (!s.fsm) return;
+    onREAD_REQ(msg) {
+        sendMessage(msg.from, { type: 'READ_REPLY', v: this.machine.v, val: this.machine.val }, '#4fc3f7');
+    }
 
-    let fsm = Automat.deserialize(s.fsm);
-    const m = message.payload;
-
-    if (m.type === 'WRITE' || m.type === 'REPAIR') {
-        if (m.version > s.version) {
-            s.version = m.version;
-            s.data = m.data;
-            if (m.version === 1) fsm.transition('UP_V1');
-            if (m.version === 2) {
-                if (fsm.state === 'V0') fsm.transition('UP_V1'); // Force transitions sequentially
-                fsm.transition('UP_V2');
-            }
-            s.fsm = fsm.serialize();
+    update(msg) {
+        const p = msg.payload;
+        if (p.v > this.machine.v) {
+            this.machine.v = p.v;
+            this.machine.val = p.val;
+            this.transition('V' + p.v, false);
         }
-        s.outbox.push({ to: 0, payload: { type: 'WRITE_ACK', version: s.version } });
+        sendMessage(msg.from, { type: 'WRITE_ACK' }, '#81c784');
     }
-    else if (m.type === 'READ_REQUEST') {
-        s.outbox.push({ to: 0, payload: { type: 'READ_REPLY', version: s.version, data: s.data } });
-    }
-
-    processOutbox(s);
-    dumpState(s);
 }
+
+class V0 extends ReplicaState {
+    getState() { return ['V0', '#cfd8dc']; }
+    canTransition() { return ['V1', 'V2']; }
+}
+
+class V1 extends ReplicaState {
+    getState() { return ['V1', '#81c784']; }
+    canTransition() { return ['V2']; }
+}
+
+class V2 extends ReplicaState {
+    getState() { return ['V2', '#2e7d32']; }
+    canTransition() { return []; }
+}
+
+const M = new ReplicaMachine();
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }
