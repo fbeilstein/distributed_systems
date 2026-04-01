@@ -20,7 +20,7 @@ The engine core lives in `js/`:
 | :--- | :--- |
 | `engine.js` | Tick loop, recomputation, message routing, crash intervals |
 | `server-runtime.js` | Sandbox that executes your `node.js` inside a `new Function()` |
-| `automat.js` | `State`, `Automat`, and `Machine` classes (injected as source text) |
+| `automat-source.js` | `State`, `Automat`, and `Machine` classes (injected as source text) |
 | `timeline.js` | Canvas renderer: tracks, state bands, message arrows, scrubber |
 | `state-inspector.js` | Bottom panel: server cards, state badges, Mermaid FSM graphs |
 | `interactions.js` | Mouse handlers: drag arrows, drag scrubber, double-click crash/lose |
@@ -196,25 +196,19 @@ Every state is a class inheriting from `State`. Key methods to override:
 | `onEnter()` | After transitioning INTO this state | Start timers, send initial messages |
 | `onExit()` | Before transitioning OUT of this state | Cleanup (timers are auto-cleared) |
 | `onUp()` | When node reboots | Force transition to a safe state (e.g., `this.transition('Follower')`) |
+| `onDown()` | When node crashes | Cleanup (e.g., set an error status in `this.machine`) |
 | `onTimer(tick)` | Every tick | Periodic logic (rarely needed if using `setTimeout`) |
 | `onMessage(msg)` | Generic message handler | Fallback if no typed handler matches |
 | `on<TYPE>(msg)` | When `msg.payload.type === 'TYPE'` | **Preferred**: Naming-convention message dispatch |
 
-#### State-Scoped Timers
+#### State-Scoped Timers & Properties
 
-```javascript
-// Set a timer: after 20 ticks, call this.onLeaderTimeout()
-this.setTimeout(20, 'onLeaderTimeout', 'monitor');
-
-// Setting a timer with the same name replaces the old one (idempotent!)
-this.setTimeout(15, 'onLeaderTimeout', 'monitor'); // replaces previous
-
-// Cancel a specific timer
-this.clearTimeout('monitor');
-
-// Cancel all timers (also done automatically on transition)
-this.clearAllTimeouts();
-```
+| Property / Method | Description |
+| :--- | :--- |
+| `this.activeTimers` | Getter: returns `{ name: ticksLeft, ... }` for all active timers. |
+| `this.setTimeout(ticks, cb, name)` | Register a timer. |
+| `this.clearTimeout(name)` | Clear a specific timer. |
+| `this.clearAllTimeouts()` | Clear all timers. |
 
 **How timers work internally**: On every tick, `Automat.onTimer()` decrements all active timer counters. When a counter reaches zero, the named callback method is called on the current state. Timers are stored as `{ name: { ticks: N, callback: 'methodName' } }` and are serialized/deserialized across ticks.
 
@@ -238,11 +232,24 @@ this.machine.leaderId = serverId;      // Write
 const leader = this.machine.leaderId;   // Read
 ```
 
-#### Transitioning
+#### Transitioning & Stale References
 
 ```javascript
 this.transition('Follower');         // Transition: calls onExit() → swap → onEnter()
 this.transition('Follower', false);  // Skip if already in Follower (idempotent, no re-enter)
+```
+
+**CRITICAL: The Stale Reference Pattern.** When you call `this.transition()`, the Automat immediately swaps the active state object. If you have code *following* the transition call that needs to interact with the current state (e.g., calling a protocol method), do NOT use `this`. Instead, use `this.automat.current`:
+
+```javascript
+onMessage(msg) {
+    if (msg.payload.type === 'HEARTBEAT') {
+        this.transition('Follower', false); 
+        // 'this' might now point to an object that just ran onExit()!
+        // To safely call a method on the NEW state:
+        this.automat.current.resetTimer(); 
+    }
+}
 ```
 
 **Case sensitivity matters!** `this.transition('follower')` will FAIL if `getState()` returns `'Follower'`.
