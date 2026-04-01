@@ -10,6 +10,14 @@ const PEERS = allServerIds.filter(id => id !== serverId);
 
 class RingState extends State {
 
+    // Election resolved: pick the highest ID, broadcast result, transition
+    resolveElection(list) {
+        this.machine.outbox = null;
+        this.machine.leader = list ? Math.max(...list) : serverId;
+        broadcast(PEERS, { type: 'LEADER', leader: this.machine.leader }, 'red');
+        this.transition(this.machine.leader === serverId ? 'Leader' : 'Follower');
+    }
+
     // --- Outbox: reliable ring delivery with automatic skip-retry ---
 
     ringFlush() {
@@ -18,13 +26,7 @@ class RingState extends State {
 
         const target = (serverId + ob.offset) % allServerIds.length;
         if (target === serverId) {
-            // Exhausted entire ring. Evaluate from what we collected.
-            this.machine.outbox = null;
-            this.machine.leader = ob.payload.list
-                ? Math.max(...ob.payload.list)
-                : serverId;
-            broadcast(PEERS, { type: 'LEADER', leader: this.machine.leader }, 'red');
-            this.transition(this.machine.leader === serverId ? 'Leader' : 'Follower');
+            this.resolveElection(ob.payload.list);
             return;
         }
 
@@ -54,10 +56,8 @@ class RingState extends State {
         const list = msg.payload.list;
 
         if (list.includes(serverId)) {
-            // Full round trip! We are already in the list, so the token has visited everyone alive.
-            this.machine.leader = Math.max(...list);
-            broadcast(PEERS, { type: 'LEADER', leader: this.machine.leader }, 'red');
-            this.transition(this.machine.leader === serverId ? 'Leader' : 'Follower');
+            // Full round trip! We are already in the list.
+            this.resolveElection(list);
         } else {
             // Add ourselves to the live set and forward along the ring
             this.machine.outbox = {
@@ -79,6 +79,7 @@ class RingState extends State {
 
 class Follower extends RingState {
     getState() { return ['Follower', '#cfd8dc']; }
+    canTransition() { return ['Candidate']; }
 
     onEnter() {
         this.setTimeout(LEADER_TIMEOUT + (serverId * 5), 'onLeaderTimeout', 'leader_wait');
@@ -102,6 +103,7 @@ class Follower extends RingState {
 
 class Candidate extends RingState {
     getState() { return ['Candidate', '#ffb74d']; }
+    canTransition() { return ['Follower', 'Leader']; }
 
     onEnter() {
         // Flush the outbox (set by Follower.onLeaderTimeout)
