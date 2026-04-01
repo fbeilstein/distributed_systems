@@ -1,29 +1,15 @@
-/**
- * automat.js
- * Lightweight FSM class for use in demo server scripts.
- * Provides state management, transition validation, and exports graph/color
- * metadata for visualization.
- *
- * This file is NOT imported as an ES module by user code. Instead,
- * server-runtime.js injects the class source into the sandbox scope.
- */
-
-/**
- * Source code of the Automat class, as a string to be injected into the
- * sandboxed Function scope. Kept as a template literal for readability.
- */
-export const AUTOMAT_SOURCE = `
 class State {
   constructor() {
     this.automat = null;
+    this.machine = null;
     this._timeouts = {}; // { name: { ticks, callback } }
   }
   
   /** Subclasses should return [displayName, color] */
   getState() { return [this.name || 'unknown', '#ccc']; }
 
-  // Transition name (internal ID) - defaults to lowercase class name
-  get name() { return this.constructor.name.toLowerCase(); }
+  // Transition name (internal ID) - defaults to class name ( intuitive, case-sensitive )
+  get name() { return this.constructor.name; }
 
   onEnter() {}
   onExit() {}
@@ -44,9 +30,13 @@ class State {
     this._timeouts = {};
   }
 
-  /** Future API: Get list of active timer names */
+  /** Get active timers with remaining ticks: { name: ticksLeft, ... } */
   get activeTimers() {
-     return Object.keys(this._timeouts);
+     const result = {};
+     for (const [name, t] of Object.entries(this._timeouts)) {
+       result[name] = t.ticks;
+     }
+     return result;
   }
 
   transition(targetName, reenter = true) { if (this.automat) this.automat.transition(targetName, reenter); }
@@ -70,7 +60,6 @@ class Automat {
       this.skipInitialEnter = false;
     }
 
-    this._pendingTimeouts = [];
     this.states = {};
     let resolvedInitialName = initialArg;
 
@@ -106,7 +95,7 @@ class Automat {
     this.stateName = resolvedInitialName;
     this.current = this.states[this.stateName];
     
-    // Trigger onEnter for the initial state if this is a fresh start (not deserialized)
+    // Trigger onEnter for the initial state if NOT handled by Machine
     if (!this.skipInitialEnter && this.current && this.current.onEnter) {
        this.current.onEnter();
     }
@@ -116,55 +105,62 @@ class Automat {
   
   onTimer(tick) {
     if (!this.current) return;
-    const timers = this.current._timeouts;
+    const cur = this.current;
+    const timers = cur._timeouts;
     for (const name in timers) {
       const t = timers[name];
       if (--t.ticks <= 0) {
         const cbName = t.callback;
-        const cb = this.current[cbName];
+        const cb = cur[cbName];
         delete timers[name];
         if (typeof cb === 'function') {
-           cb.call(this.current);
+           cb.call(cur);
         }
       }
     }
-    const rem = [];
-    for (const t of this._pendingTimeouts) {
-      if (tick >= t.fireAt) t.callback(); else rem.push(t);
-    }
-    this._pendingTimeouts = rem;
-    this.current.onTimer(tick);
+    if (this.current === cur) this.current.onTimer(tick);
   }
 
   onMessage(msg) { 
     if (!this.current) return;
+    const cur = this.current;
     const type = msg.payload && msg.payload.type;
+    const conventionName = type ? 'on' + type : null;
     
     // 1. Explicit Registration
-    if (typeof this.current.registerMessageTypes === 'function') {
-      const map = this.current.registerMessageTypes();
+    if (typeof cur.registerMessageTypes === 'function') {
+      const map = cur.registerMessageTypes();
       if (map && type in map) {
         const handler = map[type];
-        if (typeof handler === 'function') return handler.call(this.current, msg);
-        if (typeof handler === 'string' && typeof this.current[handler] === 'function') {
-          return this.current[handler](msg);
+        if (typeof handler === 'function') return handler.call(cur, msg);
+        if (typeof handler === 'string' && typeof cur[handler] === 'function') {
+          return cur[handler](msg);
         }
       }
     }
 
-    // 2. Naming Convention (Optional / If not handled above)
-    const conventionName = type ? \`on\${type}\` : null;
-    if (conventionName && typeof this.current[conventionName] === 'function') {
-      return this.current[conventionName](msg);
+    // 2. Naming Convention (State-level)
+    if (conventionName && typeof cur[conventionName] === 'function') {
+      return cur[conventionName](msg);
     }
 
-    // 3. General Fallback
-    this.current.onMessage(msg); 
+    // 3. Naming Convention (Machine-level fallback)
+    if (conventionName && cur.machine && typeof cur.machine[conventionName] === 'function') {
+      return cur.machine[conventionName](msg);
+    }
+
+    // 4. General Fallback
+    if (this.current === cur) cur.onMessage(msg); 
   }
 
   transition(targetName, reenter = true) {
     const next = (this._graph[this.stateName] && this._graph[this.stateName][targetName]) || targetName;
     if (!this.states[next]) return false;
+    
+    // Warn on undeclared transitions (helps catch typos and missing canTransition entries)
+    if (this._graph[this.stateName] && Object.keys(this._graph[this.stateName]).length > 0 && !this._graph[this.stateName][targetName]) {
+      console.warn('[Automat] Undeclared transition: ' + this.stateName + ' → ' + targetName);
+    }
     
     // Idempotency Guard: If we are already here and don't want to re-enter, do nothing.
     if (next === this.stateName && !reenter) return true;
@@ -199,18 +195,8 @@ class Automat {
       stateName: this.stateName,
       stateData: stateData,
       graph: this._graph,
-      colors: this._colors,
-      pendingTimeouts: this._pendingTimeouts
+      colors: this._colors
     };
-  }
-
-  static run(handlerName, arg, ...states) {
-    const s = loadState();
-    const a = new Automat({ initial: s.stateName, states: states, skipInitialEnter: !!s.stateName });
-    if (typeof a[handlerName] === 'function') a[handlerName](arg);
-    const res = a.serialize();
-    s.stateName = res.stateName;
-    dumpState(s);
   }
 
   static deserialize(obj, stateInstances) {
@@ -221,7 +207,6 @@ class Automat {
         colors: obj.colors,
         skipInitialEnter: true 
     });
-    a._pendingTimeouts = obj.pendingTimeouts || [];
     if (obj.stateData) {
         for (const [name, data] of Object.entries(obj.stateData)) {
             if (a.states[name]) {
@@ -235,18 +220,37 @@ class Automat {
 }
 
 class Machine {
-  constructor() {
+  constructor(config = {}) {
+    this._config = config;
     this.states = [];
     this._automat = null;
   }
 
   _hydrate() {
     const s = loadState();
-    if (s.machineData) Object.assign(this, s.machineData);
+    if (s.machineData) {
+        for (const key in s.machineData) {
+            if (key !== 'states') this[key] = s.machineData[key];
+        }
+    }
     
-    this._automat = s.fsm ? Automat.deserialize(s.fsm, this.states) : new Automat({ states: this.states });
+    // Truly fresh if no serialized FSM or no valid state name
+    const isFresh = !s.fsm || !s.fsm.stateName;
+    if (isFresh) {
+        const automatConfig = Object.assign({ states: this.states, skipInitialEnter: true }, this._config);
+        this._automat = new Automat(automatConfig);
+    } else {
+        this._automat = Automat.deserialize(s.fsm, this.states);
+    }
+
     for (const key in this._automat.states) {
-        this._automat.states[key].machine = this;
+        const stateObj = this._automat.states[key];
+        stateObj.machine = this;
+    }
+
+    // Trigger initial onEnter ONLY on a fresh start AND after links are settled
+    if (isFresh && this._automat.current && this._automat.current.onEnter) {
+        this._automat.current.onEnter();
     }
   }
 
@@ -261,13 +265,13 @@ class Machine {
     }
     const data = {};
     for (const key of Object.keys(this)) {
-        if (key !== 'states' && key !== '_automat') {
+        if (key !== 'states' && key !== '_automat' && key !== '_config') {
             data[key] = this[key];
             s[key] = this[key]; // Expose to state inspector visually
         }
     }
     s.machineData = data;
-    if (typeof this.syncUI === 'function') this.syncUI(s);
+    if (typeof this.syncUI === 'function') this.syncUI();
     dumpState(s);
   }
 
@@ -290,6 +294,12 @@ class Machine {
     if (this._automat) this._automat.onMessage(msg);
     this._persist();
   }
-}
-`;
 
+  onDown() {
+    this._hydrate();
+    if (this._automat && this._automat.current && typeof this._automat.current.onDown === 'function') {
+        this._automat.current.onDown();
+    }
+    this._persist();
+  }
+}

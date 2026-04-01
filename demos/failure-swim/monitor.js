@@ -19,22 +19,23 @@ class SwimState extends State {
 class Monitoring extends SwimState {
     constructor() { super(); this.color = '#8bc34a'; }
     onEnter() { this.setTimeout(SYNC_INTERVAL, 'startPing'); }
+    onUp() { this.setTimeout(PING_AFTER_UP, 'startPing'); }
     startPing() {
         sendMessage(TARGET_ID, { type: 'PING' }, 'blue');
-        this.transition('pingpending');
+        this.transition('PingPending');
     }
-    canTransition() { return ['pingpending']; }
+    canTransition() { return ['PingPending']; }
 }
 
 class PingPending extends SwimState {
     constructor() { super(); this.color = '#3498db'; }
     onEnter() { this.setTimeout(DIRECT_TIMEOUT, 'onDirectTimeout'); }
-    onDirectTimeout() { this.transition('indirectpolling'); }
+    onDirectTimeout() { this.transition('IndirectPolling'); }
     onMessage(msg) {
         if (msg.payload.type === 'PONG' && msg.from === TARGET_ID)
-            this.transition('monitoring');
+            this.transition('Monitoring');
     }
-    canTransition() { return ['monitoring', 'indirectpolling']; }
+    canTransition() { return ['Monitoring', 'IndirectPolling']; }
 }
 
 class IndirectPolling extends SwimState {
@@ -43,14 +44,14 @@ class IndirectPolling extends SwimState {
         broadcast(WITNESS_IDS, { type: 'PING_REQ', target: TARGET_ID }, 'orange');
         this.setTimeout(INDIRECT_TIMEOUT, 'onIndirectTimeout');
     }
-    onIndirectTimeout() { this.transition('failed'); }
+    onIndirectTimeout() { this.transition('Failed'); }
     onMessage(msg) {
         const isPong = (msg.payload.type === 'PONG' && msg.from === TARGET_ID);
         const isIndirectPong = (msg.payload.type === 'INDIRECT_PONG');
         if (isPong || isIndirectPong)
-            this.transition('monitoring');
+            this.transition('Monitoring');
     }
-    canTransition() { return ['monitoring', 'failed']; }
+    canTransition() { return ['Monitoring', 'Failed']; }
 }
 
 class Failed extends SwimState {
@@ -67,13 +68,8 @@ class SwimMonitor extends Machine {
         this.isDead = false;
         this.states = [new Monitoring(), new PingPending(), new IndirectPolling(), new Failed()];
     }
-    onUp() {
-        this._hydrate();
-        this._automat.current.setTimeout(PING_AFTER_UP, 'startPing');
-        this._persist();
-    }
-    syncUI(s) {
-        s.Target = this.isDead ? '❌ DEAD' : '✅ ONLINE';
+    syncUI() {
+        this.Target = this.isDead ? '❌ DEAD' : '✅ ONLINE';
     }
 }
 

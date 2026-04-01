@@ -187,6 +187,22 @@ body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
+.state-card.crashed {
+  border-color: #f44336;
+  background: #fff5f5;
+  opacity: 0.85;
+}
+
+.state-card.crashed .state-card-header {
+  background: #ffebee;
+  border-bottom-color: #ffcdd2;
+}
+
+body.dark-theme .state-card.crashed {
+  background: #3d2a2a;
+  border-color: #f44336;
+}
+
 .state-card-header {
   padding: 4px 6px;
   font-size: 12px;
@@ -215,6 +231,7 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 
 .state-card-name {
   cursor: pointer;

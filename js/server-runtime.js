@@ -5,19 +5,21 @@
  * Supports persistent context for "Live Object" (OOP) simulation.
  */
 
-import { AUTOMAT_SOURCE } from './automat.js?v=10';
+// AUTOMAT_SOURCE is now passed as a constructor parameter (loaded externally)
 
 export class StatefulRuntime {
-    constructor(serverId, allServerIds, code, prng, config) {
+    constructor(serverId, allServerIds, code, prng, config, automatSource) {
         this.serverId = serverId;
         this.allServerIds = [...allServerIds];
         this.code = code;
         this.prng = prng;
         this.config = config || {};
+        this.automatSource = automatSource || '';
         this.tick = 0;
         this.currentState = {};
         this.outbox = [];
         this.error = null;
+        this.randomCallCount = 0;
 
         // The "Sandbox" - created once per recompute
         this._initSandbox();
@@ -48,9 +50,10 @@ export class StatefulRuntime {
                 });
             });
         };
+        const self = this;
         const getRandom = (min, max) => {
-            const seedBase = this.prng ? this.prng.seed : 42;
-            let h = seedBase ^ this.tick ^ (this.serverId * 0x9E3779B9);
+            const seedBase = self.prng ? self.prng.seed : 42;
+            let h = seedBase ^ self.tick ^ (self.serverId * 0x9E3779B9) ^ (++self.randomCallCount * 0x517CC1B7);
             h = Math.imul(h ^ (h >>> 15), 1 | h);
             h ^= h + Math.imul(h ^ (h >>> 7), 61 | h);
             const floatVal = ((h ^ (h >>> 14)) >>> 0) / 4294967296;
@@ -60,12 +63,13 @@ export class StatefulRuntime {
         try {
             // The wrapper returns the compiled handlers and the local scope
             const wrappedCode = `
-                ${AUTOMAT_SOURCE}
+                ${this.automatSource}
                 ${this.code}
                 return {
                     onUp: typeof onUp === 'function' ? onUp : null,
                     onTimer: typeof onTimer === 'function' ? onTimer : null,
-                    onMessage: typeof onMessage === 'function' ? onMessage : null
+                    onMessage: typeof onMessage === 'function' ? onMessage : null,
+                    onDown: typeof onDown === 'function' ? onDown : null
                 };
             `;
             const factory = new Function('loadState', 'dumpState', 'sendMessage', 'broadcast', 'getRandom', 'serverId', 'allServerIds', 'config', wrappedCode);
@@ -85,6 +89,7 @@ export class StatefulRuntime {
     execute(handlerName, tick, arg) {
         this.tick = tick;
         this.outbox = [];
+        this.randomCallCount = 0;
         if (this.error) return { state: this.currentState, outbox: [], error: this.error };
 
         // Force a "Hard Reboot" (fresh closure) on onUp to clear transient memory

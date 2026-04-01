@@ -203,6 +203,18 @@ async function init() {
         engine.addServer(names[i] || undefined);
     }
 
+    // Load the Automat (State/Machine) class source for sandbox injection
+    try {
+        const automatResp = await fetch('./js/automat-source.js', { cache: 'no-store' });
+        if (automatResp.ok) {
+            engine.automatSource = await automatResp.text();
+        } else {
+            console.error('Failed to load automat-source.js:', automatResp.status);
+        }
+    } catch (e) {
+        console.error('Failed to fetch automat-source.js:', e);
+    }
+
     // Apply code and events from config
     if (config) {
         applyConfig(engine, config);

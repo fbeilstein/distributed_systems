@@ -1,267 +1,137 @@
-// Bully Algorithm with Next-In-Line Failover
-// Optimization: when the leader is elected, it assigns a priority-ordered failover list.
-// When the leader crashes, the FIRST alive node in the failover list self-promotes
-// immediately — no re-election needed.
+// --- TUNING PARAMETERS ---
+const HEARTBEAT_INTERVAL = 10;   // How often the leader sends a pulse
+const ELECTION_THRESHOLD = 20;   // Wait this long since last pulse before electing
+const PROBE_TIMEOUT = 10;        // Wait this long for probe response before full election
+const COLLECTION_TIMEOUT = 12;   // Wait this long for ALIVE responses before victory
+// -------------------------
 
-const HEARTBEAT_INTERVAL = 8;
-const LEADER_TIMEOUT = 22;
-const ELECTION_TIMEOUT = 10;
+const PEERS = allServerIds.filter(id => id !== serverId);
+const HIGHER_PRIORITY_NODES = allServerIds.filter(id => id > serverId);
 
-const NO_LEADER = -1;
-
-function onUp() {
-    let s = loadState();
-    if (Object.keys(s).length === 0) {
-        const fsm = new Automat({
-            initial: serverId === 4 ? 'leader' : 'follower',
-            states: {
-                follower: { on: { START_ELECTION: 'electing', BECOME_LEADER: 'leader' }, color: '#cfd8dc' },
-                electing: { on: { BECOME_FOLLOWER: 'follower', WON_ELECTION: 'leader' }, color: '#ffb74d' },
-                leader: { on: { BECOME_FOLLOWER: 'follower' }, color: '#81c784' }
-            }
-        });
-        dumpState({
-            fsm: fsm.serialize(),
-            leader: serverId === 4 ? 4 : NO_LEADER,
-            failoverList: [],      // Ordered list of backup IDs (set by leader)
-            lastLeaderSeen: 0,
-            permutation: [2, 4, 1, 3, 0], // Randomness for leader timeout
-            electing: false,
-            bullyFallback: false,
-            electionStartTick: null,
-        });
-    } else {
-        // On recovery, check if we're the head of the failover list
-        const s2 = loadState();
-        const fsm = Automat.deserialize(s2.fsm);
-        if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        s2.fsm = fsm.serialize();
-        s2.leader = NO_LEADER;
-        s2.lastLeaderSeen = 0;
-        s2.electing = false;
-        s2.bullyFallback = false;
-        s2.electionStartTick = null;
-        s2.failoverList = []; // Clear stale list so recovering node properly asserts itself
-        if (!s2.permutation) s2.permutation = [2, 4, 1, 3, 0];
-        dumpState(s2);
-    }
+function election_timeout() {
+    return ELECTION_THRESHOLD + (serverId * 5) - getRandom(0, 10);
 }
 
-function onTimer(tick) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    s.tick = tick;
+/** BULLY STATE: Shared handlers and protocol constants */
+class BullyState extends State {
+    wait_leader() { this.setTimeout(election_timeout(), 'onLeaderTimeout', 'leader'); }
 
-    if (fsm.state === 'leader') {
-        if (tick % HEARTBEAT_INTERVAL === 0) {
-            // Build failover list (descending IDs, excluding self)
-            const failover = allServerIds.filter(id => id !== serverId).sort((a, b) => b - a);
-            s.failoverList = failover;
-            for (const id of allServerIds) {
-                if (id !== serverId) {
-                    sendMessage(id, { type: 'HEARTBEAT', leader: serverId, failoverList: failover });
-                }
-            }
-        }
-        dumpState(s);
-        return;
+    onLEADER_HEARTBEAT(msg) {
+        this.machine.leaderId = msg.payload.leader;
+        this.machine.failoverNode = msg.payload.failoverNode;
+        this.transition('Follower', false);
+        this.wait_leader();
     }
 
-    // Follower/Backup: timeout detected
-    // Shift the timeout based on the random permutation
-    const offset = s.permutation ? s.permutation.indexOf(serverId) * 5 : 0;///!!!!
+    onELECTION(msg) {
+        sendMessage(msg.from, { type: 'ALIVE' }, 'blue');
+        this.wait_leader();
+    }
 
-    if (!s.electing && tick - s.lastLeaderSeen > LEADER_TIMEOUT + offset && tick > 5) {
-        s.electing = true;
-        s.electionStartTick = tick;
+    onPROCEED() { this.transition('Leader'); }
+    onUp() { this.transition('Follower'); }
+}
 
-        if (s.failoverList.length > 0) {
-            const highestAlt = s.failoverList[0];
-            if (highestAlt === serverId) {
-                // I am the highest alive node in the failover list — self-promote!
-                if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-                else if (fsm.can('BECOME_LEADER')) fsm.transition('BECOME_LEADER');
-
-                s.leader = serverId;
-                const failover = allServerIds.filter(id => id !== serverId).sort((a, b) => b - a);
-                s.failoverList = failover;
-                s.electing = false;
-                for (const id of allServerIds) {
-                    if (id !== serverId) {
-                        sendMessage(id, { type: 'COORDINATOR', leader: serverId, failoverList: failover });
-                    }
-                }
-            } else {
-                // Ping the highest ranked alternative as per lecture: `3 -ping-> 5`
-                if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
-                sendMessage(highestAlt, { type: 'FAILOVER_PING', from: serverId });
-            }
+/** FOLLOWER: Waiting for heartbeats or probe signals */
+class Follower extends BullyState {
+    getState() { return ['Follower', '#cfd8dc']; }
+    canTransition() { return ['Probing', 'Electing', 'Leader']; }
+    onEnter() { this.wait_leader(); }
+    onLeaderTimeout() {
+        if (this.machine.failoverNode !== undefined && this.machine.failoverNode !== null) {
+            this.transition('Probing');
         } else {
-            // No list or not in list — fall back to bully
-            if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
-            const higher = allServerIds.filter(id => id > serverId);
-            if (higher.length === 0) {
-                if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-                else fsm.transition('BECOME_LEADER'); // from follower directly if no lower ID sent msg before
-                s.leader = serverId;
-                s.electing = false;
-                s.bullyFallback = false;
-                for (const id of allServerIds) {
-                    if (id !== serverId) sendMessage(id, { type: 'COORDINATOR', leader: serverId, failoverList: [] });
-                }
-            } else {
-                for (const id of higher) {
-                    sendMessage(id, { type: 'ELECTION' });
-                }
-            }
+            this.transition('Electing');
         }
     }
-
-    // If electing, handle timeouts
-    if (s.electing && s.electionStartTick !== null) {
-        if (!s.bullyFallback && tick - s.electionStartTick > ELECTION_TIMEOUT) {
-            // FAILOVER_PING timed out without ALIVE response. Switch to bully ELECTION.
-            s.bullyFallback = true;
-            s.electionStartTick = tick;
-            const higher = allServerIds.filter(id => id > serverId);
-            if (higher.length === 0) {
-                s.leader = serverId;
-                s.electing = false;
-                s.bullyFallback = false;
-                if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-                const failover = allServerIds.filter(id => id !== serverId).sort((a, b) => b - a);
-                s.failoverList = failover;
-                for (const id of allServerIds) {
-                    if (id !== serverId) sendMessage(id, { type: 'COORDINATOR', leader: serverId, failoverList: failover });
-                }
-            } else {
-                for (const id of higher) {
-                    sendMessage(id, { type: 'ELECTION' });
-                }
-            }
-        }
-        else if (s.bullyFallback && tick - s.electionStartTick > ELECTION_TIMEOUT) {
-            // ELECTION timed out (no OK received from higher nodes). We win!
-            if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-            s.leader = serverId;
-            s.electing = false;
-            s.bullyFallback = false;
-            const failover = allServerIds.filter(id => id !== serverId).sort((a, b) => b - a);
-            s.failoverList = failover;
-            for (const id of allServerIds) {
-                if (id !== serverId) {
-                    sendMessage(id, { type: 'COORDINATOR', leader: serverId, failoverList: failover });
-                }
-            }
-        }
-    }
-
-    s.fsm = fsm.serialize();
-    dumpState(s);
 }
 
-function onMessage(message) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    const m = message.payload;
+/** PROBING: Fast handover attempt before falling back to full election */
+class Probing extends BullyState {
+    getState() { return ['Probing', '#fff59d']; }
+    canTransition() { return ['Electing', 'Follower', 'Leader']; }
 
-    if (m.type === 'HEARTBEAT') {
-        s.leader = m.leader;
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        s.electing = false;
-        s.bullyFallback = false;
-        s.electionStartTick = null;
-        if (fsm.state !== 'follower') {
-            if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-            else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        }
-        if (m.failoverList) s.failoverList = m.failoverList;
+    onEnter() {
+        // Direct invitation to the designated successor to take over
+        sendMessage(this.machine.failoverNode, { type: 'PROCEED' }, 'red');
+        this.setTimeout(PROBE_TIMEOUT, 'onProbeTimeout', 'probe');
     }
 
-    else if (m.type === 'COORDINATOR') {
-        s.leader = m.leader;
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        s.electing = false;
-        s.bullyFallback = false;
-        s.electionStartTick = null;
-        if (fsm.state !== 'follower') {
-            if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-            else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        }
-        if (m.failoverList) s.failoverList = m.failoverList;
-    }
-
-    else if (m.type === 'ELECTION') {
-        // Bully fallback
-        sendMessage(message.from, { type: 'OK' });
-        if (fsm.state !== 'leader' && !s.electing) {
-            s.electing = true;
-            s.bullyFallback = true;
-            s.electionStartTick = tick;
-            if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
-            const higher = allServerIds.filter(id => id > serverId);
-            if (higher.length === 0) {
-                if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-                s.leader = serverId;
-                s.electing = false;
-                s.bullyFallback = false;
-                const failover = allServerIds.filter(id => id !== serverId).sort((a, b) => b - a);
-                s.failoverList = failover;
-                for (const id of allServerIds) {
-                    if (id !== serverId) sendMessage(id, { type: 'COORDINATOR', leader: serverId, failoverList: failover });
-                }
-            } else {
-                for (const id of higher) sendMessage(id, { type: 'ELECTION' });
-            }
-        }
-    }
-
-    else if (m.type === 'OK') {
-        if (s.electing) {
-            // Someone higher responded. Back down and reset our timeout so we don't spam.
-            s.electing = false;
-            s.bullyFallback = false;
-            s.electionStartTick = null;
-            s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-            if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        }
-    }
-
-    else if (m.type === 'FAILOVER_PING') {
-        // Another node thinks leader is dead. Reply alive.
-        sendMessage(m.from, { type: 'FAILOVER_ALIVE', from: serverId });
-        if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
-    }
-
-    else if (m.type === 'FAILOVER_ALIVE') {
-        // The highest alternative is alive. Notify them to take over.
-        sendMessage(m.from, { type: 'FAILOVER_NOTIFY', from: serverId });
-        s.electing = false;
-        s.bullyFallback = false;
-        s.electionStartTick = null;
-        // Reset our timer to give them time to become leader and send heartbeats
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-    }
-
-    else if (m.type === 'FAILOVER_NOTIFY') {
-        // We received the formal notification from the detector. Self-promote!
-        if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-        else if (fsm.can('BECOME_LEADER')) fsm.transition('BECOME_LEADER');
-
-        s.leader = serverId;
-        const failover = allServerIds.filter(id => id !== serverId).sort((a, b) => b - a);
-        s.failoverList = failover;
-        s.electing = false;
-        s.bullyFallback = false;
-
-        for (const id of allServerIds) {
-            if (id !== serverId) {
-                sendMessage(id, { type: 'COORDINATOR', leader: serverId, failoverList: failover });
-            }
-        }
-    }
-
-    s.fsm = fsm.serialize();
-    dumpState(s);
+    // Handled by base class: if heartbeats start, we go back to Follower
+    onProbeTimeout() { this.transition('Electing'); }
 }
+
+/** ELECTING: Standard Bully fallback storm */
+class Electing extends BullyState {
+    getState() { return ['Electing', '#ffb74d']; }
+    canTransition() { return ['Leader', 'Follower']; }
+
+    onEnter() {
+        this.machine.highestResponder = serverId;
+        if (HIGHER_PRIORITY_NODES.length === 0) {
+            this.victory();
+        } else {
+            broadcast(HIGHER_PRIORITY_NODES, { type: 'ELECTION' }, 'orange');
+            this.setTimeout(COLLECTION_TIMEOUT, 'onElectionTimeout', 'election');
+        }
+    }
+
+    onElectionTimeout() {
+        if (this.machine.highestResponder === serverId) {
+            this.victory();
+        } else {
+            sendMessage(this.machine.highestResponder, { type: 'PROCEED' }, 'red');
+            this.transition('Follower');
+        }
+    }
+
+    onALIVE(msg) {
+        if (msg.from > this.machine.highestResponder)
+            this.machine.highestResponder = msg.from;
+    }
+
+    victory() {
+        this.machine.leaderId = serverId;
+        broadcast(PEERS, { type: 'LEADER_HEARTBEAT', leader: serverId }, 'green');
+        this.transition('Leader');
+    }
+}
+
+/** LEADER: Established authority designating a successor */
+class Leader extends BullyState {
+    getState() { return ['Leader', '#81c784']; }
+    canTransition() { return ['Follower']; }
+
+    onEnter() {
+        this.machine.leaderId = serverId;
+        this.onHeartbeatTick();
+    }
+
+    onHeartbeatTick() {
+        // Designate the highest peer as the successor in every heartbeat
+        const failoverNode = PEERS.sort((a, b) => b - a)[0];
+        broadcast(PEERS, { type: 'LEADER_HEARTBEAT', leader: serverId, failoverNode }, 'green');
+        this.setTimeout(HEARTBEAT_INTERVAL, 'onHeartbeatTick');
+    }
+
+    onELECTION(msg) { sendMessage(msg.from, { type: 'ALIVE' }, 'blue'); }
+}
+
+class FailoverMachine extends Machine {
+    constructor() {
+        super();
+        this.states = [new Follower(), new Probing(), new Electing(), new Leader()];
+        this.leaderId = null;
+        this.failoverNode = null;
+    }
+
+    syncUI() {
+        this.current_leader = this.leaderId === null ? 'None' : `Node-${this.leaderId}`;
+    }
+}
+
+const M = new FailoverMachine();
+
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }

@@ -89,6 +89,7 @@ export class Engine {
         this.userOverrides = new Map(); // key → { arrivalTick, lost }
         this.onChange = null;        // callback when recomputation is done
         this.config = {};
+        this.automatSource = '';     // Loaded externally and set before recompute
     }
 
     /**
@@ -160,7 +161,7 @@ export class Engine {
         for (const server of this.servers) {
             // Isolate PRNG per server to prevent cross-node butterfly effect timeline divergence
             const serverPRNG = new PRNG(this.seed + server.id * 31337);
-            runtimes.set(server.id, new StatefulRuntime(server.id, allServerIds, server.code, serverPRNG, this.config));
+            runtimes.set(server.id, new StatefulRuntime(server.id, allServerIds, server.code, serverPRNG, this.config, this.automatSource));
         }
 
         const serverWasUp = new Map();
@@ -175,6 +176,10 @@ export class Engine {
                 const rt = runtimes.get(server.id);
 
                 if (!up) {
+                    // Fire onDown when a node crashes (no outbox — can't send messages while dying)
+                    if (wasUp) {
+                        rt.execute('onDown', tick);
+                    }
                     serverWasUp.set(server.id, false);
                     continue;
                 }

@@ -29,6 +29,7 @@ class BullyState extends State {
     }
 
     onPROCEED() { this.transition('Leader'); }
+    onUp() { this.transition('Follower'); }
 }
 
 /** FOLLOWER: Waiting for heartbeats or delegations */
@@ -93,15 +94,6 @@ class BullyMachine extends Machine {
         this.states = [new Follower(), new Electing(), new Leader()];
         this.leaderId = null;
         this.highestResponder = null;
-    }
-
-    // Force return as Follower after any crash/reboot
-    onUp() {
-        super.onUp();
-        if (this._automat) {
-            this._automat.transition('Follower');
-            this._persist();
-        }
     }
 
     syncUI() {
