@@ -25,11 +25,11 @@
 
 ### Leader Election
 
-* [Bully Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/bully/demo.json)
-* [Next-In-Line Failover](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/bully-failover/demo.json)
-* [Candidate/Ordinary Optimization](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/bully-candidates/demo.json)
-* [Invitation Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/invitation/demo.json)
-* [Ring Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/ring-election/demo.json)
+* [Bully Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/election-bully/demo.json)
+* [Next-In-Line Failover](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/election-failover/demo.json)
+* [Candidate/Ordinary Optimization](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/election-candidates/demo.json)
+* [Invitation Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/election-invitation/demo.json)
+* [Ring Algorithm](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/election-ring/demo.json)
 
 ### Replication
 
