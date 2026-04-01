@@ -33,11 +33,11 @@
 
 ### Replication
 
-* [Reusable Infrastructure for Linearizability](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/rifl-retry/demo.json)
+* [Reusable Infrastructure for Linearizability](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/replication-rifl/demo.json)
 
 ### Consistency
 
-* [Vector Clocks](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/vector-clocks/demo.json)
+* [Vector Clocks](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/consistency-vector-clocks/demo.json)
 
 ### Anti-Entropy and Dissemination
 
