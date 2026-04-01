@@ -1,169 +1,91 @@
-// Bully Algorithm — Candidate/Ordinary Optimization
-// Only "candidate" nodes (high IDs: 3, 4) participate in elections.
-// "Ordinary" nodes (0, 1, 2) never run for leader — they just forward ELECTION
-// messages to the known candidates and wait for a COORDINATOR announcement.
-// This drastically reduces election message overhead.
+// Bully Candidates — Candidate Role (MURSHED12 Strict)
+// Candidates just wait for polling requests from ordinary nodes, and respond ALIVE.
 
 const HEARTBEAT_INTERVAL = 10;
-const LEADER_TIMEOUT = 25;
-const ELECTION_TIMEOUT = 20;
+const PEERS = allServerIds.filter(id => id !== serverId);
 
-// This file is for CANDIDATE nodes (IDs 2, 3, 4)
-const CANDIDATE_IDS = [2, 3, 4];
+class Follower extends State {
+    getState() { return ['candidate', '#cfd8dc']; }
+    canTransition() { return ['electing', 'leader']; }
 
-function onUp() {
-    let s = loadState();
-    if (Object.keys(s).length === 0) {
-        const fsm = new Automat({
-            initial: serverId === 4 ? 'leader' : 'candidate',
-            states: {
-                candidate: { on: { START_ELECTION: 'electing', BECOME_LEADER: 'leader' }, color: '#cfd8dc' },
-                electing: { on: { HIGHER_ID_ANSWERED: 'waiting', WON_ELECTION: 'leader', NEW_COORD: 'candidate' }, color: '#ffb74d' },
-                waiting: { on: { NEW_COORD: 'candidate', START_ELECTION: 'electing' }, color: '#fff59d' },
-                leader: { on: { BECOME_FOLLOWER: 'candidate' }, color: '#81c784' }
-            }
-        });
-        dumpState({
-            fsm: fsm.serialize(),
-            leader: serverId === 4 ? 4 : -1,
-            electing: false,
-            electionStartTick: null,
-            lastLeaderSeen: 0,
-            permutation: [2, 4, 1, 3, 0]
-        });
-    } else {
-        const s2 = loadState();
-        const fsm = Automat.deserialize(s2.fsm);
-        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-        else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        s2.fsm = fsm.serialize();
-        s2.leader = -1;
-        s2.electing = false;
-        s2.electionStartTick = null;
-        s2.lastLeaderSeen = 0;
-        if (!s2.permutation) s2.permutation = [2, 4, 1, 3, 0];
-        dumpState(s2);
+    onELECTION(msg) {
+        // The ordinary process initiates election by contacting candidate nodes.
+        // We just respond ALIVE and visually enter the "electing" phase to show we are participating.
+        sendMessage(msg.from, { type: 'ALIVE' }, 'blue');
+        this.transition('electing');
+    }
+
+    onHEARTBEAT(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+    }
+
+    onCOORDINATOR(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+        if (this.machine.leaderId === serverId) this.transition('leader');
     }
 }
 
-function onTimer(tick) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    s.tick = tick;
+class Electing extends State {
+    getState() { return ['electing', '#ffb74d']; }
+    canTransition() { return ['leader', 'candidate']; }
 
-    const offset = s.permutation ? s.permutation.indexOf(serverId) * 5 : serverId * 5;
-
-    if (fsm.state === 'leader') {
-        if (tick % HEARTBEAT_INTERVAL === 0) {
-            for (const id of allServerIds) {
-                if (id !== serverId) {
-                    sendMessage(id, { type: 'HEARTBEAT', leader: serverId });
-                }
-            }
-        }
-        dumpState(s);
-        return;
+    onELECTION(msg) {
+        sendMessage(msg.from, { type: 'ALIVE' }, 'blue');
     }
 
-    // Candidate: check election timeout (won by default if no higher responds)
-    if (s.electing && s.electionStartTick !== null && tick - s.electionStartTick > ELECTION_TIMEOUT) {
-        s.leader = serverId;
-        if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-        s.electing = false;
-        s.electionStartTick = null;
-        for (const id of allServerIds) {
-            if (id !== serverId) {
-                sendMessage(id, { type: 'COORDINATOR', leader: serverId });
-            }
-        }
-        s.fsm = fsm.serialize();
-        dumpState(s);
-        return;
+    onHEARTBEAT(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+        this.transition('candidate');
     }
 
-    // Candidate: leader timeout
-    if (!s.electing && tick - s.lastLeaderSeen > LEADER_TIMEOUT + offset && tick > 5) {
-        s.electing = true;
-        s.electionStartTick = tick;
-        if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
-        s.leader = -1;
-        const higherCandidates = CANDIDATE_IDS.filter(id => id > serverId);
-        if (higherCandidates.length === 0) {
-            // Immediately win
-            s.leader = serverId;
-            if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-            s.electing = false;
-            for (const id of allServerIds) {
-                if (id !== serverId) {
-                    sendMessage(id, { type: 'COORDINATOR', leader: serverId });
-                }
-            }
-        } else {
-            for (const id of higherCandidates) {
-                sendMessage(id, { type: 'ELECTION', from: serverId });
-            }
-        }
+    onCOORDINATOR(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+        if (this.machine.leaderId === serverId) this.transition('leader');
+        else this.transition('candidate');
     }
-
-    s.fsm = fsm.serialize();
-    dumpState(s);
 }
 
-function onMessage(message) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    const m = message.payload;
+class Leader extends State {
+    getState() { return ['leader', '#8bc34a']; }
+    canTransition() { return ['candidate']; }
 
-    if (m.type === 'HEARTBEAT') {
-        s.leader = m.leader;
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-        else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        s.electing = false;
-        s.electionStartTick = null;
+    onEnter() {
+        this.machine.leaderId = serverId;
+        this.sendHeartbeats();
     }
 
-    else if (m.type === 'ELECTION') {
-        // Bully the sender
-        sendMessage(message.from, { type: 'OK', from: serverId });
-
-        if (!s.electing) {
-            s.electing = true;
-            s.electionStartTick = s.tick !== undefined ? s.tick : 0;
-            if (fsm.can('START_ELECTION')) fsm.transition('START_ELECTION');
-            const higherCandidates = CANDIDATE_IDS.filter(id => id > serverId);
-            if (higherCandidates.length === 0) {
-                s.leader = serverId;
-                if (fsm.can('WON_ELECTION')) fsm.transition('WON_ELECTION');
-                s.electing = false;
-                for (const id of allServerIds) {
-                    if (id !== serverId) {
-                        sendMessage(id, { type: 'COORDINATOR', leader: serverId });
-                    }
-                }
-            } else {
-                for (const id of higherCandidates) sendMessage(id, { type: 'ELECTION', from: serverId });
-            }
-        }
+    sendHeartbeats() {
+        broadcast(PEERS, { type: 'HEARTBEAT', leader: serverId }, 'green');
+        this.setTimeout(HEARTBEAT_INTERVAL, 'sendHeartbeats', 'hb');
     }
 
-    else if (m.type === 'OK') {
-        // A higher candidate responded — step back (and importantly, wait for them!)
-        s.electing = false;
-        s.electionStartTick = null;
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0; // Fixes infinite loop
-        if (fsm.can('HIGHER_ID_ANSWERED')) fsm.transition('HIGHER_ID_ANSWERED');
+    onELECTION(msg) {
+        sendMessage(msg.from, { type: 'ALIVE' }, 'blue');
     }
 
-    else if (m.type === 'COORDINATOR') {
-        s.leader = m.leader;
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-        else if (fsm.can('BECOME_FOLLOWER')) fsm.transition('BECOME_FOLLOWER');
-        s.electing = false;
-        s.electionStartTick = null;
+    onHEARTBEAT(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+        this.transition('candidate');
     }
 
-    s.fsm = fsm.serialize();
-    dumpState(s);
+    onCOORDINATOR(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+        if (this.machine.leaderId !== serverId) this.transition('candidate');
+    }
 }
+
+class CandidateMachine extends Machine {
+    constructor() {
+        super({ initial: 'candidate' });
+        this.states = [new Follower(), new Electing(), new Leader()];
+        this.leaderId = -1;
+    }
+    syncUI() {
+        this.current_leader = this.leaderId === -1 ? 'None' : `Node-${this.leaderId}`;
+    }
+}
+
+const M = new CandidateMachine();
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }

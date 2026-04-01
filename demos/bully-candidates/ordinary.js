@@ -1,77 +1,94 @@
-// Bully Algorithm — Ordinary (Non-Candidate) Node
-// Ordinary nodes do NOT run for leader. When they suspect the leader is dead,
-// they forward an ELECTION message to the known candidate nodes and wait.
+// Bully Candidates — Ordinary Role (MURSHED12 Strict)
+// The ordinary process initiates election by contacting candidate nodes, collecting
+// responses from them, picking the highest-ranked alive candidate as a new leader, 
+// and then notifying the rest of the nodes about the election results.
 
 const LEADER_TIMEOUT = 25;
+const ELECTION_DURATION = 10;
 const CANDIDATE_IDS = [2, 3, 4];
 
-function onUp() {
-    let s = loadState();
-    if (Object.keys(s).length === 0) {
-        const fsm = new Automat({
-            initial: 'ordinary',
-            states: {
-                ordinary: { on: { FORWARD_ELECTION: 'waiting_election' }, color: '#cfd8dc' },
-                waiting_election: { on: { NEW_COORD: 'ordinary' }, color: '#fff59d' }
-            }
-        });
-        dumpState({
-            fsm: fsm.serialize(),
-            leader: -1,
-            lastLeaderSeen: 0,
-            electionForwarded: false,
-            electing: false,
-            electionStartTick: null,
-            permutation: [2, 4, 1, 3, 0]
-        });
-    } else {
-        const s2 = loadState();
-        const fsm = Automat.deserialize(s2.fsm);
-        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-        s2.fsm = fsm.serialize();
-        s2.leader = -1;
-        s2.lastLeaderSeen = 0;
-        s2.electionForwarded = false;
-        s2.electing = false;
-        s2.electionStartTick = null;
-        if (!s2.permutation) s2.permutation = [2, 4, 1, 3, 0];
-        dumpState(s2);
+class Monitor extends State {
+    getState() { return ['ordinary', '#cfd8dc']; }
+    canTransition() { return ['waiting_election']; }
+
+    onEnter() {
+        this.resetTimer();
+    }
+
+    resetTimer() {
+        // Tiebreaker variable δ: Delay varying significantly between nodes.
+        // Nodes with higher priorities (higher serverId) have a lower δ.
+        const offset = (2 - serverId) * 15;
+        this.setTimeout(LEADER_TIMEOUT + offset, 'onLeaderTimeout', 'timeout');
+    }
+
+    onLeaderTimeout() {
+        broadcast(CANDIDATE_IDS, { type: 'ELECTION' }, 'orange');
+        this.transition('waiting_election');
+    }
+
+    onHEARTBEAT(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+        this.resetTimer();
+    }
+
+    onCOORDINATOR(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+        this.resetTimer();
     }
 }
 
-function onTimer(tick) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    s.tick = tick;
+class WaitingElection extends State {
+    getState() { return ['waiting_election', '#fff59d']; }
+    canTransition() { return ['ordinary']; }
 
-    const offset = s.permutation ? s.permutation.indexOf(serverId) * 5 : serverId * 5;
+    onEnter() {
+        this.machine.aliveCandidates = [];
+        this.setTimeout(ELECTION_DURATION, 'onElectionTimeout', 'election');
+    }
 
-    // Detect leader timeout and forward to candidates
-    if (!s.electionForwarded && tick - s.lastLeaderSeen > LEADER_TIMEOUT + offset && tick > 5) {
-        s.electionForwarded = true;
-        s.leader = -1;
-        if (fsm.can('FORWARD_ELECTION')) fsm.transition('FORWARD_ELECTION');
-        for (const id of CANDIDATE_IDS) {
-            sendMessage(id, { type: 'ELECTION', from: serverId });
+    onALIVE(msg) {
+        if (!this.machine.aliveCandidates.includes(msg.from)) {
+            this.machine.aliveCandidates.push(msg.from);
         }
     }
 
-    s.fsm = fsm.serialize();
-    dumpState(s);
-}
+    onElectionTimeout() {
+        if (this.machine.aliveCandidates.length > 0) {
+            const newLeader = Math.max(...this.machine.aliveCandidates);
+            this.machine.leaderId = newLeader;
+            // Notify the rest of the nodes about the election results
+            broadcast(allServerIds, { type: 'COORDINATOR', leader: newLeader }, 'red');
+        }
 
-function onMessage(message) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    const m = message.payload;
-
-    if (m.type === 'HEARTBEAT' || m.type === 'COORDINATOR') {
-        s.leader = m.leader;
-        s.lastLeaderSeen = s.tick !== undefined ? s.tick : 0;
-        if (fsm.can('NEW_COORD')) fsm.transition('NEW_COORD');
-        s.electionForwarded = false;
+        // Returning to ordinary will inherently call Monitor's onEnter()
+        // which cleanly and natively resets the leader timeout clock!
+        this.transition('ordinary');
     }
 
-    s.fsm = fsm.serialize();
-    dumpState(s);
+    onHEARTBEAT(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+        this.transition('ordinary');
+    }
+
+    onCOORDINATOR(msg) {
+        this.machine.leaderId = msg.payload.leader || msg.from;
+        this.transition('ordinary');
+    }
 }
+
+class OrdinaryMachine extends Machine {
+    constructor() {
+        super({ initial: 'ordinary' });
+        this.states = [new Monitor(), new WaitingElection()];
+        this.leaderId = -1;
+    }
+    syncUI() {
+        this.current_leader = this.leaderId === -1 ? 'None' : `Node-${this.leaderId}`;
+    }
+}
+
+const M = new OrdinaryMachine();
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }

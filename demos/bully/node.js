@@ -19,7 +19,7 @@ class BullyState extends State {
     onLEADER_HEARTBEAT(msg) {
         const leader = msg.payload.leader;
         this.machine.leaderId = leader;
-        this.transition('Follower', false);
+        this.transition('Follower', false); // maybe not transion on lower node request?
         this.wait_leader();
     }
 
