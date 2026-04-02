@@ -4,18 +4,18 @@ class State {
     this.machine = null;
     this._timeouts = {}; // { name: { ticks, callback } }
   }
-  
+
   /** Subclasses should return [displayName, color] */
   getState() { return [this.name || 'unknown', '#ccc']; }
 
   // Transition name (internal ID) - defaults to class name ( intuitive, case-sensitive )
   get name() { return this.constructor.name; }
 
-  onEnter() {}
-  onExit() {}
-  onUp() {}
-  onTimer(tick) {}
-  onMessage(msg) {}
+  onEnter() { }
+  onExit() { }
+  onUp() { }
+  onTimer(tick) { }
+  onMessage(msg) { }
 
   // --- Timeout Helpers ---
   setTimeout(ticks, callbackMethodName, name = 'default') {
@@ -32,11 +32,11 @@ class State {
 
   /** Get active timers with remaining ticks: { name: ticksLeft, ... } */
   get activeTimers() {
-     const result = {};
-     for (const [name, t] of Object.entries(this._timeouts)) {
-       result[name] = t.ticks;
-     }
-     return result;
+    const result = {};
+    for (const [name, t] of Object.entries(this._timeouts)) {
+      result[name] = t.ticks;
+    }
+    return result;
   }
 
   transition(targetName, reenter = true) { if (this.automat) this.automat.transition(targetName, reenter); }
@@ -74,15 +74,15 @@ class Automat {
 
         // Discovery
         if (typeof s.canTransition === 'function') {
-           const targets = s.canTransition();
-           if (Array.isArray(targets)) {
-              if (!this._graph[name]) this._graph[name] = {};
-              targets.forEach(t => { this._graph[name][t] = t; });
-           }
+          const targets = s.canTransition();
+          if (Array.isArray(targets)) {
+            if (!this._graph[name]) this._graph[name] = {};
+            targets.forEach(t => { this._graph[name][t] = t; });
+          }
         }
       } else {
         // Compatibility for raw objects
-        this._isLegacy = true; 
+        this._isLegacy = true;
         const name = s.name || (typeof defStates === 'object' && Object.keys(defStates).find(k => defStates[k] === s)) || 'unknown';
         const ls = new State(); ls.automat = this;
         this.states[name] = ls;
@@ -94,15 +94,15 @@ class Automat {
 
     this.stateName = resolvedInitialName;
     this.current = this.states[this.stateName];
-    
+
     // Trigger onEnter for the initial state if NOT handled by Machine
     if (!this.skipInitialEnter && this.current && this.current.onEnter) {
-       this.current.onEnter();
+      this.current.onEnter();
     }
   }
 
   onUp() { if (this.current) this.current.onUp(); }
-  
+
   onTimer(tick) {
     if (!this.current) return;
     const cur = this.current;
@@ -114,19 +114,19 @@ class Automat {
         const cb = cur[cbName];
         delete timers[name];
         if (typeof cb === 'function') {
-           cb.call(cur);
+          cb.call(cur);
         }
       }
     }
     if (this.current === cur) this.current.onTimer(tick);
   }
 
-  onMessage(msg) { 
+  onMessage(msg) {
     if (!this.current) return;
     const cur = this.current;
     const type = msg.payload && msg.payload.type;
     const conventionName = type ? 'on' + type : null;
-    
+
     // 1. Explicit Registration
     if (typeof cur.registerMessageTypes === 'function') {
       const map = cur.registerMessageTypes();
@@ -150,18 +150,18 @@ class Automat {
     }
 
     // 4. General Fallback
-    if (this.current === cur) cur.onMessage(msg); 
+    if (this.current === cur) cur.onMessage(msg);
   }
 
   transition(targetName, reenter = true) {
     const next = (this._graph[this.stateName] && this._graph[this.stateName][targetName]) || targetName;
     if (!this.states[next]) return false;
-    
+
     // Warn on undeclared transitions (helps catch typos and missing canTransition entries)
     if (this._graph[this.stateName] && Object.keys(this._graph[this.stateName]).length > 0 && !this._graph[this.stateName][targetName]) {
       console.warn('[Automat] Undeclared transition: ' + this.stateName + ' → ' + targetName);
     }
-    
+
     // Idempotency Guard: If we are already here and don't want to re-enter, do nothing.
     if (next === this.stateName && !reenter) return true;
 
@@ -190,7 +190,7 @@ class Automat {
     if (this.stateName) this._colors[this.stateName] = color;
 
     return {
-      state: display, 
+      state: display,
       color: color,
       stateName: this.stateName,
       stateData: stateData,
@@ -200,19 +200,19 @@ class Automat {
   }
 
   static deserialize(obj, stateInstances) {
-    const a = new Automat({ 
-        initial: obj.stateName, 
-        states: stateInstances, 
-        graph: obj.graph, 
-        colors: obj.colors,
-        skipInitialEnter: true 
+    const a = new Automat({
+      initial: obj.stateName,
+      states: stateInstances,
+      graph: obj.graph,
+      colors: obj.colors,
+      skipInitialEnter: true
     });
     if (obj.stateData) {
-        for (const [name, data] of Object.entries(obj.stateData)) {
-            if (a.states[name]) {
-                a.states[name]._timeouts = data._timeouts || {};
-            }
+      for (const [name, data] of Object.entries(obj.stateData)) {
+        if (a.states[name]) {
+          a.states[name]._timeouts = data._timeouts || {};
         }
+      }
     }
     return a;
   }
@@ -229,56 +229,56 @@ class Machine {
   _hydrate() {
     const s = loadState();
     if (s.machineData) {
-        for (const key in s.machineData) {
-            if (key !== 'states') this[key] = s.machineData[key];
-        }
+      for (const key in s.machineData) {
+        if (key !== 'states') this[key] = s.machineData[key];
+      }
     }
-    
+
     // Truly fresh if no serialized FSM or no valid state name
     const isFresh = !s.fsm || !s.fsm.stateName;
     if (isFresh) {
-        const automatConfig = Object.assign({ states: this.states, skipInitialEnter: true }, this._config);
-        this._automat = new Automat(automatConfig);
+      const automatConfig = Object.assign({ states: this.states, skipInitialEnter: true }, this._config);
+      this._automat = new Automat(automatConfig);
     } else {
-        this._automat = Automat.deserialize(s.fsm, this.states);
+      this._automat = Automat.deserialize(s.fsm, this.states);
     }
 
     for (const key in this._automat.states) {
-        const stateObj = this._automat.states[key];
-        stateObj.machine = this;
+      const stateObj = this._automat.states[key];
+      stateObj.machine = this;
     }
 
     // Trigger initial onEnter ONLY on a fresh start AND after links are settled
     if (isFresh && this._automat.current && this._automat.current.onEnter) {
-        this._automat.current.onEnter();
+      this._automat.current.onEnter();
     }
   }
 
   _persist() {
     const s = loadState();
+    if (typeof this.syncUI === 'function') this.syncUI();
     if (this._automat) {
-        s.fsm = this._automat.serialize();
-        s.ui_state = s.fsm.state;
-        s.ui_color = s.fsm.color;
-        s.ui_graph = s.fsm.graph;
-        s.ui_colors = s.fsm.colors;
+      s.fsm = this._automat.serialize();
+      s.ui_state = s.fsm.state;
+      s.ui_color = s.fsm.color;
+      s.ui_graph = s.fsm.graph;
+      s.ui_colors = s.fsm.colors;
     }
     const data = {};
     for (const key of Object.keys(this)) {
-        if (key !== 'states' && key !== '_automat' && key !== '_config') {
-            data[key] = this[key];
-            s[key] = this[key]; // Expose to state inspector visually
-        }
+      if (key !== 'states' && key !== '_automat' && key !== '_config') {
+        data[key] = this[key];
+        s[key] = this[key]; // Expose to state inspector visually
+      }
     }
     s.machineData = data;
-    if (typeof this.syncUI === 'function') this.syncUI();
     dumpState(s);
   }
 
   onUp() {
     this._hydrate();
     if (this._automat && this._automat.current && typeof this._automat.current.onUp === 'function') {
-        this._automat.current.onUp();
+      this._automat.current.onUp();
     }
     this._persist();
   }
@@ -298,7 +298,7 @@ class Machine {
   onDown() {
     this._hydrate();
     if (this._automat && this._automat.current && typeof this._automat.current.onDown === 'function') {
-        this._automat.current.onDown();
+      this._automat.current.onDown();
     }
     this._persist();
   }
