@@ -1,69 +1,110 @@
-function onUp() {
-    let s = loadState();
-    s.localSeq = 0;
-    s.vectorMatrix = { 1: [], 2: [], 3: [] };
-    dumpState(s);
+const CLIENT_ID = 0;
+const COORD_ID = 4;
+const REPLICAS = allServerIds.filter(id => id !== CLIENT_ID && id !== COORD_ID);
+const PEERS = REPLICAS.filter(id => id !== serverId);
+
+class BVVMachine extends Machine {
+    constructor() {
+        super();
+        this.states = [new Idle(), new Syncing()];
+        this.matrix = {};
+        REPLICAS.forEach(id => {
+            this.matrix[id] = [];
+        });
+        this.localSeq = 0;
+    }
+
+    syncUI() {
+        this.vectorMatrix = this.matrix;
+    }
 }
 
-function onTimer(tick) {
-}
+class BVVState extends State {
+    onUp() { this.transition('Idle'); }
 
-function onMessage(message) {
-    let s = loadState();
-    if (!s.vectorMatrix) s.vectorMatrix = { 1: [], 2: [], 3: [] };
-    if (s.localSeq === undefined) s.localSeq = 0;
+    onWRITE_REQ(msg) {
+        this.machine.localSeq++;
+        const origin = serverId;
+        if (!this.machine.matrix[origin]) this.machine.matrix[origin] = [];
+        this.machine.matrix[origin].push(this.machine.localSeq);
+        broadcast(PEERS, { type: 'REPLICATE', origin, seq: this.machine.localSeq }, 'orange');
+    }
 
-    if (message.payload.type === 'WRITE_REQ') {
-        s.localSeq++;
-        s.vectorMatrix[serverId].push(s.localSeq);
-
-        for (let target of [1, 2, 3]) {
-            if (target !== serverId) {
-                sendMessage(target, {
-                    type: 'REPLICATE',
-                    origin: serverId,
-                    seq: s.localSeq
-                });
-            }
+    onREPLICATE(msg) {
+        const { origin, seq } = msg.payload;
+        if (!this.machine.matrix[origin]) this.machine.matrix[origin] = [];
+        if (!this.machine.matrix[origin].includes(seq)) {
+            this.machine.matrix[origin].push(seq);
+            this.machine.matrix[origin].sort((a, b) => a - b);
         }
-    } else if (message.payload.type === 'REPLICATE') {
-        const o = message.payload.origin;
-        const seq = message.payload.seq;
-        if (!s.vectorMatrix[o]) s.vectorMatrix[o] = [];
-        if (!s.vectorMatrix[o].includes(seq)) {
-            s.vectorMatrix[o].push(seq);
-            s.vectorMatrix[o].sort((a, b) => a - b);
-        }
-    } else if (message.payload.type === 'SYNC_CHAIN') {
-        sendMessage(2, { type: 'SYNC_DATA_CHAIN', dataParams: s.vectorMatrix, step: 1 });
-    } else if (message.payload.type === 'SYNC_DATA_CHAIN') {
-        const peerVectors = message.payload.dataParams;
+    }
 
-        Object.keys(peerVectors).forEach(o => {
-            if (!s.vectorMatrix[o]) s.vectorMatrix[o] = [];
-            peerVectors[o].forEach(seq => {
-                if (!s.vectorMatrix[o].includes(seq)) {
-                    s.vectorMatrix[o].push(seq);
-                    s.vectorMatrix[o].sort((a, b) => a - b);
+    _getNextInChain() {
+        const myIndex = REPLICAS.indexOf(serverId);
+        const nextIndex = (myIndex + 1) % REPLICAS.length;
+        return REPLICAS[nextIndex];
+    }
+
+    _merge(peerMatrix) {
+        Object.keys(peerMatrix || {}).forEach(origin => {
+            if (!this.machine.matrix[origin]) this.machine.matrix[origin] = [];
+            peerMatrix[origin].forEach(seq => {
+                if (!this.machine.matrix[origin].includes(seq)) {
+                    this.machine.matrix[origin].push(seq);
+                    this.machine.matrix[origin].sort((a, b) => a - b);
                 }
             });
         });
-
-        // Pass the baton down the ring timeline generically: 3->2, 2->1, 1->3
-        const step = message.payload.step;
-        if (step < 3) {
-            let nextTarget = serverId - 1;
-            if (nextTarget < 1) nextTarget = 3;
-            sendMessage(nextTarget, { type: 'SYNC_DATA_CHAIN', dataParams: s.vectorMatrix, step: step + 1 });
-        }
     }
-
-    // Add FSM visual colors for standard bands (independent of the custom render matrix visualizer)
-    if (message.payload.type === 'WRITE_REQ' || message.payload.type === 'REPLICATE') {
-        s.fsm = { state: 'Processing', colors: { Processing: '#333' } };
-    } else {
-        s.fsm = { state: 'Syncing', colors: { Syncing: '#7e57c2' } };
-    }
-
-    dumpState(s);
 }
+
+class Idle extends BVVState {
+    getState() { return ['Idle', '#4fc3f7']; }
+    canTransition() { return ['Syncing']; }
+
+    onSYNC_DATA(msg) {
+        const visited = msg.payload.visited || [];
+        this._merge(msg.payload.matrix);
+
+        // Add self to visited and propagate
+        visited.push(serverId);
+        sendMessage(this._getNextInChain(), {
+            type: 'SYNC_DATA',
+            matrix: this.machine.matrix,
+            visited: visited
+        }, 'purple');
+
+        this.transition('Syncing');
+    }
+}
+
+class Syncing extends BVVState {
+    getState() { return ['Syncing', '#9c27b0']; }
+    canTransition() { return ['Idle']; }
+    onEnter() { this.setTimeout(20, 'returnIdle', 'sync'); }
+    returnIdle() { this.transition('Idle'); }
+
+    onSYNC_DATA(msg) {
+        const visited = msg.payload.visited || [];
+        this._merge(msg.payload.matrix);
+
+        // Add self to visited
+        visited.push(serverId);
+
+
+        // Stop propagation when each node has been visited twice (total 2 * N visits)
+        if (visited.length < REPLICAS.length * 2) {
+            sendMessage(this._getNextInChain(), {
+                type: 'SYNC_DATA',
+                matrix: this.machine.matrix,
+                visited: visited
+            }, 'purple');
+        }
+        this.returnIdle();
+    }
+}
+
+const M = new BVVMachine();
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }

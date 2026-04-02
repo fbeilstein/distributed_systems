@@ -3,34 +3,33 @@
     "ticks": 200,
     "nodes": 5,
     "names": [
-        "Client",
+        "Coord",
         "A",
         "B",
         "C",
-        "Coord"
+        "Client"
     ],
     "customRenderFile": "render.js",
     "servers": [
         {
-            "codeFile": "client.js",
-            "color": "#7e57c2"
+            "id": 0,
+            "codeFile": "coordinator.js"
         },
         {
-            "codeFile": "replica.js",
-            "color": "#4fc3f7"
+            "id": 1,
+            "codeFile": "replica.js"
         },
         {
-            "codeFile": "replica.js",
-            "color": "#81c784"
+            "id": 2,
+            "codeFile": "replica.js"
         },
         {
-            "codeFile": "replica.js",
-            "color": "#ffb74d"
+            "id": 3,
+            "codeFile": "replica.js"
         },
         {
-            "codeFile": "coordinator.js",
-            "color": "#8d6e63"
+            "id": 4,
+            "codeFile": "client.js"
         }
-    ],
-    "events": []
+    ]
 }

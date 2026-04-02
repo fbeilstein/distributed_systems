@@ -39,7 +39,7 @@ replicas.forEach(sid => {
     if (st && st.vectorMatrix) {
         const startY = timeline.serverToY(sid) + 12;
 
-        ctx.fillStyle = 'rgba(30, 30, 30, 0.15)';
+        ctx.fillStyle = 'rgba(30, 30, 30, 0.35)';
         ctx.strokeStyle = '#555';
         ctx.lineWidth = 1;
         ctx.fillRect(xOffset - 25, startY - 5, matrixWidth + 10, 40);
