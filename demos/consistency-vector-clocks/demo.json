@@ -6,7 +6,7 @@
     "stateBandHeight": 40,
     "hideStateLabels": true,
     "customRenderFile": "render.js",
-    "firstTrackOffset": 10,
+    "trackPaddingTop": 10,
     "names": [
         "Node-0",
         "Node-1",

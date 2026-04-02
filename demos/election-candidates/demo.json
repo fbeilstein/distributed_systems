@@ -2,7 +2,7 @@
     "nodes": 5,
     "seed": 88,
     "ticks": 150,
-    "nameWidth": 100,
+    "labelWidth": 100,
     "names": [
         "Ordinary-0",
         "Ordinary-1",
