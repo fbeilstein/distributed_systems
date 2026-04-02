@@ -7,6 +7,7 @@
 export const DEFAULT_PIXELS_PER_TICK = 16;
 export const TRACK_HEIGHT = 80;
 export const TRACK_PADDING_TOP = 50;
+export const TRACK_PADDING_BOTTOM = 40;
 export const LABEL_WIDTH = 60;
 const INTERACTION_RADIUS = 8;
 const STATE_BAND_OFFSET = 22; // below the track line
@@ -17,6 +18,7 @@ const MAX_SCALE = 64;
 const STATE_LINE_HEIGHT = 12; // Height of text line
 const STATE_BAND_VPADDING = 6; // Total vertical padding (top+bottom)
 const STATE_BAND_HEIGHT = 8; // Global default height for single-line bands
+
 
 export class Timeline {
     constructor(canvas, tooltipEl) {
@@ -33,7 +35,7 @@ export class Timeline {
         // Configurable Layout Properties
         this.trackHeight = TRACK_HEIGHT;
         this.trackPaddingTop = TRACK_PADDING_TOP;
-        this.trackPaddingBottom = 40; // Default bottom padding
+        this.trackPaddingBottom = TRACK_PADDING_BOTTOM;
         this.labelWidth = LABEL_WIDTH;
         this.stateBandOffset = STATE_BAND_OFFSET;
         this.lineHeight = STATE_LINE_HEIGHT;

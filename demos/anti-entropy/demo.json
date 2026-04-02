@@ -4,7 +4,7 @@
     "ticks": 110,
     "trackHeight": 55,
     "stateBandOffset": 15,
-    "nameWidth": 100,
+    "labelWidth": 100,
     "names": [
         "Coordinator",
         "Replica 1",

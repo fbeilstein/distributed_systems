@@ -346,24 +346,25 @@ However, if another client executes a read querying the isolated `Nodes B and C`
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 58,
+  "ticks": 56,
   "trackHeight": 40,
   "stateBandOffset": 10,
+  "labelWidth": 100,
   "servers": ["Coordinator", "Node A", "Node B", "Node C", "Node D"],
   "states": [
     { "server": "Coordinator", "start": 0, "end": 7, "state": "Idle", "color": "#e0e0e0" },
     { "server": "Coordinator", "start": 8, "end": 19, "state": "Writes R=3", "color": "#ffb74d" },
     { "server": "Coordinator", "start": 20, "end": 30, "state": "Writes Hint", "color": "#ef5350" },
     { "server": "Node A", "start": 0, "end": 14, "state": "v0", "color": "#e0e0e0" },
-    { "server": "Node A", "start": 15, "end": 58, "state": "v1", "color": "#81c784" },
+    { "server": "Node A", "start": 15, "end": 56, "state": "v1", "color": "#81c784" },
     { "server": "Node B", "start": 0, "end": 32, "state": "CRASHED", "color": "#ef5350" },
     { "server": "Node B", "start": 33, "end": 42, "state": "Rebooted (v0)", "color": "#ffb74d" },
-    { "server": "Node B", "start": 43, "end": 58, "state": "v1 (Healed)", "color": "#81c784" },
+    { "server": "Node B", "start": 43, "end": 56, "state": "v1 (Healed)", "color": "#81c784" },
     { "server": "Node C", "start": 0, "end": 13, "state": "v0", "color": "#e0e0e0" },
-    { "server": "Node C", "start": 14, "end": 58, "state": "v1", "color": "#81c784" },
+    { "server": "Node C", "start": 14, "end": 56, "state": "v1", "color": "#81c784" },
     { "server": "Node D", "start": 0, "end": 25, "state": "Idle", "color": "#e0e0e0" },
     { "server": "Node D", "start": 26, "end": 49, "state": "Holding Hint", "color": "#ffb74d" },
-    { "server": "Node D", "start": 50, "end": 58, "state": "Hint Deleted", "color": "#e0e0e0" }
+    { "server": "Node D", "start": 50, "end": 56, "state": "Hint Deleted", "color": "#e0e0e0" }
   ],
   "messages": [
     {"from": "Coordinator", "to": "Node A", "sendTick": 10, "recvTick": 15},
