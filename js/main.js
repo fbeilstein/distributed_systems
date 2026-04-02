@@ -228,18 +228,6 @@ async function init() {
     // Initialize components
     const timeline = new Timeline(canvas, tooltipEl);
     window.currentTimeline = timeline; // Expose for theme switching
-    if (config && config.trackHeight) {
-        timeline.trackHeight = config.trackHeight;
-    }
-    if (config && config.firstTrackOffset !== undefined) {
-        timeline.trackPaddingTop = config.firstTrackOffset;
-    }
-    if (config && config.stateBandOffset !== undefined) {
-        timeline.stateBandOffset = config.stateBandOffset;
-    }
-    if (config && config.stateBandHeight !== undefined) {
-        timeline.stateBandHeight = config.stateBandHeight;
-    }
     timeline.setEngine(engine);
 
     if (config && config.customRenderCode) {

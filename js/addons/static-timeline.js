@@ -99,17 +99,11 @@ SlideAddons.register('static-timeline', (block) => {
         preNode.parentNode.replaceChild(container, preNode);
 
         // 7. Render Timeline natively
+        mockEngine.config = config; // Critical: pass config to engine for Timeline sync
         const timeline = new Timeline(canvas, null);
         timeline.hideScrubber = true;
         timeline.setEngine(mockEngine);
         timeline.scale = config.scale || 20; // horizontal stretch
-
-        // Allow vertical fine-tuning through markdown JSON
-        if (config.trackHeight !== undefined) timeline.trackHeight = config.trackHeight;
-        if (config.trackPaddingTop !== undefined) timeline.trackPaddingTop = config.trackPaddingTop;
-        if (config.stateBandOffset !== undefined) timeline.stateBandOffset = config.stateBandOffset;
-        if (config.stateBandHeight !== undefined) timeline.stateBandHeight = config.stateBandHeight;
-        if (config.labelWidth !== undefined) timeline.labelWidth = config.labelWidth;
 
         if (config.zoom) timeline.zoom = config.zoom;
         timeline.resize(); // apply scale and zoom to canvas dimensions

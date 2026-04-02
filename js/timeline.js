@@ -33,6 +33,7 @@ export class Timeline {
         // Configurable Layout Properties
         this.trackHeight = TRACK_HEIGHT;
         this.trackPaddingTop = TRACK_PADDING_TOP;
+        this.trackPaddingBottom = 40; // Default bottom padding
         this.labelWidth = LABEL_WIDTH;
         this.stateBandOffset = STATE_BAND_OFFSET;
         this.lineHeight = STATE_LINE_HEIGHT;
@@ -75,15 +76,20 @@ export class Timeline {
 
     resize() {
         if (!this.engine) return;
-        // Dynamically evaluate layout properties just in case engine.config loaded after setEngine
-        this.labelWidth = (this.engine.config && this.engine.config.nameWidth) ? this.engine.config.nameWidth : LABEL_WIDTH;
-        if (this.engine.config && this.engine.config.firstTrackOffset) {
-            this.trackPaddingTop = this.engine.config.firstTrackOffset;
-        }
+        const config = this.engine.config || {};
+
+        // Sync layout properties from simulation configuration
+        if (config.labelWidth !== undefined) this.labelWidth = config.labelWidth;
+        if (config.trackPaddingTop !== undefined) this.trackPaddingTop = config.trackPaddingTop;
+        if (config.trackPaddingBottom !== undefined) this.trackPaddingBottom = config.trackPaddingBottom;
+        if (config.trackHeight !== undefined) this.trackHeight = config.trackHeight;
+        if (config.stateBandOffset !== undefined) this.stateBandOffset = config.stateBandOffset;
+        if (config.stateBandHeight !== undefined) this.stateBandHeight = config.stateBandHeight;
 
         const numServers = this.engine.servers.length;
         const width = this.labelWidth + (this.maxTicks + 2) * this.scale;
-        const height = this.trackPaddingTop + numServers * this.trackHeight + 40;
+        const height = this.trackPaddingTop + numServers * this.trackHeight + this.trackPaddingBottom;
+
         this.canvas.width = width;
         this.canvas.height = height;
         this.canvas.style.width = (width * this.zoom) + 'px';

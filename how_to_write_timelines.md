@@ -57,11 +57,12 @@ These fine-tune vertical spacing (same names as `demo.json`):
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `trackHeight` | Number | 80 | Vertical space per server track (px) |
-| `trackPaddingTop` | Number | — | Padding above the first track |
-| `stateBandOffset` | Number | 22 | Vertical offset of state band below the track line |
-| `stateBandHeight` | Number | 8 | Height of the state band rectangle |
-| `labelWidth` | Number | 60 | Width of the left label column |
+| `labelWidth` | Number | 60 | Width of the left label column (px). |
+| `trackPaddingTop` | Number | 50 | Vertical space above the first track (px). |
+| `trackPaddingBottom`| Number | 40 | Vertical space below the last track (px). |
+| `trackHeight` | Number | 80 | Vertical space per server track (px). |
+| `stateBandOffset` | Number | 22 | Vertical offset of state band below the track line (px). |
+| `stateBandHeight` | Number | 8 | Height of the state band rectangle (px). |
 
 ### Container Formatting
 
@@ -147,10 +148,11 @@ Each entry marks a server as crashed (dashed track line, grayed out) for a tick 
 
 ```json
 {
-  "zoom": 0.85,
-  "ticks": 58,
-  "trackHeight": 40,
-  "stateBandOffset": 10,
+  "zoom": 1.0,
+  "ticks": 19,
+  "labelWidth": 80,
+  "trackPaddingTop": 20,
+  "trackPaddingBottom": 20,
   "servers": ["W1", "W2", "R1", "R2"]
 }
 ```

@@ -134,20 +134,21 @@ To actively detect exactly which bytes differ between the network responses, dat
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 58,
+  "ticks": 56,
   "trackHeight": 40,
   "stateBandOffset": 10,
+  "labelWidth": 100,
   "servers": ["Client", "Coordinator", "Node A", "Node B", "Node C"],
   "states": [
     { "server": "Client", "start": 2, "end": 44, "state": "Waiting...", "color": "#ffe0b2" },
-    { "server": "Client", "start": 45, "end": 58, "state": "Reads v1", "color": "#81c784" },
+    { "server": "Client", "start": 45, "end": 56, "state": "Reads v1", "color": "#81c784" },
     { "server": "Coordinator", "start": 0, "end": 5, "state": "Idle", "color": "#e0e0e0" },
     { "server": "Coordinator", "start": 6, "end": 21, "state": "Querying R=3", "color": "#ffb74d" },
     { "server": "Coordinator", "start": 22, "end": 38, "state": "Blocking Repair", "color": "#ef5350" },
-    { "server": "Node A", "start": 0, "end": 58, "state": "v1", "color": "#81c784" },
+    { "server": "Node A", "start": 0, "end": 56, "state": "v1", "color": "#81c784" },
     { "server": "Node B", "start": 0, "end": 29, "state": "v0 (Stale)", "color": "#e0e0e0" },
-    { "server": "Node B", "start": 30, "end": 58, "state": "v1 (Repaired)", "color": "#81c784" },
-    { "server": "Node C", "start": 0, "end": 58, "state": "v1", "color": "#81c784" }
+    { "server": "Node B", "start": 30, "end": 56, "state": "v1 (Repaired)", "color": "#81c784" },
+    { "server": "Node C", "start": 0, "end": 56, "state": "v1", "color": "#81c784" }
   ],
   "messages": [
     {"from": "Client", "to": "Coordinator", "sendTick": 3, "recvTick": 6},
@@ -177,6 +178,7 @@ To actively detect exactly which bytes differ between the network responses, dat
   "width": "45%",
   "ticks": 12,
   "trackHeight": 35,
+  "labelWidth": 100,
   "stateBandOffset": 10,
   "servers": ["Coordinator", "Node 1", "Node 2", "Node 3"],
   "states": [
@@ -220,18 +222,22 @@ Because robust databases routinely layer more than just one solitary Anti-Entrop
 
 # Digest Reads Visualized
 
-*(A timeline highlighting the massive bandwidth savings of a Digest Read on a Happy Path. The Coordinator securely routes the heavy full-data read strictly to Node 1, while explicitly requesting lightweight hashes from Nodes 2 and 3. Because `Hash(v1)` beautifully matches the payload from Node 1, the system successfully bypasses transferring duplicate payloads!)*
+<small><i>
+A timeline highlighting the massive bandwidth savings of a Digest Read on a Happy Path. The Coordinator securely routes the heavy full-data read strictly to Node 1, while explicitly requesting lightweight hashes from Nodes 2 and 3. Because `Hash(v1)` beautifully matches the payload from Node 1, the system successfully bypasses transferring duplicate payloads!
+</i></small>
 
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 58,
+  "ticks": 56,
   "trackHeight": 40,
   "stateBandOffset": 10,
+  "labelWidth": 100,
+  "trackPaddingBottom": 10,
   "servers": ["Client", "Coordinator", "Node 1", "Node 2", "Node 3"],
   "states": [
     { "server": "Client", "start": 5, "end": 44, "state": "Waiting...", "color": "#ffe0b2" },
-    { "server": "Client", "start": 45, "end": 58, "state": "Reads Data", "color": "#81c784" },
+    { "server": "Client", "start": 45, "end": 56, "state": "Reads Data", "color": "#81c784" },
     { "server": "Coordinator", "start": 0, "end": 14, "state": "Idle", "color": "#e0e0e0" },
     { "server": "Coordinator", "start": 15, "end": 34, "state": "Validating Hashes", "color": "#ffb74d" },
     { "server": "Node 1", "start": 25, "end": 35, "state": "Uploading 10MB Data", "color": "#ffb74d" },
@@ -250,7 +256,10 @@ Because robust databases routinely layer more than just one solitary Anti-Entrop
   ]
 }
 ```
-*(Node 2 and Node 3 cleanly return their tiny 32-byte `Hash(v1)` payloads significantly faster than Node 1 can optimally stream the heavy `Data v1`. The Coordinator successfully validates the hashes at tick 35, saving bandwidth and routing the data to the client at tick 37 without triggering secondary full-reads!)*
+
+<small><i>
+Node 2 and Node 3 cleanly return their tiny 32-byte `Hash(v1)` payloads significantly faster than Node 1 can optimally stream the heavy `Data v1`. The Coordinator successfully validates the hashes at tick 35, saving bandwidth and routing the data to the client at tick 37 without triggering secondary full-reads!
+</i></small>
 
 ---
 
@@ -263,6 +272,13 @@ Another anti-entropy approach is **Hinted Handoff**, which operates as a **write
 If a target node crashes or fails to acknowledge an incoming write packet, the Write Coordinator (or one of the healthy replicas) proactively stores a special temporary record called a **hint**. 
 
 This hint waits in the background until the target node finally comes back online, at which point the Coordinator replays the hint packet to the target to bring it back into sync.
+
+<!-- Custom Embedded Interactive Hinted Handoff Demo -->
+<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+        Launch Hinted Handoff Sandbox
+    </button>
+</div>
 
 ---
 
@@ -363,13 +379,6 @@ However, if another client executes a read querying the isolated `Nodes B and C`
 ```
 *(Notice how the Coordinator successfully saves the state in Node D. The moment Node B reboots at tick 33, Node D routes the Hint directly to Node B, decisively healing the dataset and cleaning up its own temporary logs!)*
 
-<!-- Custom Embedded Interactive Anti-Entropy Demo -->
-<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/anti-entropy/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        Launch Anti-Entropy Sandbox
-    </button>
-</div>
-
 ---
 
 # The Need for Background Repair
@@ -395,7 +404,7 @@ Instead of sending millions of raw rows of data over the wire, modern asynchrono
 # Merkle Trees
 
 <!-- Custom Embedded Interactive Merkle Demo -->
-<iframe src="demos/merkle-tree/index.html" style="width: 100%; height: 350px; border: none; border-radius: 10px; margin: 25px 0;"></iframe>
+<iframe src="demos/merkle-tree/index.html" style="width: 100%; height: 450px; border: none; border-radius: 10px; margin: 25px 0;"></iframe>
 
 ---
 

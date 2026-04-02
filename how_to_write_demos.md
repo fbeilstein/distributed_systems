@@ -42,9 +42,10 @@ The engine core lives in `js/`:
 ### Layout
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `nameWidth` | Number | 60 | Width of the left label column (px). Use 80-100 for long names like "Coordinator" |
+| `labelWidth` | Number | 60 | Width of the left label column (px). Use 80-100 for long names like "Coordinator" |
 | `trackHeight` | Number | 80 | Vertical space per server track (px) |
-| `firstTrackOffset` | Number | 50 | Vertical space above the first track (px). Increase to make room for `render.js` overlays |
+| `trackPaddingTop` | Number | 50 | Vertical space above the first track (px). Increase to make room for `render.js` overlays |
+| `trackPaddingBottom` | Number | 40 | Vertical space below the last track (px). |
 | `stateBandOffset` | Number | 22 | Vertical offset of the colored state band below the track line (px) |
 | `stateBandHeight` | Number | 8 | Height of the state band rectangle (px) |
 | `hideStateLabels` | Boolean | false | Hide text labels inside state bands |
@@ -81,8 +82,8 @@ Any other keys in `demo.json` are passed through to your node scripts as the glo
     "nodes": 5,
     "seed": 99,
     "ticks": 160,
-    "nameWidth": 80,
-    "firstTrackOffset": 200,
+    "labelWidth": 80,
+    "trackPaddingTop": 200,
     "trackHeight": 70,
     "phiThreshold": 13,
     "customRenderFile": "render.js",
