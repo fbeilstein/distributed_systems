@@ -122,11 +122,32 @@ class Repairing extends CoordinatorState {
     canTransition() { return ['HasHints', 'Idle']; }
 
     onEnter() {
+        this.machine.waitingAcks = {};
         for (const id of this.machine.stalers) {
-            sendMessage(parseInt(id), { type: 'REPAIR', ...this.machine.db.x }, '#ab47bc');
-            delete this.machine.pendingHints[id]; // Repaired!
+            this.machine.waitingAcks[parseInt(id)] = true;
         }
-        this.setTimeout(5, 'finish');
+        this.sendRepairs();
+    }
+
+    sendRepairs() {
+        for (const id in this.machine.waitingAcks) {
+            sendMessage(parseInt(id), { type: 'REPAIR', ...this.machine.db.x }, '#ab47bc');
+            delete this.machine.pendingHints[id];
+        }
+        // Retry every 10 ticks until all ACKed
+        this.setTimeout(10, 'onRepairTimeout', 'repair');
+    }
+
+    onWRITE_ACK(msg) {
+        delete this.machine.waitingAcks[msg.from];
+        if (Object.keys(this.machine.waitingAcks).length === 0) {
+            this.clearTimeout('repair');
+            this.finish();
+        }
+    }
+
+    onRepairTimeout() {
+        this.sendRepairs(); // Still waiting for some ACKs? Retry.
     }
 }
 

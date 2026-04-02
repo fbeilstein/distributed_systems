@@ -4,7 +4,7 @@
     "ticks": 110,
     "trackHeight": 55,
     "stateBandOffset": 15,
-    "labelWidth": 100,
+    "nameWidth": 100,
     "names": [
         "Coordinator",
         "Replica 1",
@@ -23,18 +23,6 @@
         },
         {
             "codeFile": "replica.js"
-        }
-    ],
-    "events": [
-        {
-            "type": "crash",
-            "server": 3,
-            "tick": 5
-        },
-        {
-            "type": "recover",
-            "server": 3,
-            "tick": 85
         }
     ]
 }

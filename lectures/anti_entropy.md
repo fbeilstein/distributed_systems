@@ -665,6 +665,18 @@ This robust handshake allows bootstrapping or recovering nodes to quickly become
 
 ---
 
+# The Superseding Principle
+
+In real-world eventually consistent systems (such as **Amazon Dynamo** and **Apache Cassandra**), a critical optimization known as **The Superseding Principle** (or Write-Side Cancellation) is used to prioritize performance:
+
+*   **Freshness over History:** If a coordinator is actively "repairing" a node by sending it version `V1`, but a new user write `V2` arrives for the same key, the coordinator will immediately cancel or ignore the `V1` effort and focus on the `V2` propagation.
+*   **Atomic LWW:** Because **Last-Write-Wins (LWW)** treats the newest version as the absolute truth, `V2` renders any pending `V1` repair obsolete. 
+*   **Availability First:** Postponing a new write until an old background repair finishes would cause "head-of-line blocking," violating the high-availability goals of the system.
+
+By allowing new writes to supersede background reconciliations, these industrial databases ensure that they always converge towards the *latest* truth as quickly as possible, skipping intermediate stale states.
+
+---
+
 # Synthesis: Layering the Defenses
 
 Robust distributed databases (like Apache Cassandra or Amazon Dynamo) do not choose just one of these anti-entropy mechanisms. Instead, they seamlessly layer them together to provide comprehensive, overlapping dataset protection:
