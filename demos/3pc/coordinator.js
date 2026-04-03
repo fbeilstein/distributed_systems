@@ -26,6 +26,9 @@ class Voting extends State {
     onEnter() {
         this.setTimeout(18, 'onVoteTimeout');
     }
+    onUp() {
+        this.onVoteTimeout();
+    }
     onVoteTimeout() {
         const txId = this.machine.txId;
         broadcast(COHORTS, { type: 'DO_ABORT', txId }, 'red', true);
@@ -65,6 +68,9 @@ class PreCommitting extends State {
     canTransition() { return ['commit']; }
     onEnter() {
         this.setTimeout(18, 'onAckTimeout');
+    }
+    onUp() {
+        this.onAckTimeout();
     }
     onAckTimeout() {
         const txId = this.machine.txId;
@@ -126,15 +132,6 @@ class CoordinatorMachine extends Machine {
     }
     onUp() {
         super.onUp();
-        // Coordinator recovered while in-flight transaction existed
-        if (['voting', 'pre-committing'].includes(this._automat.stateName)) {
-            // Coordinator recovery immediately triggers timeout to safely fallback
-            if (this._automat.current && typeof this._automat.current.onAckTimeout === 'function') {
-                this._automat.current.onAckTimeout();
-            } else if (this._automat.current && typeof this._automat.current.onVoteTimeout === 'function') {
-                this._automat.current.onVoteTimeout();
-            }
-        }
     }
 }
 
