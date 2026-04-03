@@ -1,9 +1,10 @@
 {
-    "seed": 204,
-    "ticks": 110,
-    "nodes": 7,
-    "trackHeight": 65,
-    "stateBandOffset": 15,
+    "nodes": 8,
+    "seed": 404,
+    "ticks": 400,
+    "labelWidth": 100,
+    "trackPaddingTop": 0,
+    "trackHeight": 75,
     "names": [
         "Leaf L-L (0)",
         "Branch L (1)",
@@ -11,7 +12,8 @@
         "Root (3)",
         "Leaf R-L (4)",
         "Branch R (5)",
-        "Leaf R-R (6)"
+        "Leaf R-R (6)",
+        "Client (7)"
     ],
     "servers": [
         {
@@ -34,6 +36,10 @@
         },
         {
             "codeFile": "node.js"
+        },
+        {
+            "codeFile": "client.js",
+            "color": "#7e57c2"
         }
     ],
     "events": []
