@@ -49,9 +49,9 @@
 
 ### Distributed Transactions
 
-* [2 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/2pc/demo.json)
-* [3 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/3pc/demo.json)
-* [Consistent Hashing](https://fbeilstein.github.io/distributed_systems/demos/consistent-hashing-ring/index.html)
+* [2 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/transactions-two-phase-commit/demo.json)
+* [3 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/transactions-three-phase-commit/demo.json)
+* [Consistent Hashing](https://fbeilstein.github.io/distributed_systems/demos/transactions-consistent-hashing/index.html)
 
 ### Consensus
 

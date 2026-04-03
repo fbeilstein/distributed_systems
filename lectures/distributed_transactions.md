@@ -250,7 +250,7 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/2pc/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/transactions-two-phase-commit/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch 2PC Demo
     </button>
 </div>
@@ -382,7 +382,7 @@ The sandbox shows the three-phase handshake: `PROPOSE → VOTE → PREPARE → A
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/3pc/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/transactions-three-phase-commit/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch 3PC Demo
     </button>
 </div>
@@ -510,7 +510,7 @@ When a node is **removed**: only its keys move to its successor — again, rough
 
 <p style="font-size: 0.85rem; color: #aaa; margin-bottom: -15px;">Sandbox with 1,000 keys. Click <b>Add Server</b> to observe the <b>minimal-disruption</b> guarantee: only a small fraction of keys (red) migrate to the new server. The <b>Gap-Aware</b> placement algorithm ensures balanced distribution. <i>Note: In production (e.g. Dynamo), these "servers" can be virtual units to balance load.</i></p>
 
-<iframe src="demos/consistent-hashing-ring/index.html" style="width: 100%; height: 500px; border: none; border-radius: 12px; margin-top: 20px;"></iframe>
+<iframe src="demos/transactions-consistent-hashing/index.html" style="width: 100%; height: 500px; border: none; border-radius: 12px; margin-top: 20px;"></iframe>
 
 ---
 
