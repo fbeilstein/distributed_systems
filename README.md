@@ -53,7 +53,7 @@
 * [3 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/transactions-three-phase-commit/demo.json)
 * [Consistent Hashing](https://fbeilstein.github.io/distributed_systems/demos/transactions-consistent-hashing/index.html)
 
-### Consensus
+### Consensus (under development)
 
 * [Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/paxos/demo.json)
 * [Multi-Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/multi-paxos/demo.json)
@@ -61,4 +61,8 @@
 * [PBFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/pbft/demo.json)
 
 
+## Guides
+
+* [How to write demos](https://fbeilstein.github.io/distributed_systems/how_to_write_demos.md)
+* [How to create static timelines](https://fbeilstein.github.io/distributed_systems/how_to_write_timelines.md)
 
