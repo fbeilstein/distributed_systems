@@ -1,103 +1,130 @@
-// Coordinator FSM
-function onUp() {
-    let s = loadState();
-    if (Object.keys(s).length === 0) {
-        const fsm = new Automat({
-            initial: 'idle',
-            states: {
-                idle: { on: { START: 'prepare' }, color: '#8bc34a' },
-                prepare: { on: { ALL_SENT: 'collecting' }, color: '#ffc107' },
-                collecting: { on: { ALL_VOTED: 'committing', TIMEOUT: 'aborting', ANY_ABORT: 'aborting' }, color: '#ff9800' },
-                committing: { on: { DONE: 'idle' }, color: '#2196f3' },
-                aborting: { on: { DONE: 'idle' }, color: '#f44336' },
-            }
-        });
-        dumpState({ fsm: fsm.serialize(), txId: 0, outbox: [], votes: {}, history: [] });
+const COORDINATOR_ID = 0;
+const CLIENT_ID = 4;
+const DB_IDS = allServerIds.filter(id => id !== COORDINATOR_ID && id !== CLIENT_ID);
+
+
+class CoordinatorMachine extends Machine {
+    constructor() {
+        super();
+        this.states = [new Idle(), new Prepare(), new Collecting(), new Committing(), new Aborting()];
+        this.txId = 0;
+        this.votes = {};
+        this.history = [];
+        this.outbox = [];
+        this.cohorts = DB_IDS;
+        this.currentTick = 0;
+    }
+    onTimer(t) { this.currentTick = t; super.onTimer(t); }
+}
+
+class BaseCoordinatorState extends State {
+    onMessage(m) {
+        const handler = `on${m.payload.type}`;
+        if (typeof this[handler] === 'function') this[handler](m);
+    }
+    onDECISION_REQUEST(m) {
+        const txId = m.payload.txId;
+        if (this.machine.history.includes(`TX${txId}:commit`)) {
+            sendMessage(m.from, { type: 'COMMIT', txId: txId }, 'green');
+        } else if (this.machine.history.includes(`TX${txId}:abort`)) {
+            sendMessage(m.from, { type: 'ABORT', txId: txId }, 'red');
+        }
     }
 }
 
-function onTimer(tick) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    s.tick = tick;
-
-    // 1. idle -> prepare (ticks 10 and 65)
-    if (fsm.state === 'idle' && (tick === 10 || tick === 65)) {
-        s.txId++;
-        fsm.transition('START');
-        const targets = allServerIds.filter(id => id !== serverId);
-        s.outbox = targets.map(id => ({ to: id, msg: { type: 'PREPARE', txId: s.txId, data: s.txId } }));
-        s.votes = {};
-        s.phaseStart = tick;
+class Idle extends BaseCoordinatorState {
+    getState() { return ['idle', '#8bc34a']; }
+    canTransition() { return ['prepare']; }
+    onCLIENT_TX_START(m) { this.startTx(m.payload.txId, m.payload.val); }
+    startTx(txId, data) {
+        this.machine.txId = txId;
+        this.machine.votes = {};
+        this.machine.outbox = this.machine.cohorts.map(id => ({
+            to: id,
+            msg: { type: 'PREPARE', txId: txId, data: data }
+        }));
+        this.transition('prepare');
     }
-
-    // 2. prepare -> collecting
-    if (fsm.state === 'prepare') {
-        if (s.outbox.length > 0) {
-            const t = s.outbox.pop();
-            sendMessage(t.to, t.msg);
-        }
-        if (s.outbox.length === 0) {
-            fsm.transition('ALL_SENT');
-        }
-    }
-
-    // 3. collecting timeouts
-    if (fsm.state === 'collecting' && tick - s.phaseStart > 18) {
-        fsm.transition('TIMEOUT');
-        const targets = allServerIds.filter(id => id !== serverId);
-        s.outbox = targets.map(id => ({ to: id, msg: { type: 'ABORT', txId: s.txId } }));
-    }
-
-    // 4. committing / aborting -> idle
-    if ((fsm.state === 'committing' || fsm.state === 'aborting') && s.outbox.length > 0) {
-        const t = s.outbox.pop();
-        sendMessage(t.to, t.msg);
-    }
-    if ((fsm.state === 'committing' || fsm.state === 'aborting') && s.outbox.length === 0) {
-        fsm.transition('DONE');
-    }
-
-    s.fsm = fsm.serialize();
-    dumpState(s);
 }
 
-function onMessage(message) {
-    let s = loadState();
-    const fsm = Automat.deserialize(s.fsm);
-    const m = message.payload;
-
-    if (fsm.state === 'collecting' && m.txId === s.txId) {
-        if (m.type === 'VOTE_COMMIT') s.votes[message.from] = 'commit';
-        if (m.type === 'VOTE_ABORT') s.votes[message.from] = 'abort';
-
-        const expected = allServerIds.filter(id => id !== serverId);
-
-        if (m.type === 'VOTE_ABORT') {
-            fsm.transition('ANY_ABORT');
-            s.history.push('TX' + s.txId + ':abort');
-            s.outbox = expected.map(id => ({ to: id, msg: { type: 'ABORT', txId: s.txId } }));
+class Prepare extends BaseCoordinatorState {
+    getState() { return ['prepare', '#ffc107']; }
+    canTransition() { return ['collecting']; }
+    onEnter() { this.setTimeout(2, 'sendNext', 'p'); }
+    sendNext() {
+        if (this.machine.outbox.length > 0) {
+            const next = this.machine.outbox.pop();
+            sendMessage(next.to, next.msg, 'orange');
+            this.setTimeout(2, 'sendNext', 'p');
         } else {
-            const allVoted = expected.every(id => s.votes[id] !== undefined);
-            if (allVoted) {
-                const allCommit = expected.every(id => s.votes[id] === 'commit');
-                if (allCommit) {
-                    fsm.transition('ALL_VOTED');
-                    s.history.push('TX' + s.txId + ':commit');
-                    s.outbox = expected.map(id => ({ to: id, msg: { type: 'COMMIT', txId: s.txId } }));
-                }
-            }
+            this.transition('collecting');
         }
     }
-
-    if (m.type === 'DECISION_REQUEST') {
-        if (s.history.includes('TX' + m.txId + ':commit')) {
-            sendMessage(message.from, { type: 'COMMIT', txId: m.txId });
-        } else if (s.history.includes('TX' + m.txId + ':abort')) {
-            sendMessage(message.from, { type: 'ABORT', txId: m.txId });
-        }
-    }
-
-    s.fsm = fsm.serialize();
-    dumpState(s);
 }
+
+class Collecting extends BaseCoordinatorState {
+    getState() { return ['collecting', '#ff9800']; }
+    canTransition() { return ['committing', 'aborting']; }
+    onEnter() { this.setTimeout(15, 'onTimeout', 't'); }
+    onVOTE_COMMIT(m) {
+        if (m.payload.txId !== this.machine.txId) return;
+        this.machine.votes[m.from] = 'commit';
+        this.checkVotes();
+    }
+    onVOTE_ABORT(m) {
+        if (m.payload.txId !== this.machine.txId) return;
+        this.machine.history.push(`TX${this.machine.txId}:abort`);
+        this.machine.outbox = this.machine.cohorts.map(id => ({ to: id, msg: { type: 'ABORT', txId: this.machine.txId } }));
+        this.transition('aborting');
+    }
+    onTimeout() {
+        this.machine.history.push(`TX${this.machine.txId}:abort`);
+        this.machine.outbox = this.machine.cohorts.map(id => ({ to: id, msg: { type: 'ABORT', txId: this.machine.txId } }));
+        this.transition('aborting');
+    }
+    checkVotes() {
+        const allVoted = this.machine.cohorts.every(id => this.machine.votes[id] === 'commit');
+        if (allVoted) {
+            this.machine.history.push(`TX${this.machine.txId}:commit`);
+            this.machine.outbox = this.machine.cohorts.map(id => ({ to: id, msg: { type: 'COMMIT', txId: this.machine.txId } }));
+            this.transition('committing');
+        }
+    }
+}
+
+class Committing extends BaseCoordinatorState {
+    getState() { return ['committing', '#2196f3']; }
+    canTransition() { return ['idle']; }
+    onEnter() { this.setTimeout(2, 'sendNext', 'c'); }
+    sendNext() {
+        if (this.machine.outbox.length > 0) {
+            const next = this.machine.outbox.pop();
+            sendMessage(next.to, next.msg, 'green');
+            this.setTimeout(2, 'sendNext', 'c');
+        } else {
+            this.transition('idle');
+        }
+    }
+}
+
+class Aborting extends BaseCoordinatorState {
+    getState() { return ['aborting', '#f44336']; }
+    canTransition() { return ['idle']; }
+    onEnter() { this.setTimeout(2, 'sendNext', 'a'); }
+    sendNext() {
+        if (this.machine.outbox.length > 0) {
+            const next = this.machine.outbox.pop();
+            sendMessage(next.to, next.msg, 'red');
+            this.setTimeout(2, 'sendNext', 'a');
+        } else {
+            this.transition('idle');
+        }
+    }
+}
+
+
+// --- BOOTSTRAP ---
+const M = new CoordinatorMachine();
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }
