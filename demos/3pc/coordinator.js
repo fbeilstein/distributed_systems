@@ -1,6 +1,6 @@
 // Three-Phase Commit (3PC) — Coordinator Role
-const CLIENT = 4;
-const COHORTS = allServerIds.filter(id => id !== serverId && id !== CLIENT);
+const CLIENT_ID = 4;
+const COHORTS = allServerIds.filter(id => id !== serverId && id !== CLIENT_ID);
 
 class Idle extends State {
     getState() { return ['idle', '#cfd8dc']; }
@@ -22,7 +22,7 @@ class Idle extends State {
 
 class Voting extends State {
     getState() { return ['voting', '#ffe082']; }
-    canTransition() { return ['pre-committing', 'abort']; }
+    canTransition() { return ['prepare', 'abort']; }
     onEnter() {
         this.setTimeout(18, 'onVoteTimeout');
     }
@@ -46,8 +46,8 @@ class Voting extends State {
                 }
 
                 if (this.machine.votes.length === COHORTS.length) {
-                    broadcast(COHORTS, { type: 'PRE_COMMIT', txId }, 'blue', true);
-                    this.transition('pre-committing');
+                    broadcast(COHORTS, { type: 'PREPARE', txId }, 'blue', true);
+                    this.transition('prepare');
                 }
             },
             'VOTE_NO': (msg) => {
@@ -62,9 +62,9 @@ class Voting extends State {
     }
 }
 
-class PreCommitting extends State {
-    get name() { return 'pre-committing'; }
-    getState() { return ['pre-committing', '#90caf9']; }
+class Prepare extends State {
+    get name() { return 'prepare'; }
+    getState() { return ['prepare', '#90caf9']; }
     canTransition() { return ['commit']; }
     onEnter() {
         this.setTimeout(18, 'onAckTimeout');
@@ -80,7 +80,7 @@ class PreCommitting extends State {
     }
     registerMessageTypes() {
         return {
-            'ACK_PRE_COMMIT': (msg) => {
+            'ACK_PREPARE': (msg) => {
                 const { txId } = msg.payload;
                 if (txId !== this.machine.txId) return;
 
@@ -123,7 +123,7 @@ class Abort extends State {
 class CoordinatorMachine extends Machine {
     constructor() {
         super();
-        this.states = [new Idle(), new Voting(), new PreCommitting(), new Commit(), new Abort()];
+        this.states = [new Idle(), new Voting(), new Prepare(), new Commit(), new Abort()];
         this.txId = null;
         this.val = null;
         this.votes = [];
