@@ -1,19 +1,24 @@
-// Symmetric Plumtree (Final Stabilization)
+// Symmetric Plumtree (Clean OOP Architecture)
 class PlumMachine extends Machine {
     constructor() {
         super();
         this.states = [new Waiting(), new Syncing(), new GotMsg()];
-        this.seen = {}; this.children = []; this.lazy = []; this.targets = [];
-        this.gId = null; this.init = false;
+        this.seen = {};
+        this.children = [];
+        this.lazy = [];
+        this.targets = [];
+        this.gId = null;
+        this.init = false;
     }
+
     syncUI() {
         this.active_links = this.children.length > 0 ? `[${this.children.join(', ')}]` : 'None';
         this.backup_links = this.lazy.length > 0 ? `[${this.lazy.join(', ')}]` : 'None';
         this.seen_count = Object.keys(this.seen).length;
     }
+
     onUp() {
         if (!this.init) {
-            // Strictly Hierarchical: Root -> Branches -> Leafs
             const initial = { 0: [], 1: [0, 2], 2: [], 3: [1, 5], 4: [], 5: [4, 6], 6: [] };
             this.children = initial[serverId] || [];
             this.lazy = allServerIds.filter(id => id < 7 && id !== serverId && !this.children.includes(id));
@@ -21,6 +26,7 @@ class PlumMachine extends Machine {
         }
         super.onUp();
     }
+
     moveToLazy(p) {
         this.children = this.children.filter(x => x !== p);
         if (!this.lazy.includes(p)) this.lazy.push(p);
@@ -28,7 +34,9 @@ class PlumMachine extends Machine {
 }
 
 class BaseState extends State {
-    clutter(t) { return !(t < 30 || (t >= 280 && t <= 300) || (t >= 150 && t <= 165)); }
+    clutter(t) {
+        return !(t < 30 || (t >= 280 && t <= 300) || (t >= 150 && t <= 165));
+    }
 
     onTimer(t) {
         super.onTimer(t);
@@ -42,7 +50,11 @@ class BaseState extends State {
         if (!this.machine.children.includes(m.from)) this.machine.children.push(m.from);
         sendMessage(m.from, { type: 'EAGER_PUSH', msgId: m.payload.msgId }, 'green');
     }
-    onPRUNE(m) { this.machine.moveToLazy(m.from); }
+
+    onPRUNE(m) {
+        this.machine.moveToLazy(m.from);
+    }
+
     onLAZY_ID(m) {
         const ids = m.payload.msgIds || [m.payload.msgId];
         ids.forEach(id => {
@@ -54,26 +66,29 @@ class BaseState extends State {
         });
     }
 
-    process(m, isForwarding) {
+    // BASE METHOD: Purely evaluates protocol logic. Returns TRUE if it's a new message.
+    // It has zero knowledge of states or timers.
+    receivePayload(m, isForwarding) {
         const id = m.payload.msgId;
+
         if (this.machine.seen[id]) {
             if (m.from < 7) {
                 sendMessage(m.from, { type: 'PRUNE' }, 'red');
                 this.machine.moveToLazy(m.from);
             }
-        } else {
-            this.machine.seen[id] = true;
-            if (isForwarding) {
-                broadcast(this.machine.children, { type: 'EAGER_PUSH', msgId: id }, 'green');
-            }
-            if (this.getState()[0] === 'SYNC') this.clearTimeout('g');
-            this.transition('GOT_MSG');
+            return false; // Duplicate: Do not trigger state transitions
         }
 
-        if (this.getState()[0] === 'GOT_MSG') {
-            this.clearTimeout('flash');
-            this.setTimeout(6, 'revertToWait', 'flash');
+        this.machine.seen[id] = true;
+
+        if (isForwarding) {
+            // Good Practice: Exclude the sender when forwarding down the hierarchy
+            const targets = this.machine.children.filter(c => c !== m.from);
+            if (targets.length > 0) {
+                broadcast(targets, { type: 'EAGER_PUSH', msgId: id }, 'green');
+            }
         }
+        return true; // New message: Tells the derived state it can proceed
     }
 }
 
@@ -81,8 +96,13 @@ class Waiting extends BaseState {
     getState() { return ['WAIT', '#cfd8dc']; }
     canTransition() { return ['SYNC', 'GOT_MSG']; }
     onUp() { this.transition('WAIT'); }
-    onCLIENT_REQ(m) { this.process(m, true); }
-    onEAGER_PUSH(m) { this.process(m, true); }
+
+    onCLIENT_REQ(m) {
+        if (this.receivePayload(m, true)) this.transition('GOT_MSG');
+    }
+    onEAGER_PUSH(m) {
+        if (this.receivePayload(m, true)) this.transition('GOT_MSG');
+    }
 }
 
 class Syncing extends BaseState {
@@ -90,7 +110,21 @@ class Syncing extends BaseState {
     canTransition() { return ['GOT_MSG']; }
     onUp() { this.transition('WAIT'); }
     onEnter() { this.doGraft(); }
-    onEAGER_PUSH(m) { this.process(m, false); } // Silent repair
+
+    onCLIENT_REQ(m) {
+        if (this.receivePayload(m, true)) {
+            this.clearTimeout('g');
+            this.transition('GOT_MSG');
+        }
+    }
+
+    onEAGER_PUSH(m) {
+        if (this.receivePayload(m, false)) { // Silent repair (no forwarding)
+            this.clearTimeout('g');
+            this.transition('GOT_MSG');
+        }
+    }
+
     doGraft() {
         if (this.machine.targets.length > 0) {
             const t = this.machine.targets.shift();
@@ -105,10 +139,23 @@ class GotMsg extends BaseState {
     getState() { return ['GOT_MSG', '#81c784']; }
     canTransition() { return ['WAIT']; }
     onUp() { this.transition('WAIT', false); }
-    onEnter() { this.setTimeout(6, 'revertToWait', 'flash'); }
+
+    onEnter() { this.resetFlash(); }
     revertToWait() { this.transition('WAIT'); }
-    onCLIENT_REQ(m) { this.process(m, true); }
-    onEAGER_PUSH(m) { this.process(m, true); }
+
+    resetFlash() {
+        this.clearTimeout('flash');
+        this.setTimeout(6, 'revertToWait', 'flash');
+    }
+
+    onCLIENT_REQ(m) {
+        this.receivePayload(m, true);
+        this.resetFlash(); // Instead of transitioning, just restart our own timer
+    }
+    onEAGER_PUSH(m) {
+        this.receivePayload(m, true);
+        this.resetFlash();
+    }
 }
 
 const M = new PlumMachine();
