@@ -1,4 +1,4 @@
-// Anti-Entropy — Coordinator
+// Anti-Entropy (Hinted Handoff) — Coordinator
 // Implements Hinted Handoff and Read Repair for eventual consistency.
 
 class CoordinatorMachine extends Machine {

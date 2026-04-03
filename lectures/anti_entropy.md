@@ -275,7 +275,7 @@ This hint waits in the background until the target node finally comes back onlin
 
 <!-- Custom Embedded Interactive Hinted Handoff Demo -->
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/anti-entropy/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-hinted-handoff/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Hinted Handoff Sandbox
     </button>
 </div>
@@ -405,7 +405,7 @@ Instead of sending millions of raw rows of data over the wire, modern asynchrono
 # Merkle Trees
 
 <!-- Custom Embedded Interactive Merkle Demo -->
-<iframe src="demos/merkle-tree/index.html" style="width: 100%; height: 450px; border: none; border-radius: 10px; margin: 25px 0;"></iframe>
+<iframe src="demos/anti-entropy-merkle-tree/index.html" style="width: 100%; height: 450px; border: none; border-radius: 10px; margin: 25px 0;"></iframe>
 
 ---
 
@@ -473,7 +473,7 @@ To get two nodes back in sync, they exchange logical clocks, identify the gaps r
 
 <!-- Custom Embedded Interactive Bitmap Version Vector Demo -->
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/bitmap-version-vectors/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-version-vectors/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Bitmap Version Vectors Demo
     </button>
 </div>
@@ -510,7 +510,7 @@ To involve other nodes and propagate updates with the **reach** of a broadcast a
 3. As soon as holder processes become certain the update is fully propagated, they move to a "removed" state and stop sending.
 
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/gossip-dissemination/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-gossip/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Gossip Dissemination Demo
     </button>
 </div>
@@ -566,7 +566,7 @@ Selecting nodes randomly improves robustness against partitions, but is **not me
 
 <!-- Custom Embedded Interactive Plumtree Demo -->
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/plum/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-plumtree/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Plumtree / Hybrid Gossip Demo
     </button>
 </div>
@@ -699,7 +699,7 @@ When fused together, they effortlessly bridge the mathematical chasm between the
 
 ---
 
-# Congratulations!
+# Conclusions
 
 You have successfully navigated the sprawling mechanisms resolving divergent datasets across chaotic topologies!
 

@@ -41,11 +41,11 @@
 
 ### Anti-Entropy and Dissemination
 
-* [Read Repair & Hinted Handoff](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy/demo.json)
-* [Bitmap Version Vectors](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/bitmap-version-vectors/demo.json)
-* [Gossip Dissemination](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/gossip-dissemination/demo.json)
-* [Plumtree](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/plum/demo.json)
-* [Merkle Tree](https://fbeilstein.github.io/distributed_systems/demos/merkle-tree/index.html)
+* [Read Repair & Hinted Handoff](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-hinted-handoff/demo.json)
+* [Merkle Tree](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-merkle-tree/demo.json)
+* [Bitmap Version Vectors](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-version-vectors/demo.json)
+* [Gossip Dissemination](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-gossip/demo.json)
+* [Plumtree](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-plumtree/demo.json)
 
 ### Distributed Transactions
 

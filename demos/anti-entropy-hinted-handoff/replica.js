@@ -1,4 +1,4 @@
-// Anti-Entropy — Replica
+// Anti-Entropy (Hinted Handoff) — Replica
 // Responds to coordinator requests and reports recovery for Hint Handoff.
 
 class ReplicaMachine extends Machine {
