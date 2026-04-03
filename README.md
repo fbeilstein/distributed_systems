@@ -63,6 +63,6 @@
 
 ## Guides
 
-* [How to write demos](https://fbeilstein.github.io/distributed_systems/how_to_write_demos.md)
-* [How to create static timelines](https://fbeilstein.github.io/distributed_systems/how_to_write_timelines.md)
+* [How to write demos](./how_to_write_demos.md)
+* [How to create static timelines](./how_to_write_timelines.md)
 
