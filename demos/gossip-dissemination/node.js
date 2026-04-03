@@ -1,79 +1,84 @@
-// SIR Gossip Dissemination (Susceptible → Infected → Removed)
-// Node 0 starts a rumor at tick 5. Infected nodes spread to FANOUT random peers.
-// After enough rounds or redundant receptions, nodes transition to Removed.
-
-const GOSSIP_INTERVAL = 15;
-const FANOUT = 2;
-const REDUNDANT_THRESHOLD = 3;
-
-function onUp() {
-    let s = loadState();
-    if (!s.state) {
-        s.state = 'SUSCEPTIBLE';
-        s.redundantCount = 0;
-        s.rounds = 0;
-        s.ui_state = 'Susceptible';
-        s.ui_color = '#cfd8dc';
+// SIR Gossip Dissemination (Clean OOP Architecture - EXACT ORIGINAL LOGIC)
+class GossipMachine extends Machine {
+    constructor() {
+        super();
+        this.states = [new Susceptible(), new Infected(), new Removed()];
+        this.redundantCount = 0;
+        this.rounds = 0;
+        this.rumorSeen = false;
     }
-    dumpState(s);
+    syncUI() {
+        this.rounds_completed = this.rounds;
+        this.redundancy_seen = this.redundantCount;
+    }
 }
 
-function onTimer(tick) {
-    let s = loadState();
-
-    // Patient Zero drops the rumor
-    if (serverId === 0 && tick === 5 && s.state === 'SUSCEPTIBLE') {
-        s.state = 'INFECTED';
-        s.ui_state = 'Infected (Spreading)';
-        s.ui_color = '#ffb74d';
-    }
-
-    if (s.state === 'INFECTED') {
-        const offset = Math.floor((serverId / allServerIds.length) * GOSSIP_INTERVAL);
-        if (tick % GOSSIP_INTERVAL === offset) {
-            s.rounds++;
-            if (s.rounds > 5) {
-                s.state = 'REMOVED';
-                s.ui_state = 'Removed';
-                s.ui_color = '#333333';
+class BaseGossipState extends State {
+    onMessage(m) {
+        if (m.payload.type === 'RUMOR') {
+            if (this.machine.rumorSeen) {
+                this.machine.redundantCount++;
+                if (this.machine.redundantCount >= 3) this.transition('REMOVED');
             } else {
-                // Pick FANOUT distinct random peers
-                let targets = [];
-                let attempts = 0;
-                while (targets.length < FANOUT && attempts < 20) {
-                    attempts++;
-                    let t = getRandom(0, allServerIds.length - 1);
-                    if (t !== serverId && !targets.includes(t)) {
-                        targets.push(t);
-                    }
-                }
-                for (const t of targets) {
-                    sendMessage(t, { type: 'RUMOR' });
-                }
+                this.machine.rumorSeen = true;
+                this.transition('INFECTED');
+            }
+        }
+    }
+}
+
+class Susceptible extends BaseGossipState {
+    getState() { return ['SUSCEPTIBLE', '#cfd8dc']; }
+    canTransition() { return ['INFECTED']; }
+    onUp() { this.transition('SUSCEPTIBLE'); }
+}
+
+class Infected extends BaseGossipState {
+    getState() { return ['INFECTED', '#ffb74d']; }
+    canTransition() { return ['REMOVED']; }
+
+    onEnter() {
+        this.machine.rumorSeen = true;
+    }
+
+    onTimer(t) {
+        super.onTimer(t);
+        const GOSSIP_INTERVAL = 15;
+        // EXACT ORIGINAL OFFSET: for 10 servers, indices are 1-10
+        // Offset logic: (relativeId / numServers) * 15
+        const offset = Math.floor(((serverId - 1) / 10) * GOSSIP_INTERVAL);
+
+        if (t % GOSSIP_INTERVAL === offset) {
+            this.machine.rounds++;
+            if (this.machine.rounds > 5) {
+                this.transition('REMOVED');
+            } else {
+                this.doGossip();
             }
         }
     }
 
-    dumpState(s);
-}
-
-function onMessage(message) {
-    let s = loadState();
-
-    if (message.payload.type === 'RUMOR') {
-        if (s.state === 'SUSCEPTIBLE') {
-            s.state = 'INFECTED';
-            s.ui_state = 'Infected (Spreading)';
-            s.ui_color = '#ffb74d';
-        } else if (s.state === 'INFECTED') {
-            s.redundantCount++;
-            if (s.redundantCount >= REDUNDANT_THRESHOLD) {
-                s.state = 'REMOVED';
-                s.ui_state = 'Removed';
-                s.ui_color = '#333333';
+    doGossip() {
+        let targets = [];
+        let attempts = 0;
+        while (targets.length < 2 && attempts < 50) {
+            attempts++;
+            // Randomly select 2 peers from the server pool (indices 1-10)
+            let t = getRandom(1, 10);
+            if (t !== serverId && !targets.includes(t)) {
+                targets.push(t);
             }
         }
+        broadcast(targets, { type: 'RUMOR', msgId: 'r1' }, '#ffb74d');
     }
-
-    dumpState(s);
 }
+
+class Removed extends State {
+    getState() { return ['REMOVED', '#37474f']; }
+    canTransition() { return []; }
+}
+
+const M = new GossipMachine();
+function onUp() { M.onUp(); }
+function onTimer(t) { M.onTimer(t); }
+function onMessage(m) { M.onMessage(m); }

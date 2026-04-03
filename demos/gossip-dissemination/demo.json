@@ -1,10 +1,11 @@
 {
     "seed": 404,
-    "ticks": 130,
-    "nodes": 10,
+    "ticks": 140,
+    "nodes": 11,
     "trackHeight": 60,
     "stateBandOffset": 12,
     "names": [
+        "Client (Infector)",
         "Patient Zero",
         "Node 1",
         "Node 2",
@@ -17,6 +18,10 @@
         "Node 9"
     ],
     "servers": [
+        {
+            "codeFile": "client.js",
+            "color": "#7e57c2"
+        },
         {
             "codeFile": "node.js"
         },
