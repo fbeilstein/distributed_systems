@@ -20,7 +20,7 @@ for (let sid = 1; sid <= 3; sid++) {
         const state = states[sid] || states[String(sid)];
         if (!state) continue;
 
-        const historyArr = state.history || [];
+        const historyArr = state.history || (state.fsm && state.fsm.history) || [];
         const currCount = historyArr.length;
 
         // If history array grew, a transaction outcome was finalized at tick `t`.

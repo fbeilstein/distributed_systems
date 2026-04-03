@@ -1,26 +1,36 @@
 {
-    "nodes": 4,
+    "nodes": 5,
     "seed": 45,
     "ticks": 115,
+    "labelWidth": 100,
     "customRenderFile": "render.js",
     "names": [
         "Coordinator",
         "DB-1",
         "DB-2",
-        "DB-3"
+        "DB-3",
+        "Client"
     ],
     "servers": [
         {
+            "id": 0,
             "codeFile": "coordinator.js"
         },
         {
-            "codeFile": "cohort.js"
+            "id": 1,
+            "codeFile": "participant.js"
         },
         {
-            "codeFile": "cohort.js"
+            "id": 2,
+            "codeFile": "participant.js"
         },
         {
-            "codeFile": "cohort.js"
+            "id": 3,
+            "codeFile": "participant.js"
+        },
+        {
+            "id": 4,
+            "codeFile": "client.js"
         }
     ]
 }
