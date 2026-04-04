@@ -61,13 +61,15 @@ class Automat {
     }
 
     this.states = {};
+    this.machine = isConfig ? args[0].machine : null;
     let resolvedInitialName = initialArg;
 
     for (const s of defStates) {
       if (s instanceof State) {
         s.automat = this;
+        s.machine = this.machine;
         const [displayName, color] = s.getState();
-        const name = displayName || s.name || 'unknown';
+        const name = (s.name || displayName || 'unknown').toLowerCase();
         this.states[name] = s;
         if (!this._colors[name]) this._colors[name] = color;
         if (!resolvedInitialName) resolvedInitialName = name;
@@ -77,7 +79,10 @@ class Automat {
           const targets = s.canTransition();
           if (Array.isArray(targets)) {
             if (!this._graph[name]) this._graph[name] = {};
-            targets.forEach(t => { this._graph[name][t] = t; });
+            targets.forEach(t => {
+              const target = (t || '').toLowerCase();
+              this._graph[name][target] = target;
+            });
           }
         }
       } else {
@@ -154,7 +159,8 @@ class Automat {
   }
 
   transition(targetName, reenter = true) {
-    const next = (this._graph[this.stateName] && this._graph[this.stateName][targetName]) || targetName;
+    const target = (targetName || '').toLowerCase();
+    const next = (this._graph[this.stateName] && this._graph[this.stateName][target]) || target;
     if (!this.states[next]) return false;
 
     // Warn on undeclared transitions (helps catch typos and missing canTransition entries)
@@ -205,7 +211,8 @@ class Automat {
       states: stateInstances,
       graph: obj.graph,
       colors: obj.colors,
-      skipInitialEnter: true
+      skipInitialEnter: true,
+      machine: stateInstances.length > 0 ? stateInstances[0].machine : null // Carry over if possible
     });
     if (obj.stateData) {
       for (const [name, data] of Object.entries(obj.stateData)) {
@@ -237,9 +244,11 @@ class Machine {
     // Truly fresh if no serialized FSM or no valid state name
     const isFresh = !s.fsm || !s.fsm.stateName;
     if (isFresh) {
-      const automatConfig = Object.assign({ states: this.states, skipInitialEnter: true }, this._config);
+      const automatConfig = Object.assign({ states: this.states, skipInitialEnter: true, machine: this }, this._config);
       this._automat = new Automat(automatConfig);
     } else {
+      // For deserialization, we need the machine reference ready
+      this.states.forEach(st => { st.machine = this; });
       this._automat = Automat.deserialize(s.fsm, this.states);
     }
 
