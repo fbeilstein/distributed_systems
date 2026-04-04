@@ -78,6 +78,7 @@ export class Timeline {
 
     resize() {
         if (!this.engine) return;
+        this.maxTicks = this.engine.maxTicks;
         const config = this.engine.config || {};
 
         // Sync layout properties from simulation configuration
