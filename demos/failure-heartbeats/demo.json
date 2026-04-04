@@ -11,19 +11,15 @@
     ],
     "servers": [
         {
-            "id": 0,
             "codeFile": "monitor.js"
         },
         {
-            "id": 1,
             "codeFile": "target.js"
         },
         {
-            "id": 2,
             "codeFile": "target.js"
         },
         {
-            "id": 3,
             "codeFile": "target.js"
         }
     ]

@@ -13,23 +13,18 @@
     ],
     "servers": [
         {
-            "id": 0,
             "codeFile": "coordinator.js"
         },
         {
-            "id": 1,
             "codeFile": "node.js"
         },
         {
-            "id": 2,
             "codeFile": "node.js"
         },
         {
-            "id": 3,
             "codeFile": "node.js"
         },
         {
-            "id": 4,
             "codeFile": "client.js"
         }
     ]

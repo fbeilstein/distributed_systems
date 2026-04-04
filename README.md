@@ -1,6 +1,5 @@
 # Distributed Systems (draft)
 
-* [old course on DB](https://github.com/fbeilstein/dbms)
 
 ## Lecture Slides
 

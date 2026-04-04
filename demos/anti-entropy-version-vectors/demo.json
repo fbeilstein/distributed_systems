@@ -12,23 +12,18 @@
     "customRenderFile": "render.js",
     "servers": [
         {
-            "id": 0,
             "codeFile": "coordinator.js"
         },
         {
-            "id": 1,
             "codeFile": "replica.js"
         },
         {
-            "id": 2,
             "codeFile": "replica.js"
         },
         {
-            "id": 3,
             "codeFile": "replica.js"
         },
         {
-            "id": 4,
             "codeFile": "client.js"
         }
     ]

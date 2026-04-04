@@ -16,26 +16,21 @@
     ],
     "servers": [
         {
-            "id": 0,
             "codeFile": "monitor.js"
         },
         {
-            "id": 1,
             "codeFile": "target.js",
             "color": "#ffb74d"
         },
         {
-            "id": 2,
             "codeFile": "target.js",
             "color": "#81c784"
         },
         {
-            "id": 3,
             "codeFile": "target.js",
             "color": "#64b5f6"
         },
         {
-            "id": 4,
             "codeFile": "target.js",
             "color": "#ba68c8"
         }

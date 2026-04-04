@@ -11,23 +11,18 @@
     ],
     "servers": [
         {
-            "id": 0,
             "codeFile": "monitor.js"
         },
         {
-            "id": 1,
             "codeFile": "witness.js"
         },
         {
-            "id": 2,
             "codeFile": "witness.js"
         },
         {
-            "id": 3,
             "codeFile": "witness.js"
         },
         {
-            "id": 4,
             "codeFile": "target.js"
         }
     ]

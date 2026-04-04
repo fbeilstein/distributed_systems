@@ -9,15 +9,12 @@
     ],
     "servers": [
         {
-            "id": 0,
             "codeFile": "node.js"
         },
         {
-            "id": 1,
             "codeFile": "client.js"
         },
         {
-            "id": 2,
             "codeFile": "client.js"
         }
     ]
