@@ -1,7 +1,7 @@
 // Paxos — Client Requests
 
 const PROPOSER_A = 0;
-const PROPOSER_B = 1;
+const PROPOSER_B = 4;
 
 function onUp() {
     dumpState({
