@@ -35,6 +35,7 @@
       <span id="tick-display" class="toolbar-info">Tick: 0</span>
       <button id="btn-add-server" title="Add Server">+ Server</button>
       <button id="btn-remove-server" title="Remove Server">− Server</button>
+      <button id="btn-open-config" title="Open Config">⚙</button>
     </div>
   </header>
 
@@ -64,6 +65,27 @@
       <div class="modal-footer">
         <span class="modal-error"></span>
         <button class="modal-save">Save &amp; Run</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Config Editor Modal -->
+  <div id="config-editor-modal" class="modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <span class="modal-title">Config Editor (demo.json)</span>
+        <button class="modal-cancel" title="Close">✕</button>
+      </div>
+      <div class="modal-editor-wrap">
+        <div id="cm-config-editor"></div>
+      </div>
+      <div class="modal-footer">
+        <span class="modal-error"></span>
+        <div class="modal-actions">
+          <button class="modal-reload-js">Reload JS</button>
+          <button class="modal-save">Save &amp; Run</button>
+        </div>
       </div>
     </div>
   </div>

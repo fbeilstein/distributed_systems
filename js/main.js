@@ -9,6 +9,7 @@ import { Timeline } from './timeline.js?v=10';
 import { Interactions } from './interactions.js?v=10';
 import { StateInspector } from './state-inspector.js?v=10';
 import { CodeEditor, DEFAULT_CODE } from './code-editor.js?v=10';
+import { ConfigEditor } from './config-editor.js?v=10';
 
 // --- Theme Management ---
 function applyTheme(theme) {
@@ -51,8 +52,44 @@ const resizerEl = document.getElementById('resizer');
 const modalEl = document.getElementById('code-editor-modal');
 const addBtn = document.getElementById('btn-add-server');
 const removeBtn = document.getElementById('btn-remove-server');
+const configBtn = document.getElementById('btn-open-config');
+const configModalEl = document.getElementById('config-editor-modal');
 const seedDisplay = document.getElementById('seed-display');
 const tickDisplay = document.getElementById('tick-display');
+
+// --- Fetch resources for config ---
+async function fetchResources(config, baseUrl) {
+    if (!config.servers || !Array.isArray(config.servers)) return config;
+
+    // Fetch custom render file if present
+    if (config.customRenderFile) {
+        const renderUrl = baseUrl + config.customRenderFile;
+        try {
+            const renderResp = await fetch(renderUrl, { cache: 'no-store' });
+            if (!renderResp.ok) throw new Error(`HTTP ${renderResp.status}`);
+            config.customRenderCode = await renderResp.text();
+        } catch (e) {
+            console.error(`Failed to load custom render code from ${renderUrl}:`, e);
+        }
+    }
+
+    // Fetch all codeFiles in parallel
+    const fetchPromises = config.servers.map(async (sc) => {
+        if (sc.codeFile) {
+            const codeUrl = baseUrl + sc.codeFile;
+            try {
+                const codeResp = await fetch(codeUrl, { cache: 'no-store' });
+                if (!codeResp.ok) throw new Error(`HTTP ${codeResp.status}`);
+                sc.code = await codeResp.text();
+            } catch (e) {
+                console.error(`Failed to load code from ${codeUrl}:`, e);
+                sc.code = `// Failed to load external code: ${sc.codeFile}\n`;
+            }
+        }
+    });
+    await Promise.all(fetchPromises);
+    return config;
+}
 
 // --- Load JSON config ---
 async function loadConfig(url) {
@@ -61,38 +98,8 @@ async function loadConfig(url) {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const config = JSON.parse(await resp.text());
 
-        // Resolve external codeFiles
-        if (config.servers && Array.isArray(config.servers)) {
-            const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
-
-            // Fetch custom render file if present
-            if (config.customRenderFile) {
-                const renderUrl = baseUrl + config.customRenderFile;
-                try {
-                    const renderResp = await fetch(renderUrl, { cache: 'no-store' });
-                    if (!renderResp.ok) throw new Error(`HTTP ${renderResp.status}`);
-                    config.customRenderCode = await renderResp.text();
-                } catch (e) {
-                    console.error(`Failed to load custom render code from ${renderUrl}:`, e);
-                }
-            }
-
-            // Fetch all codeFiles in parallel
-            const fetchPromises = config.servers.map(async (sc) => {
-                if (sc.codeFile) {
-                    const codeUrl = baseUrl + sc.codeFile;
-                    try {
-                        const codeResp = await fetch(codeUrl, { cache: 'no-store' });
-                        if (!codeResp.ok) throw new Error(`HTTP ${codeResp.status}`);
-                        sc.code = await codeResp.text();
-                    } catch (e) {
-                        console.error(`Failed to load code from ${codeUrl}:`, e);
-                        sc.code = `// Failed to load external code: ${sc.codeFile}\n`;
-                    }
-                }
-            });
-            await Promise.all(fetchPromises);
-        }
+        const baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+        await fetchResources(config, baseUrl);
 
         return config;
     } catch (e) {
@@ -139,26 +146,51 @@ document.addEventListener('mouseup', () => {
 });
 
 // --- Apply config to engine ---
-function applyConfig(engine, config) {
-    // Apply per-server code
-    if (config.servers && Array.isArray(config.servers) && config.servers.length > 0) {
+function applyConfig(engine, config, skipCodeUpdate = false) {
+    // Sync node count
+    const numNodes = config.nodes || 0;
+    while (engine.servers.length < numNodes) {
+        engine.addServer();
+    }
+    while (engine.servers.length > numNodes && numNodes > 0) {
+        engine.removeServer();
+    }
+
+    // Apply per-server code and metadata
+    if (config.servers && Array.isArray(config.servers)) {
         for (let i = 0; i < engine.servers.length; i++) {
-            const sc = config.servers[Math.min(i, config.servers.length - 1)];
+            const sc = config.servers[i] || {};
+            const engineServer = engine.servers[i];
+
+            if (sc.name) engineServer.name = sc.name;
+
+            if (skipCodeUpdate) {
+                if (sc.color) engineServer.color = sc.color;
+                continue;
+            }
+
             let code = '';
             if (sc.code !== undefined) {
                 code = sc.code;
+            } else if (sc.onUp || sc.onTimer || sc.onMessage) {
+                code += (sc.onUp || 'function onUp() {}') + '\n\n';
+                code += (sc.onTimer || 'function onTimer(tick) {}') + '\n\n';
+                code += (sc.onMessage || 'function onMessage(message) {}') + '\n\n';
             } else {
-                if (sc.onUp) code += sc.onUp + '\n\n';
-                else code += 'function onUp() {}\n\n';
-                if (sc.onTimer) code += sc.onTimer + '\n\n';
-                else code += 'function onTimer(tick) {}\n\n';
-                if (sc.onMessage) code += sc.onMessage + '\n\n';
-                else code += 'function onMessage(message) {}\n\n';
+                // If no specific code path, keep existing or default
+                if (!engineServer.code) engineServer.code = DEFAULT_CODE;
+                continue;
             }
-            engine.servers[i].code = code;
-            if (sc.color) engine.servers[i].color = sc.color;
+            engineServer.code = code;
+            if (sc.color) engineServer.color = sc.color;
         }
     }
+
+    // Update simulation parameters
+    if (config.seed !== undefined) engine.seed = config.seed;
+    if (config.ticks !== undefined) engine.maxTicks = config.ticks;
+    engine.config = config; // for latency jitter etc.
+    if (config.hideStateLabels) engine.hideStateLabels = true;
 
     // Apply pre-configured events
     if (config.events && Array.isArray(config.events)) {
@@ -256,9 +288,58 @@ async function init() {
         if (tickDisplay) tickDisplay.textContent = `Tick: ${tick}`;
     });
 
+    const baseUrl = CODE_URL ? CODE_URL.substring(0, CODE_URL.lastIndexOf('/') + 1) : './';
+
+    const configEditor = new ConfigEditor(configModalEl, engine, {
+        onConfigSaved: (newConfig) => {
+            config = newConfig;
+            applyConfig(engine, config, true); // true = skip code update
+            seedDisplay.textContent = `Seed: ${engine.seed}`;
+            engine.recompute();
+            timeline.resize();
+            timeline.draw();
+            stateInspector.update(timeline.scrubberTick);
+        },
+        onReloadJs: async (newConfig) => {
+            config = newConfig;
+            await fetchResources(config, baseUrl);
+            applyConfig(engine, config, false); // false = apply code update
+            seedDisplay.textContent = `Seed: ${engine.seed}`;
+
+            if (config.customRenderCode) {
+                try {
+                    timeline.customRender = new Function('ctx', 'timeline', 'engine', config.customRenderCode);
+                } catch (e) {
+                    console.error('Failed to parse customRenderCode:', e);
+                }
+            }
+
+            engine.recompute();
+            timeline.resize();
+            timeline.draw();
+            stateInspector.update(timeline.scrubberTick);
+        }
+    });
+
+    configBtn.addEventListener('click', () => {
+        // Strip raw 'code' strings from the config we show in the editor
+        // to keep it focused on filenames and parameters as requested.
+        const editorConfig = JSON.parse(JSON.stringify(config || {
+            nodes: engine.servers.length,
+            ticks: engine.maxTicks,
+            seed: engine.seed,
+            servers: engine.servers.map(s => ({ name: s.name, codeFile: s.codeFile || 'node.js' }))
+        }));
+        if (editorConfig.servers) {
+            editorConfig.servers.forEach(s => delete s.code);
+        }
+        configEditor.open(editorConfig);
+    });
+
     // Toolbar: add/remove servers
     addBtn.addEventListener('click', () => {
         engine.addServer();
+        if (config) config.nodes = engine.servers.length;
         engine.recompute();
         timeline.resize();
         timeline.draw();
@@ -267,6 +348,7 @@ async function init() {
 
     removeBtn.addEventListener('click', () => {
         engine.removeServer();
+        if (config) config.nodes = engine.servers.length;
         engine.recompute();
         timeline.resize();
         timeline.draw();

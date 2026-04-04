@@ -103,6 +103,39 @@ body {
   background: #e8e8e8;
 }
 
+#btn-open-config {
+  font-size: 16px !important;
+  line-height: 1;
+  padding: 4px 8px !important;
+}
+
+#btn-open-config:hover {
+  transform: rotate(30deg);
+}
+
+/* --- Modal Actions --- */
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-reload-js {
+  padding: 6px 16px;
+  font-size: 12px;
+  font-family: inherit;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background: var(--card-bg);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.modal-reload-js:hover {
+  background: var(--secondary-bg);
+}
+
+/* --- Hint text --- */
 /* --- Timeline Container --- */
 #timeline-container {
   flex: 1 1 50%;
