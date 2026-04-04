@@ -63,6 +63,7 @@
 
 ## Guides
 
+* [How to write slides](./how_to_write_slides.md)
 * [How to write demos](./how_to_write_demos.md)
 * [How to create static timelines](./how_to_write_timelines.md)
 

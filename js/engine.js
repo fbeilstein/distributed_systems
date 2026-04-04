@@ -268,7 +268,9 @@ export class Engine {
         // from advancing the PRNG and shifting latencies for unrelated nodes.
         const typeHash = typeStr.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
         const msgHash = (outgoing.sendTick * 31 + outgoing.from * 17 + outgoing.to * 7 + typeHash + this.seed);
-        let arrivalTick = outgoing.sendTick + 1 + (msgHash % 5); // Default latency: 1-5 ticks
+        const minLatency = this.config.minLatency !== undefined ? this.config.minLatency : 1;
+        const latencyJitter = this.config.latencyJitter !== undefined ? this.config.latencyJitter : 5;
+        let arrivalTick = outgoing.sendTick + minLatency + (latencyJitter > 0 ? (msgHash % latencyJitter) : 0);
         let lost = false;
 
         const key = Engine.messageKey(outgoing.from, outgoing.to, outgoing.sendTick, typeStr);

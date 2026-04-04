@@ -46,6 +46,8 @@ The engine core lives in `js/`:
 | `trackHeight` | Number | 80 | Vertical space per server track (px) |
 | `trackPaddingTop` | Number | 50 | Vertical space above the first track (px). Increase to make room for `render.js` overlays |
 | `trackPaddingBottom` | Number | 40 | Vertical space below the last track (px). |
+| `minLatency` | Number | 1 | Minimum message delay (ticks). |
+| `latencyJitter` | Number | 5 | Range of random delay added (ticks). Delay is `minLatency + (hash % jitter)`. |
 | `stateBandOffset` | Number | 22 | Vertical offset of the colored state band below the track line (px) |
 | `stateBandHeight` | Number | 8 | Height of the state band rectangle (px) |
 | `hideStateLabels` | Boolean | false | Hide text labels inside state bands |
