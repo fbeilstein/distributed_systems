@@ -48,6 +48,7 @@ class Idle extends BaseProposerState {
         return {
             'CLIENT_REQUEST': (msg) => {
                 this.machine.val = msg.payload.val;
+                this.machine.valueSource = 'original';
                 this.startPrepare();
             }
         };
@@ -55,7 +56,10 @@ class Idle extends BaseProposerState {
 }
 
 class Preparing extends BaseProposerState {
-    getState() { return ['preparing', '#ffb74d']; }
+    getState() {
+        const source = this.machine.valueSource === 'original' ? '' : ' (adopted)';
+        return [`preparing${source}`, '#ffb74d'];
+    }
     canTransition() { return ['accepting', 'failed']; }
 
     onEnter() {
@@ -76,6 +80,7 @@ class Preparing extends BaseProposerState {
                 if (prevBallot > this.machine.highestBallot && prevVal !== null) {
                     this.machine.highestBallot = prevBallot;
                     this.machine.val = prevVal;
+                    this.machine.valueSource = `from B:${prevBallot}`;
                 }
 
                 if (this.machine.promises.length >= QUORUM) {
@@ -138,6 +143,7 @@ class ProposerMachine extends Machine {
         this.round = 0;
         this.ballot = 0;
         this.val = null;
+        this.valueSource = 'none';
         this.highestBallot = 0;
 
         // UI Arrays

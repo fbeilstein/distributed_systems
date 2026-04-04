@@ -37,7 +37,11 @@ class Ready extends State {
 
 class Promised extends State {
     getState() {
-        return [`P:${this.machine.promised}`, '#ffe082'];
+        let label = `P:${this.machine.promised}`;
+        if (this.machine.acceptedVal !== null) {
+            label += ` (v:${this.machine.acceptedVal})`;
+        }
+        return [label, '#ffe082'];
     }
     canTransition() { return ['promised', 'accepted']; }
     registerMessageTypes() {

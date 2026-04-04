@@ -121,20 +121,21 @@ When an acceptor receives a `PREPARE(N)`, it responds based on its current state
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 60,
+  "ticks": 56,
   "trackHeight": 50,
   "stateBandOffset": 10,
+  "labelWidth": 100,
   "servers": ["Proposer", "Acceptor-1", "Acceptor-2", "Acceptor-3"],
   "states": [
     { "server": "Proposer",   "start": 0,  "end": 9,  "state": "idle",            "color": "#b0bec5" },
     { "server": "Proposer",   "start": 10, "end": 30, "state": "PREPARE(N=5)",    "color": "#ffb74d" },
-    { "server": "Proposer",   "start": 31, "end": 60, "state": "quorum reached",  "color": "#81c784" },
+    { "server": "Proposer",   "start": 31, "end": 56, "state": "quorum reached",  "color": "#81c784" },
     { "server": "Acceptor-1", "start": 0,  "end": 15, "state": "not prepared",    "color": "#b0bec5" },
-    { "server": "Acceptor-1", "start": 16, "end": 60, "state": "promised N=5",    "color": "#4fc3f7" },
+    { "server": "Acceptor-1", "start": 16, "end": 56, "state": "promised N=5",    "color": "#4fc3f7" },
     { "server": "Acceptor-2", "start": 0,  "end": 17, "state": "not prepared",    "color": "#b0bec5" },
-    { "server": "Acceptor-2", "start": 18, "end": 60, "state": "promised N=5",    "color": "#4fc3f7" },
+    { "server": "Acceptor-2", "start": 18, "end": 56, "state": "promised N=5",    "color": "#4fc3f7" },
     { "server": "Acceptor-3", "start": 0,  "end": 19, "state": "not prepared",    "color": "#b0bec5" },
-    { "server": "Acceptor-3", "start": 20, "end": 60, "state": "promised N=5",    "color": "#4fc3f7" }
+    { "server": "Acceptor-3", "start": 20, "end": 56, "state": "promised N=5",    "color": "#4fc3f7" }
   ],
   "messages": [
     { "from": "Proposer",   "to": "Acceptor-1", "sendTick": 10, "recvTick": 15, "label": "PREPARE(5)" },
@@ -173,22 +174,23 @@ An acceptor can respond to more than one `PREPARE` as long as each later one has
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 65,
+  "ticks": 56,
   "trackHeight": 50,
   "stateBandOffset": 10,
+  "labelWidth": 100,
   "servers": ["Proposer", "Acceptor-1", "Acceptor-2", "Acceptor-3", "Learner"],
   "states": [
     { "server": "Proposer",   "start": 0,  "end": 9,  "state": "has quorum",     "color": "#81c784" },
     { "server": "Proposer",   "start": 10, "end": 30, "state": "ACCEPT(5,'X')",  "color": "#ffb74d" },
-    { "server": "Proposer",   "start": 31, "end": 65, "state": "decided 'X'",    "color": "#4caf50" },
+    { "server": "Proposer",   "start": 31, "end": 56, "state": "decided 'X'",    "color": "#4caf50" },
     { "server": "Acceptor-1", "start": 0,  "end": 14, "state": "promised N=5",   "color": "#4fc3f7" },
-    { "server": "Acceptor-1", "start": 15, "end": 65, "state": "accepted 'X'",   "color": "#81c784" },
+    { "server": "Acceptor-1", "start": 15, "end": 56, "state": "accepted 'X'",   "color": "#81c784" },
     { "server": "Acceptor-2", "start": 0,  "end": 16, "state": "promised N=5",   "color": "#4fc3f7" },
-    { "server": "Acceptor-2", "start": 17, "end": 65, "state": "accepted 'X'",   "color": "#81c784" },
+    { "server": "Acceptor-2", "start": 17, "end": 56, "state": "accepted 'X'",   "color": "#81c784" },
     { "server": "Acceptor-3", "start": 0,  "end": 18, "state": "promised N=5",   "color": "#4fc3f7" },
-    { "server": "Acceptor-3", "start": 19, "end": 65, "state": "accepted 'X'",   "color": "#81c784" },
-    { "server": "Learner",    "start": 0,  "end": 32, "state": "waiting",        "color": "#b0bec5" },
-    { "server": "Learner",    "start": 33, "end": 65, "state": "learned 'X'",    "color": "#4caf50" }
+    { "server": "Acceptor-3", "start": 19, "end": 56, "state": "accepted 'X'",   "color": "#81c784" },
+    { "server": "Learner",    "start": 0,  "end": 26, "state": "waiting",        "color": "#b0bec5" },
+    { "server": "Learner",    "start": 27, "end": 56, "state": "learned 'X'",    "color": "#4caf50" }
   ],
   "messages": [
     { "from": "Proposer",   "to": "Acceptor-1", "sendTick": 10, "recvTick": 15, "label": "ACCEPT(5,'X')" },
@@ -252,18 +254,19 @@ To tolerate **f** failed processes, the protocol requires **2f + 1** total accep
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 65,
+  "ticks": 56,
   "trackHeight": 44,
   "stateBandOffset": 10,
+  "labelWidth": 100,
   "servers": ["Proposer-A", "Proposer-B", "Node-1", "Node-2", "Node-3", "Node-4", "Node-5"],
   "states": [
     { "server": "Proposer-A", "start": 5,  "end": 35, "state": "quorum: N1,N2,N3",  "color": "#4fc3f7" },
     { "server": "Proposer-B", "start": 5,  "end": 35, "state": "quorum: N3,N4,N5",  "color": "#ffb74d" },
-    { "server": "Node-1",     "start": 0,  "end": 65, "state": "in A's quorum",      "color": "#4fc3f7" },
-    { "server": "Node-2",     "start": 0,  "end": 65, "state": "in A's quorum",      "color": "#4fc3f7" },
-    { "server": "Node-3",     "start": 0,  "end": 65, "state": "overlap — arbiter",  "color": "#ab47bc" },
-    { "server": "Node-4",     "start": 0,  "end": 65, "state": "in B's quorum",      "color": "#ffb74d" },
-    { "server": "Node-5",     "start": 0,  "end": 65, "state": "in B's quorum",      "color": "#ffb74d" }
+    { "server": "Node-1",     "start": 0,  "end": 56, "state": "in A's quorum",      "color": "#4fc3f7" },
+    { "server": "Node-2",     "start": 0,  "end": 56, "state": "in A's quorum",      "color": "#4fc3f7" },
+    { "server": "Node-3",     "start": 0,  "end": 56, "state": "overlap — arbiter",  "color": "#ab47bc" },
+    { "server": "Node-4",     "start": 0,  "end": 56, "state": "in B's quorum",      "color": "#ffb74d" },
+    { "server": "Node-5",     "start": 0,  "end": 56, "state": "in B's quorum",      "color": "#ffb74d" }
   ]
 }
 ```
@@ -350,16 +353,6 @@ The proposer committed value `'X'` to Acceptor-1, then crashed before reaching t
 
 > **Note**: all of this can happen without the original proposer knowing. If the client is connected only to Proposer-1, it may never learn the result of the Paxos round.
 
-<div class="callout-box">
-    <h4>What to watch</h4>
-    <p>In this demo, Proposer-1 crashes right after sending an ACCEPT to Acceptor-1. Watch Proposer-2 wake up, discover the partially-committed value during its PREPARE phase, and safely adopt it rather than overwriting it.</p>
-</div>
-
-<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/paxos-recovery/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #e53935; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        Launch Recovery Demo
-    </button>
-</div>
 
 ---
 
