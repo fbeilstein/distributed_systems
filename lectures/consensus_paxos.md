@@ -128,22 +128,22 @@ When an acceptor receives a `PREPARE(N)`, it responds based on its current state
   "servers": ["Proposer", "Acceptor-1", "Acceptor-2", "Acceptor-3"],
   "states": [
     { "server": "Proposer",   "start": 0,  "end": 9,  "state": "idle",            "color": "#b0bec5" },
-    { "server": "Proposer",   "start": 10, "end": 30, "state": "PREPARE(N=5)",    "color": "#ffb74d" },
-    { "server": "Proposer",   "start": 31, "end": 56, "state": "quorum reached",  "color": "#81c784" },
-    { "server": "Acceptor-1", "start": 0,  "end": 15, "state": "not prepared",    "color": "#b0bec5" },
-    { "server": "Acceptor-1", "start": 16, "end": 56, "state": "promised N=5",    "color": "#4fc3f7" },
-    { "server": "Acceptor-2", "start": 0,  "end": 17, "state": "not prepared",    "color": "#b0bec5" },
-    { "server": "Acceptor-2", "start": 18, "end": 56, "state": "promised N=5",    "color": "#4fc3f7" },
-    { "server": "Acceptor-3", "start": 0,  "end": 19, "state": "not prepared",    "color": "#b0bec5" },
-    { "server": "Acceptor-3", "start": 20, "end": 56, "state": "promised N=5",    "color": "#4fc3f7" }
+    { "server": "Proposer",   "start": 10, "end": 23, "state": "PREPARE(5)",       "color": "#ffb74d" },
+    { "server": "Proposer",   "start": 24, "end": 56, "state": "quorum reached",  "color": "#81c784" },
+    { "server": "Acceptor-1", "start": 0,  "end": 14, "state": "not prepared",    "color": "#b0bec5" },
+    { "server": "Acceptor-1", "start": 15, "end": 56, "state": "promised N=5",    "color": "#4fc3f7" },
+    { "server": "Acceptor-2", "start": 0,  "end": 16, "state": "not prepared",    "color": "#b0bec5" },
+    { "server": "Acceptor-2", "start": 17, "end": 56, "state": "promised N=5",    "color": "#4fc3f7" },
+    { "server": "Acceptor-3", "start": 0,  "end": 18, "state": "not prepared",    "color": "#b0bec5" },
+    { "server": "Acceptor-3", "start": 19, "end": 56, "state": "promised N=5",    "color": "#4fc3f7" }
   ],
   "messages": [
-    { "from": "Proposer",   "to": "Acceptor-1", "sendTick": 10, "recvTick": 15, "label": "PREPARE(5)" },
-    { "from": "Proposer",   "to": "Acceptor-2", "sendTick": 10, "recvTick": 17 },
-    { "from": "Proposer",   "to": "Acceptor-3", "sendTick": 10, "recvTick": 19 },
-    { "from": "Acceptor-1", "to": "Proposer",   "sendTick": 16, "recvTick": 23, "label": "PROMISE(5)" },
-    { "from": "Acceptor-2", "to": "Proposer",   "sendTick": 18, "recvTick": 26 },
-    { "from": "Acceptor-3", "to": "Proposer",   "sendTick": 20, "recvTick": 30 }
+    { "from": "Proposer",   "to": "Acceptor-1", "sendTick": 10, "recvTick": 15},
+    { "from": "Proposer",   "to": "Acceptor-2", "sendTick": 10, "recvTick": 17},
+    { "from": "Proposer",   "to": "Acceptor-3", "sendTick": 10, "recvTick": 19},
+    { "from": "Acceptor-1", "to": "Proposer",   "sendTick": 16, "recvTick": 21},
+    { "from": "Acceptor-2", "to": "Proposer",   "sendTick": 18, "recvTick": 24},
+    { "from": "Acceptor-3", "to": "Proposer",   "sendTick": 20, "recvTick": 26}
   ]
 }
 ```
@@ -181,26 +181,27 @@ An acceptor can respond to more than one `PREPARE` as long as each later one has
   "servers": ["Proposer", "Acceptor-1", "Acceptor-2", "Acceptor-3", "Learner"],
   "states": [
     { "server": "Proposer",   "start": 0,  "end": 9,  "state": "has quorum",     "color": "#81c784" },
-    { "server": "Proposer",   "start": 10, "end": 30, "state": "ACCEPT(5,'X')",  "color": "#ffb74d" },
-    { "server": "Proposer",   "start": 31, "end": 56, "state": "decided 'X'",    "color": "#4caf50" },
+    { "server": "Proposer",   "start": 10, "end": 23, "state": "ACCEPT(5,'X')",  "color": "#ffb74d" },
+    { "server": "Proposer",   "start": 24, "end": 56, "state": "decided 'X'",    "color": "#4caf50" },
     { "server": "Acceptor-1", "start": 0,  "end": 14, "state": "promised N=5",   "color": "#4fc3f7" },
     { "server": "Acceptor-1", "start": 15, "end": 56, "state": "accepted 'X'",   "color": "#81c784" },
     { "server": "Acceptor-2", "start": 0,  "end": 16, "state": "promised N=5",   "color": "#4fc3f7" },
     { "server": "Acceptor-2", "start": 17, "end": 56, "state": "accepted 'X'",   "color": "#81c784" },
     { "server": "Acceptor-3", "start": 0,  "end": 18, "state": "promised N=5",   "color": "#4fc3f7" },
     { "server": "Acceptor-3", "start": 19, "end": 56, "state": "accepted 'X'",   "color": "#81c784" },
-    { "server": "Learner",    "start": 0,  "end": 26, "state": "waiting",        "color": "#b0bec5" },
-    { "server": "Learner",    "start": 27, "end": 56, "state": "learned 'X'",    "color": "#4caf50" }
+    { "server": "Learner",    "start": 0,  "end": 24, "state": "waiting",        "color": "#b0bec5" },
+    { "server": "Learner",    "start": 25, "end": 56, "state": "learned 'X'",    "color": "#4caf50" }
   ],
   "messages": [
-    { "from": "Proposer",   "to": "Acceptor-1", "sendTick": 10, "recvTick": 15, "label": "ACCEPT(5,'X')" },
-    { "from": "Proposer",   "to": "Acceptor-2", "sendTick": 10, "recvTick": 17 },
-    { "from": "Proposer",   "to": "Acceptor-3", "sendTick": 10, "recvTick": 19 },
-    { "from": "Acceptor-1", "to": "Proposer",   "sendTick": 16, "recvTick": 22, "label": "ACCEPTED" },
-    { "from": "Acceptor-2", "to": "Proposer",   "sendTick": 18, "recvTick": 24 },
-    { "from": "Acceptor-1", "to": "Learner",    "sendTick": 16, "recvTick": 23 },
-    { "from": "Acceptor-2", "to": "Learner",    "sendTick": 18, "recvTick": 27 },
-    { "from": "Acceptor-3", "to": "Learner",    "sendTick": 20, "recvTick": 32 }
+    { "from": "Proposer",   "to": "Acceptor-1", "sendTick": 10, "recvTick": 15},
+    { "from": "Proposer",   "to": "Acceptor-2", "sendTick": 10, "recvTick": 17},
+    { "from": "Proposer",   "to": "Acceptor-3", "sendTick": 10, "recvTick": 19},
+    { "from": "Acceptor-1", "to": "Proposer",   "sendTick": 16, "recvTick": 22},
+    { "from": "Acceptor-2", "to": "Proposer",   "sendTick": 18, "recvTick": 24},
+    { "from": "Acceptor-1", "to": "Learner",    "sendTick": 16, "recvTick": 23},
+    { "from": "Acceptor-2", "to": "Learner",    "sendTick": 18, "recvTick": 25},
+    { "from": "Acceptor-3", "to": "Proposer",   "sendTick": 20, "recvTick": 26},
+    { "from": "Acceptor-3", "to": "Learner",    "sendTick": 20, "recvTick": 27}
   ]
 }
 ```
@@ -290,27 +291,33 @@ If the proposer crashes before it collects a quorum of PROMISE responses, nothin
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 70,
+  "ticks": 56,
   "trackHeight": 50,
   "stateBandOffset": 10,
+  "labelWidth": 100,
   "servers": ["Proposer-1", "Proposer-2", "Acceptor-1", "Acceptor-2", "Acceptor-3"],
   "states": [
-    { "server": "Proposer-1", "start": 0,  "end": 15, "state": "PREPARE(1,'X')", "color": "#ffb74d" },
-    { "server": "Proposer-1", "start": 16, "end": 30, "state": "CRASHED",         "color": "#ef5350" },
-    { "server": "Proposer-2", "start": 30, "end": 45, "state": "PREPARE(2,'Y')", "color": "#81c784" },
-    { "server": "Proposer-2", "start": 46, "end": 70, "state": "commit 'Y'",      "color": "#4caf50" },
-    { "server": "Acceptor-1", "start": 0,  "end": 70, "state": "waiting",         "color": "#b0bec5" },
-    { "server": "Acceptor-2", "start": 0,  "end": 70, "state": "waiting",         "color": "#b0bec5" },
-    { "server": "Acceptor-3", "start": 0,  "end": 70, "state": "waiting",         "color": "#b0bec5" }
+    { "server": "Proposer-1", "start": 0,  "end": 6,  "state": "PREPARE(1)",      "color": "#ffb74d" },
+    { "server": "Proposer-1", "start": 7,  "end": 56, "state": "CRASHED",         "color": "#ef5350" },
+    { "server": "Acceptor-1", "start": 0,  "end": 9,  "state": "waiting",         "color": "#b0bec5" },
+    { "server": "Acceptor-1", "start": 10, "end": 26, "state": "promised N=1",    "color": "#90caf9" },
+    { "server": "Acceptor-1", "start": 27, "end": 56, "state": "promised N=2",    "color": "#4fc3f7" },
+    { "server": "Proposer-2", "start": 17, "end": 33, "state": "PREPARE(2)",      "color": "#81c784" },
+    { "server": "Proposer-2", "start": 34, "end": 56, "state": "commit 'Y'",      "color": "#4caf50" },
+    { "server": "Acceptor-2", "start": 0,  "end": 27, "state": "waiting",         "color": "#b0bec5" },
+    { "server": "Acceptor-2", "start": 28, "end": 56, "state": "promised N=2",    "color": "#4fc3f7" },
+    { "server": "Acceptor-3", "start": 0,  "end": 28, "state": "waiting",         "color": "#b0bec5" },
+    { "server": "Acceptor-3", "start": 29, "end": 56, "state": "promised N=2",    "color": "#4fc3f7" }
   ],
   "messages": [
     { "from": "Proposer-1", "to": "Acceptor-1", "sendTick": 5,  "recvTick": 10 },
-    { "from": "Proposer-2", "to": "Acceptor-1", "sendTick": 32, "recvTick": 37, "label": "PREPARE(2)" },
-    { "from": "Proposer-2", "to": "Acceptor-2", "sendTick": 32, "recvTick": 38 },
-    { "from": "Proposer-2", "to": "Acceptor-3", "sendTick": 32, "recvTick": 39 },
-    { "from": "Acceptor-1", "to": "Proposer-2", "sendTick": 38, "recvTick": 43, "label": "PROMISE(2)" },
-    { "from": "Acceptor-2", "to": "Proposer-2", "sendTick": 39, "recvTick": 44 },
-    { "from": "Acceptor-3", "to": "Proposer-2", "sendTick": 40, "recvTick": 45 }
+    { "from": "Acceptor-1", "to": "Proposer-1", "sendTick": 11, "recvTick": 16 },
+    { "from": "Proposer-2", "to": "Acceptor-1", "sendTick": 22, "recvTick": 27 },
+    { "from": "Proposer-2", "to": "Acceptor-2", "sendTick": 22, "recvTick": 28 },
+    { "from": "Proposer-2", "to": "Acceptor-3", "sendTick": 22, "recvTick": 29 },
+    { "from": "Acceptor-1", "to": "Proposer-2", "sendTick": 28, "recvTick": 32 },
+    { "from": "Acceptor-2", "to": "Proposer-2", "sendTick": 29, "recvTick": 34 },
+    { "from": "Acceptor-3", "to": "Proposer-2", "sendTick": 30, "recvTick": 35 }
   ]
 }
 ```
@@ -324,29 +331,33 @@ The proposer committed value `'X'` to Acceptor-1, then crashed before reaching t
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 80,
+  "ticks": 56,
   "trackHeight": 44,
   "stateBandOffset": 10,
+  "labelWidth": 100,
   "servers": ["Proposer-1", "Proposer-2", "Acceptor-1", "Acceptor-2", "Acceptor-3"],
   "states": [
-    { "server": "Proposer-1", "start": 0,  "end": 20, "state": "commit 'X', id=1",  "color": "#ffb74d" },
-    { "server": "Proposer-1", "start": 21, "end": 40, "state": "CRASHED",            "color": "#ef5350" },
-    { "server": "Proposer-2", "start": 40, "end": 55, "state": "PREPARE(2,'Y')",     "color": "#81c784" },
-    { "server": "Proposer-2", "start": 56, "end": 70, "state": "commit 'X' (id=2)", "color": "#4caf50" },
-    { "server": "Acceptor-1", "start": 0,  "end": 18, "state": "accept 1",           "color": "#b0bec5" },
-    { "server": "Acceptor-1", "start": 19, "end": 80, "state": "accepted 'X', id=1","color": "#4fc3f7" },
-    { "server": "Acceptor-2", "start": 0,  "end": 80, "state": "accept 1",           "color": "#b0bec5" },
-    { "server": "Acceptor-3", "start": 0,  "end": 80, "state": "accept 1",           "color": "#b0bec5" }
+    { "server": "Proposer-1", "start": 0,  "end": 9,  "state": "ACCEPT(1,'X')",     "color": "#ffb74d" },
+    { "server": "Proposer-1", "start": 10, "end": 56, "state": "CRASHED",            "color": "#ef5350" },
+    { "server": "Acceptor-1", "start": 0,  "end": 13, "state": "idle",               "color": "#b0bec5" },
+    { "server": "Acceptor-1", "start": 14, "end": 27, "state": "accepted 'X', id=1","color": "#81c784" },
+    { "server": "Acceptor-1", "start": 28, "end": 56, "state": "promised N=2 (saw X)", "color": "#ce93d8" },
+    { "server": "Proposer-2", "start": 17, "end": 36, "state": "PREPARE(2)",         "color": "#81c784" },
+    { "server": "Proposer-2", "start": 37, "end": 56, "state": "commit 'X' (id=2)", "color": "#4caf50" },
+    { "server": "Acceptor-2", "start": 0,  "end": 28, "state": "idle",               "color": "#b0bec5" },
+    { "server": "Acceptor-2", "start": 29, "end": 56, "state": "promised N=2",       "color": "#90caf9" },
+    { "server": "Acceptor-3", "start": 0,  "end": 29, "state": "idle",               "color": "#b0bec5" },
+    { "server": "Acceptor-3", "start": 30, "end": 56, "state": "promised N=2",       "color": "#90caf9" }
   ],
   "messages": [
-    { "from": "Proposer-1", "to": "Acceptor-1", "sendTick": 10, "recvTick": 18, "label": "ACCEPT(1,'X')" },
-    { "from": "Proposer-2", "to": "Acceptor-1", "sendTick": 42, "recvTick": 48, "label": "PREPARE(2)" },
-    { "from": "Proposer-2", "to": "Acceptor-2", "sendTick": 42, "recvTick": 49 },
-    { "from": "Acceptor-1", "to": "Proposer-2", "sendTick": 49, "recvTick": 55, "label": "PROMISE: 'X' seen!" },
-    { "from": "Acceptor-2", "to": "Proposer-2", "sendTick": 50, "recvTick": 55 },
-    { "from": "Proposer-2", "to": "Acceptor-1", "sendTick": 56, "recvTick": 62, "label": "ACCEPT(2,'X')" },
-    { "from": "Proposer-2", "to": "Acceptor-2", "sendTick": 56, "recvTick": 63 },
-    { "from": "Proposer-2", "to": "Acceptor-3", "sendTick": 56, "recvTick": 64 }
+    { "from": "Proposer-1", "to": "Acceptor-1", "sendTick": 8,  "recvTick": 14},
+    { "from": "Acceptor-1", "to": "Proposer-1", "sendTick": 15, "recvTick": 20},
+    { "from": "Proposer-2", "to": "Acceptor-1", "sendTick": 23, "recvTick": 28},
+    { "from": "Proposer-2", "to": "Acceptor-2", "sendTick": 24, "recvTick": 29},
+    { "from": "Proposer-2", "to": "Acceptor-3", "sendTick": 25, "recvTick": 30},
+    { "from": "Acceptor-1", "to": "Proposer-2", "sendTick": 29, "recvTick": 36},
+    { "from": "Acceptor-2", "to": "Proposer-2", "sendTick": 30, "recvTick": 37},
+    { "from": "Acceptor-3", "to": "Proposer-2", "sendTick": 31, "recvTick": 38}
   ]
 }
 ```
@@ -363,36 +374,58 @@ Two proposers repeatedly outbid each other, preventing either from completing. N
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 90,
+  "ticks": 48,
   "trackHeight": 44,
   "stateBandOffset": 10,
-  "servers": ["Proposer-1", "Proposer-2", "Acceptor-1", "Acceptor-2", "Acceptor-3"],
+  "labelWidth": 100,
+  "servers": ["Proposer-1", "Proposer-2", "Acceptor-1"],
   "states": [
-    { "server": "Proposer-1", "start": 0,  "end": 14, "state": "PREPARE(1,'X')",  "color": "#4fc3f7" },
-    { "server": "Proposer-1", "start": 25, "end": 39, "state": "PREPARE(3,'X')",  "color": "#4fc3f7" },
-    { "server": "Proposer-1", "start": 50, "end": 64, "state": "PREPARE(5,'X')",  "color": "#4fc3f7" },
-    { "server": "Proposer-2", "start": 10, "end": 24, "state": "PREPARE(2,'Y')",  "color": "#ffb74d" },
-    { "server": "Proposer-2", "start": 35, "end": 49, "state": "PREPARE(4,'Y')",  "color": "#ffb74d" },
-    { "server": "Proposer-2", "start": 60, "end": 74, "state": "PREPARE(6,'Y')",  "color": "#ffb74d" },
-    { "server": "Acceptor-1", "start": 0,  "end": 90, "state": "never settles",   "color": "#b0bec5" },
-    { "server": "Acceptor-2", "start": 0,  "end": 90, "state": "never settles",   "color": "#b0bec5" },
-    { "server": "Acceptor-3", "start": 0,  "end": 90, "state": "never settles",   "color": "#b0bec5" }
+    { "server": "Proposer-1", "start": 0,  "end": 8,   "state": "PREPARE(1)",      "color": "#bbdefb" },
+    { "server": "Proposer-1", "start": 9,  "end": 17,  "state": "ACCEPT(1,'X')",   "color": "#4fc3f7" },
+    { "server": "Proposer-1", "start": 17, "end": 20,  "state": "WAIT (REJECTED)", "color": "#ef5350" },
+    { "server": "Proposer-1", "start": 21, "end": 26,  "state": "PREPARE(3)",      "color": "#1565c0" },
+    { "server": "Proposer-1", "start": 27, "end": 41,  "state": "ACCEPT(3,'X')",   "color": "#0d47a1" },
+    { "server": "Proposer-1", "start": 41, "end": 48,  "state": "WAIT (REJECTED)", "color": "#ef5350" },
+    
+    { "server": "Proposer-2", "start": 0,  "end": 13,  "state": "PREPARE(2)",      "color": "#ffe082" },
+    { "server": "Proposer-2", "start": 14, "end": 29,  "state": "ACCEPT(2,'Y')",   "color": "#ffb74d" },
+    { "server": "Proposer-2", "start": 29, "end": 32,  "state": "WAIT (REJECTED)", "color": "#ef5350" },
+    { "server": "Proposer-2", "start": 33, "end": 38,  "state": "PREPARE(4)",      "color": "#fbc02d" },
+    { "server": "Proposer-2", "start": 39, "end": 48,  "state": "ACCEPT(4,'Y')",   "color": "#f9a825" },
+    
+    { "server": "Acceptor-1", "start": 0,  "end": 4,   "state": "idle",            "color": "#b0bec5" },
+    { "server": "Acceptor-1", "start": 5,  "end": 9,   "state": "promised N=1",    "color": "#bbdefb" },
+    { "server": "Acceptor-1", "start": 10, "end": 22,  "state": "promised N=2",    "color": "#ffe082" },
+    { "server": "Acceptor-1", "start": 23, "end": 34,  "state": "promised N=3",    "color": "#1565c0" },
+    { "server": "Acceptor-1", "start": 35, "end": 48,  "state": "promised N=4",    "color": "#fbc02d" }
+  ],
+  "messages": [
+    { "from": "Proposer-1", "to": "Acceptor-1", "sendTick": 2,  "recvTick": 5},
+    { "from": "Acceptor-1", "to": "Proposer-1", "sendTick": 5,  "recvTick": 8},
+    
+    { "from": "Proposer-2", "to": "Acceptor-1", "sendTick": 7,  "recvTick": 10},
+    { "from": "Acceptor-1", "to": "Proposer-2", "sendTick": 10, "recvTick": 13},
+    
+    { "from": "Proposer-1", "to": "Acceptor-1", "sendTick": 10, "recvTick": 14},
+    { "from": "Acceptor-1", "to": "Proposer-1", "sendTick": 14, "recvTick": 17},
+    
+    { "from": "Proposer-1", "to": "Acceptor-1", "sendTick": 22, "recvTick": 23},
+    { "from": "Acceptor-1", "to": "Proposer-1", "sendTick": 23, "recvTick": 26},
+    
+    { "from": "Proposer-2", "to": "Acceptor-1", "sendTick": 22, "recvTick": 26},
+    { "from": "Acceptor-1", "to": "Proposer-2", "sendTick": 26, "recvTick": 29},
+    
+    { "from": "Proposer-2", "to": "Acceptor-1", "sendTick": 34, "recvTick": 35},
+    { "from": "Acceptor-1", "to": "Proposer-2", "sendTick": 35, "recvTick": 38},
+    
+    { "from": "Proposer-1", "to": "Acceptor-1", "sendTick": 34, "recvTick": 38},
+    { "from": "Acceptor-1", "to": "Proposer-1", "sendTick": 38, "recvTick": 41}
   ]
 }
 ```
 
 **Resolution**: **Random exponential backoff** — the proposer that lost the ballot waits a random amount of time before retrying, giving the other time to complete.
 
-<div class="callout-box">
-    <h4>What to watch</h4>
-    <p>Watch two proposers intentionally collide. When they receive a NACK, they enter a randomized backoff state before retrying. One will eventually out-wait the other and secure the quorum!</p>
-</div>
-
-<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/paxos-livelock/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #fb8c00; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        Launch Livelock Backoff Demo
-    </button>
-</div>
 
 ---
 
@@ -438,42 +471,147 @@ Some Multi-Paxos implementations use **leases**:
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 100,
+  "ticks": 54,
   "trackHeight": 44,
   "stateBandOffset": 10,
+  "labelWidth": 100,
   "servers": ["Leader", "Acceptor-1", "Acceptor-2", "Acceptor-3"],
   "states": [
-    { "server": "Leader",     "start": 0,  "end": 9,  "state": "idle",             "color": "#b0bec5" },
-    { "server": "Leader",     "start": 10, "end": 28, "state": "PREPARE (round 1)","color": "#ffb74d" },
-    { "server": "Leader",     "start": 29, "end": 49, "state": "ACCEPT cmd_1",     "color": "#4fc3f7" },
-    { "server": "Leader",     "start": 50, "end": 69, "state": "ACCEPT cmd_2 ✂️",  "color": "#4fc3f7" },
-    { "server": "Leader",     "start": 70, "end": 89, "state": "ACCEPT cmd_3 ✂️",  "color": "#4fc3f7" },
-    { "server": "Leader",     "start": 90, "end": 100,"state": "decided",          "color": "#81c784" },
-    { "server": "Acceptor-1", "start": 0,  "end": 14, "state": "ready",            "color": "#b0bec5" },
-    { "server": "Acceptor-1", "start": 15, "end": 28, "state": "promised",         "color": "#ce93d8" },
-    { "server": "Acceptor-1", "start": 29, "end": 100,"state": "accepting",        "color": "#81c784" },
-    { "server": "Acceptor-2", "start": 0,  "end": 16, "state": "ready",            "color": "#b0bec5" },
-    { "server": "Acceptor-2", "start": 17, "end": 28, "state": "promised",         "color": "#ce93d8" },
-    { "server": "Acceptor-2", "start": 29, "end": 100,"state": "accepting",        "color": "#81c784" },
-    { "server": "Acceptor-3", "start": 0,  "end": 18, "state": "ready",            "color": "#b0bec5" },
-    { "server": "Acceptor-3", "start": 19, "end": 28, "state": "promised",         "color": "#ce93d8" },
-    { "server": "Acceptor-3", "start": 29, "end": 100,"state": "accepting",        "color": "#81c784" }
+    { "server": "Leader",     "start": 0,  "end": 4,  "state": "idle",             "color": "#b0bec5" },
+    { "server": "Leader",     "start": 5,  "end": 14, "state": "PREPARE(N)",         "color": "#ffb74d" },
+    { "server": "Leader",     "start": 15, "end": 27, "state": "ACCEPT cmd_1",     "color": "#4fc3f7" },
+    { "server": "Leader",     "start": 28, "end": 40, "state": "ACCEPT cmd_2 ✂️",  "color": "#4fc3f7" },
+    { "server": "Leader",     "start": 41, "end": 54, "state": "ACCEPT cmd_3 ✂️",  "color": "#4fc3f7" },
+    
+    { "server": "Acceptor-1", "start": 0,  "end": 7,  "state": "ready",            "color": "#b0bec5" },
+    { "server": "Acceptor-1", "start": 8,  "end": 17, "state": "promised",         "color": "#ce93d8" },
+    { "server": "Acceptor-1", "start": 18, "end": 54, "state": "accepting stream", "color": "#81c784" },
+    
+    { "server": "Acceptor-2", "start": 0,  "end": 8,  "state": "ready",            "color": "#b0bec5" },
+    { "server": "Acceptor-2", "start": 9,  "end": 18, "state": "promised",         "color": "#ce93d8" },
+    { "server": "Acceptor-2", "start": 19, "end": 54, "state": "accepting stream", "color": "#81c784" },
+    
+    { "server": "Acceptor-3", "start": 0,  "end": 9,  "state": "ready",            "color": "#b0bec5" },
+    { "server": "Acceptor-3", "start": 10, "end": 19, "state": "promised",         "color": "#ce93d8" },
+    { "server": "Acceptor-3", "start": 20, "end": 54, "state": "accepting stream", "color": "#81c784" }
   ],
   "messages": [
-    { "from": "Leader",     "to": "Acceptor-1", "sendTick": 10, "recvTick": 15, "label": "PREPARE" },
-    { "from": "Leader",     "to": "Acceptor-2", "sendTick": 10, "recvTick": 17 },
-    { "from": "Leader",     "to": "Acceptor-3", "sendTick": 10, "recvTick": 19 },
-    { "from": "Acceptor-1", "to": "Leader",     "sendTick": 16, "recvTick": 22, "label": "PROMISE" },
-    { "from": "Acceptor-2", "to": "Leader",     "sendTick": 18, "recvTick": 26 },
-    { "from": "Acceptor-3", "to": "Leader",     "sendTick": 20, "recvTick": 28 },
-    { "from": "Leader",     "to": "Acceptor-1", "sendTick": 30, "recvTick": 35, "label": "ACCEPT cmd_1" },
-    { "from": "Leader",     "to": "Acceptor-1", "sendTick": 51, "recvTick": 56, "label": "ACCEPT cmd_2 ✂️" },
-    { "from": "Leader",     "to": "Acceptor-1", "sendTick": 71, "recvTick": 76, "label": "ACCEPT cmd_3 ✂️" }
+    { "from": "Leader",     "to": "Acceptor-1", "sendTick": 5,  "recvTick": 8 },
+    { "from": "Leader",     "to": "Acceptor-2", "sendTick": 5,  "recvTick": 9 },
+    { "from": "Leader",     "to": "Acceptor-3", "sendTick": 5,  "recvTick": 10 },
+    
+    { "from": "Acceptor-1", "to": "Leader",     "sendTick": 9,  "recvTick": 13 },
+    { "from": "Acceptor-2", "to": "Leader",     "sendTick": 10, "recvTick": 14 },
+    { "from": "Acceptor-3", "to": "Leader",     "sendTick": 11, "recvTick": 15 },
+    
+    { "from": "Leader",     "to": "Acceptor-1", "sendTick": 15, "recvTick": 18 },
+    { "from": "Leader",     "to": "Acceptor-2", "sendTick": 15, "recvTick": 19 },
+    { "from": "Leader",     "to": "Acceptor-3", "sendTick": 15, "recvTick": 20 },
+    
+    { "from": "Acceptor-1", "to": "Leader",     "sendTick": 19, "recvTick": 23 },
+    { "from": "Acceptor-2", "to": "Leader",     "sendTick": 20, "recvTick": 24 },
+    { "from": "Acceptor-3", "to": "Leader",     "sendTick": 21, "recvTick": 25 },
+    
+    { "from": "Leader",     "to": "Acceptor-1", "sendTick": 28, "recvTick": 31 },
+    { "from": "Leader",     "to": "Acceptor-2", "sendTick": 28, "recvTick": 32 },
+    { "from": "Leader",     "to": "Acceptor-3", "sendTick": 28, "recvTick": 33 },
+    
+    { "from": "Acceptor-1", "to": "Leader",     "sendTick": 32, "recvTick": 36 },
+    { "from": "Acceptor-2", "to": "Leader",     "sendTick": 33, "recvTick": 37 },
+    { "from": "Acceptor-3", "to": "Leader",     "sendTick": 34, "recvTick": 38 },
+    
+    { "from": "Leader",     "to": "Acceptor-1", "sendTick": 41, "recvTick": 44 },
+    { "from": "Leader",     "to": "Acceptor-2", "sendTick": 41, "recvTick": 45 },
+    { "from": "Leader",     "to": "Acceptor-3", "sendTick": 41, "recvTick": 46 },
+    
+    { "from": "Acceptor-1", "to": "Leader",     "sendTick": 45, "recvTick": 49 },
+    { "from": "Acceptor-2", "to": "Leader",     "sendTick": 46, "recvTick": 50 },
+    { "from": "Acceptor-3", "to": "Leader",     "sendTick": 47, "recvTick": 51 }
   ]
 }
 ```
 
 ✂️ indicates rounds where the Prepare phase was **skipped** entirely.
+
+---
+
+# Leader steal
+
+```static-timeline
+{
+  "zoom": 0.85,
+  "ticks": 56,
+  "trackHeight": 44,
+  "stateBandOffset": 10,
+  "labelWidth": 100,
+  "servers": ["Proposer-A", "Proposer-B", "Acceptor-1", "Acceptor-2", "Acceptor-3"],
+  "states": [
+    { "server": "Proposer-A", "start": 0,  "end": 10,  "state": "PREPARE(1)",      "color": "#ffb74d" },
+    { "server": "Proposer-A", "start": 11, "end": 20,  "state": "LEADER (cmd_1)",  "color": "#4fc3f7" },
+    { "server": "Proposer-A", "start": 21, "end": 36,  "state": "Phantom Leader",  "color": "#e0e0e0" },
+    { "server": "Proposer-A", "start": 37, "end": 42,  "state": "ACCEPT cmd_3 ✂️", "color": "#4fc3f7" },
+    { "server": "Proposer-A", "start": 43, "end": 47,  "state": "FAILED (NACK)",   "color": "#e57373" },
+    { "server": "Proposer-A", "start": 48, "end": 56,  "state": "PREPARE(3)",      "color": "#ffb74d" },
+
+    { "server": "Proposer-B", "start": 0,  "end": 19,  "state": "idle",            "color": "#b0bec5" },
+    { "server": "Proposer-B", "start": 20, "end": 28,  "state": "PREPARE(2)",      "color": "#ffb74d" },
+    { "server": "Proposer-B", "start": 29, "end": 56,  "state": "LEADER (cmd_2)",  "color": "#4fc3f7" },
+
+    { "server": "Acceptor-1", "start": 0,  "end": 4,   "state": "ready",           "color": "#b0bec5" },
+    { "server": "Acceptor-1", "start": 5,  "end": 22,  "state": "promised N=1",    "color": "#ce93d8" },
+    { "server": "Acceptor-1", "start": 23, "end": 56,  "state": "promised N=2",    "color": "#ba68c8" },
+    
+    { "server": "Acceptor-2", "start": 0,  "end": 5,   "state": "ready",           "color": "#b0bec5" },
+    { "server": "Acceptor-2", "start": 6,  "end": 23,  "state": "promised N=1",    "color": "#ce93d8" },
+    { "server": "Acceptor-2", "start": 24, "end": 56,  "state": "promised N=2",    "color": "#ba68c8" },
+
+    { "server": "Acceptor-3", "start": 0,  "end": 6,   "state": "ready",           "color": "#b0bec5" },
+    { "server": "Acceptor-3", "start": 7,  "end": 24,  "state": "promised N=1",    "color": "#ce93d8" },
+    { "server": "Acceptor-3", "start": 25, "end": 56,  "state": "promised N=2",    "color": "#ba68c8" }
+  ],
+  "messages": [
+    { "from": "Proposer-A", "to": "Acceptor-1", "sendTick": 2,  "recvTick": 5},
+    { "from": "Proposer-A", "to": "Acceptor-2", "sendTick": 2,  "recvTick": 6 },
+    { "from": "Proposer-A", "to": "Acceptor-3", "sendTick": 2,  "recvTick": 7 },
+    
+    { "from": "Acceptor-1", "to": "Proposer-A", "sendTick": 5,  "recvTick": 8},
+    { "from": "Acceptor-2", "to": "Proposer-A", "sendTick": 6,  "recvTick": 9 },
+    { "from": "Acceptor-3", "to": "Proposer-A", "sendTick": 7,  "recvTick": 10 },
+    
+    { "from": "Proposer-A", "to": "Acceptor-1", "sendTick": 11, "recvTick": 14},
+    { "from": "Proposer-A", "to": "Acceptor-2", "sendTick": 11, "recvTick": 15 },
+    { "from": "Proposer-A", "to": "Acceptor-3", "sendTick": 11, "recvTick": 16 },
+    
+    { "from": "Acceptor-1", "to": "Proposer-A", "sendTick": 14, "recvTick": 17},
+    { "from": "Acceptor-2", "to": "Proposer-A", "sendTick": 15, "recvTick": 18 },
+    { "from": "Acceptor-3", "to": "Proposer-A", "sendTick": 16, "recvTick": 19 },
+    
+    { "from": "Proposer-B", "to": "Acceptor-1", "sendTick": 20, "recvTick": 23},
+    { "from": "Proposer-B", "to": "Acceptor-2", "sendTick": 20, "recvTick": 24 },
+    { "from": "Proposer-B", "to": "Acceptor-3", "sendTick": 20, "recvTick": 25 },
+    
+    { "from": "Acceptor-1", "to": "Proposer-B", "sendTick": 23, "recvTick": 26},
+    { "from": "Acceptor-2", "to": "Proposer-B", "sendTick": 24, "recvTick": 27 },
+    { "from": "Acceptor-3", "to": "Proposer-B", "sendTick": 25, "recvTick": 28 },
+    
+    { "from": "Proposer-B", "to": "Acceptor-1", "sendTick": 29, "recvTick": 32},
+    { "from": "Proposer-B", "to": "Acceptor-2", "sendTick": 29, "recvTick": 33 },
+    { "from": "Proposer-B", "to": "Acceptor-3", "sendTick": 29, "recvTick": 34 },
+    
+    { "from": "Proposer-A", "to": "Acceptor-1", "sendTick": 37, "recvTick": 40},
+    { "from": "Proposer-A", "to": "Acceptor-2", "sendTick": 37, "recvTick": 41 },
+    { "from": "Proposer-A", "to": "Acceptor-3", "sendTick": 37, "recvTick": 42 },
+    
+    { "from": "Acceptor-1", "to": "Proposer-A", "sendTick": 40, "recvTick": 43, "lost": true },
+    { "from": "Acceptor-2", "to": "Proposer-A", "sendTick": 41, "recvTick": 44, "lost": true },
+    { "from": "Acceptor-3", "to": "Proposer-A", "sendTick": 42, "recvTick": 45, "lost": true },
+
+    { "from": "Proposer-A", "to": "Acceptor-1", "sendTick": 48, "recvTick": 51},
+    { "from": "Proposer-A", "to": "Acceptor-2", "sendTick": 48, "recvTick": 52 },
+    { "from": "Proposer-A", "to": "Acceptor-3", "sendTick": 48, "recvTick": 53 }
+  ]
+}
+```
 
 ---
 
@@ -487,7 +625,7 @@ This simulation shows the optimization in action. The first round is a full Paxo
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/multi-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #7b1fa2; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/multi-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Multi-Paxos Demo
     </button>
 </div>
@@ -511,33 +649,32 @@ Two types of rounds exist:
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 70,
+  "ticks": 56,
   "trackHeight": 48,
   "stateBandOffset": 10,
   "servers": ["Coordinator", "Proposer-1", "Acceptor-1", "Acceptor-2", "Acceptor-3"],
   "states": [
-    { "server": "Coordinator",  "start": 0,  "end": 15, "state": "accept any (fast)",  "color": "#81c784" },
-    { "server": "Coordinator",  "start": 16, "end": 70, "state": "waiting for result", "color": "#4fc3f7" },
+    { "server": "Coordinator",  "start": 0,  "end": 26, "state": "accept any (fast)",  "color": "#81c784" },
+    { "server": "Coordinator",  "start": 27, "end": 56, "state": "decided 'Y'",         "color": "#4caf50" },
     { "server": "Proposer-1",   "start": 0,  "end": 14, "state": "idle",               "color": "#b0bec5" },
-    { "server": "Proposer-1",   "start": 15, "end": 30, "state": "commit 'Y' direct",  "color": "#ffb74d" },
-    { "server": "Proposer-1",   "start": 31, "end": 70, "state": "decided",            "color": "#4caf50" },
-    { "server": "Acceptor-1",   "start": 0,  "end": 14, "state": "ready for any",      "color": "#b0bec5" },
-    { "server": "Acceptor-1",   "start": 15, "end": 70, "state": "accepted 'Y'",       "color": "#81c784" },
-    { "server": "Acceptor-2",   "start": 0,  "end": 16, "state": "ready for any",      "color": "#b0bec5" },
-    { "server": "Acceptor-2",   "start": 17, "end": 70, "state": "accepted 'Y'",       "color": "#81c784" },
-    { "server": "Acceptor-3",   "start": 0,  "end": 18, "state": "ready for any",      "color": "#b0bec5" },
-    { "server": "Acceptor-3",   "start": 19, "end": 70, "state": "accepted 'Y'",       "color": "#81c784" }
+    { "server": "Proposer-1",   "start": 15, "end": 26, "state": "commit 'Y' direct",  "color": "#ffb74d" },
+    { "server": "Proposer-1",   "start": 27, "end": 56, "state": "decided",            "color": "#4caf50" },
+    { "server": "Acceptor-1",   "start": 0,  "end": 19, "state": "ready for any",      "color": "#b0bec5" },
+    { "server": "Acceptor-1",   "start": 20, "end": 26, "state": "accepted 'Y'",       "color": "#81c784" },
+    { "server": "Acceptor-1",   "start": 27, "end": 56, "state": "learned 'Y'",        "color": "#4caf50" },
+    { "server": "Acceptor-2",   "start": 0,  "end": 20, "state": "ready for any",      "color": "#b0bec5" },
+    { "server": "Acceptor-2",   "start": 21, "end": 56, "state": "accepted 'Y'",       "color": "#81c784" },
+    { "server": "Acceptor-3",   "start": 0,  "end": 21, "state": "ready for any",      "color": "#b0bec5" },
+    { "server": "Acceptor-3",   "start": 22, "end": 56, "state": "accepted 'Y'",       "color": "#81c784" }
   ],
   "messages": [
-    { "from": "Coordinator", "to": "Acceptor-1", "sendTick": 5,  "recvTick": 10, "label": "accept any" },
-    { "from": "Coordinator", "to": "Acceptor-2", "sendTick": 5,  "recvTick": 11 },
-    { "from": "Coordinator", "to": "Acceptor-3", "sendTick": 5,  "recvTick": 12 },
+    { "from": "Coordinator", "to": "Acceptor-1", "sendTick": 3,  "recvTick": 6,  "label": "accept any" },
     { "from": "Proposer-1",  "to": "Acceptor-1", "sendTick": 15, "recvTick": 20, "label": "ACCEPT 'Y'" },
-    { "from": "Proposer-1",  "to": "Acceptor-2", "sendTick": 15, "recvTick": 22 },
-    { "from": "Proposer-1",  "to": "Acceptor-3", "sendTick": 15, "recvTick": 24 },
-    { "from": "Acceptor-1",  "to": "Coordinator","sendTick": 21, "recvTick": 28, "label": "ACCEPTED 'Y'" },
-    { "from": "Acceptor-2",  "to": "Coordinator","sendTick": 23, "recvTick": 30 },
-    { "from": "Acceptor-3",  "to": "Coordinator","sendTick": 25, "recvTick": 32 }
+    { "from": "Proposer-1",  "to": "Acceptor-2", "sendTick": 15, "recvTick": 21 },
+    { "from": "Proposer-1",  "to": "Acceptor-3", "sendTick": 15, "recvTick": 22 },
+    { "from": "Acceptor-1",  "to": "Coordinator","sendTick": 21, "recvTick": 25, "label": "ACCEPTED 'Y'" },
+    { "from": "Acceptor-2",  "to": "Coordinator","sendTick": 22, "recvTick": 26 },
+    { "from": "Acceptor-3",  "to": "Coordinator","sendTick": 23, "recvTick": 27 }
   ]
 }
 ```
@@ -589,29 +726,31 @@ Commands are executed **after all their dependencies** (and their dependencies' 
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 85,
+  "ticks": 56,
   "trackHeight": 44,
   "stateBandOffset": 10,
   "servers": ["Leader-1 (cmd X)", "Leader-2 (cmd Y)", "Replica-1", "Replica-2", "Replica-3"],
   "states": [
-    { "server": "Leader-1 (cmd X)", "start": 0,  "end": 18, "state": "pre-accept(X,{})",   "color": "#4fc3f7" },
-    { "server": "Leader-1 (cmd X)", "start": 19, "end": 40, "state": "commit X",            "color": "#4caf50" },
-    { "server": "Leader-2 (cmd Y)", "start": 20, "end": 38, "state": "pre-accept(Y,{})",   "color": "#ffb74d" },
-    { "server": "Leader-2 (cmd Y)", "start": 39, "end": 55, "state": "slow path: dep={X}", "color": "#ef5350" },
-    { "server": "Leader-2 (cmd Y)", "start": 56, "end": 85, "state": "commit Y after X",   "color": "#4caf50" },
-    { "server": "Replica-1",        "start": 0,  "end": 85, "state": "log: [X, Y]",        "color": "#b0bec5" },
-    { "server": "Replica-2",        "start": 0,  "end": 85, "state": "log: [X, Y]",        "color": "#b0bec5" },
-    { "server": "Replica-3",        "start": 0,  "end": 85, "state": "log: [X, Y]",        "color": "#b0bec5" }
+    { "server": "Leader-1 (cmd X)", "start": 0,  "end": 13, "state": "pre-accept(X,{})",    "color": "#4fc3f7" },
+    { "server": "Leader-1 (cmd X)", "start": 14, "end": 28, "state": "commit X",            "color": "#4caf50" },
+    { "server": "Leader-2 (cmd Y)", "start": 12, "end": 26, "state": "pre-accept(Y,{})",    "color": "#ffb74d" },
+    { "server": "Leader-2 (cmd Y)", "start": 27, "end": 39, "state": "slow path: dep={X}",  "color": "#ef5350" },
+    { "server": "Leader-2 (cmd Y)", "start": 40, "end": 56, "state": "commit Y after X",    "color": "#4caf50" },
+    { "server": "Replica-1",        "start": 0,  "end": 56, "state": "log: [X, Y]",         "color": "#b0bec5" },
+    { "server": "Replica-2",        "start": 0,  "end": 56, "state": "log: [X, Y]",         "color": "#b0bec5" },
+    { "server": "Replica-3",        "start": 0,  "end": 56, "state": "log: [X, Y]",         "color": "#b0bec5" }
   ],
   "messages": [
-    { "from": "Leader-1 (cmd X)", "to": "Replica-1",        "sendTick": 5,  "recvTick": 10, "label": "pre-accept X" },
-    { "from": "Leader-1 (cmd X)", "to": "Replica-2",        "sendTick": 5,  "recvTick": 11 },
-    { "from": "Replica-1",        "to": "Leader-1 (cmd X)", "sendTick": 11, "recvTick": 17, "label": "ok, no deps" },
-    { "from": "Replica-2",        "to": "Leader-1 (cmd X)", "sendTick": 12, "recvTick": 18 },
-    { "from": "Leader-2 (cmd Y)", "to": "Replica-2",        "sendTick": 22, "recvTick": 28, "label": "pre-accept Y" },
-    { "from": "Leader-2 (cmd Y)", "to": "Replica-3",        "sendTick": 22, "recvTick": 29 },
-    { "from": "Replica-2",        "to": "Leader-2 (cmd Y)", "sendTick": 29, "recvTick": 35, "label": "dep={X} conflict!" },
-    { "from": "Replica-3",        "to": "Leader-2 (cmd Y)", "sendTick": 30, "recvTick": 38 }
+    { "from": "Leader-1 (cmd X)", "to": "Replica-1",        "sendTick": 3,  "recvTick": 7,  "label": "pre-accept X" },
+    { "from": "Leader-1 (cmd X)", "to": "Replica-2",        "sendTick": 3,  "recvTick": 8 },
+    { "from": "Leader-1 (cmd X)", "to": "Replica-3",        "sendTick": 3,  "recvTick": 9 },
+    { "from": "Replica-1",        "to": "Leader-1 (cmd X)", "sendTick": 8,  "recvTick": 13, "label": "ok, no deps" },
+    { "from": "Replica-2",        "to": "Leader-1 (cmd X)", "sendTick": 9,  "recvTick": 14 },
+    { "from": "Leader-2 (cmd Y)", "to": "Replica-1",        "sendTick": 17, "recvTick": 20 },
+    { "from": "Leader-2 (cmd Y)", "to": "Replica-2",        "sendTick": 17, "recvTick": 21, "label": "pre-accept Y" },
+    { "from": "Leader-2 (cmd Y)", "to": "Replica-3",        "sendTick": 17, "recvTick": 22 },
+    { "from": "Replica-2",        "to": "Leader-2 (cmd Y)", "sendTick": 22, "recvTick": 26, "label": "dep={X} conflict!" },
+    { "from": "Replica-3",        "to": "Leader-2 (cmd Y)", "sendTick": 23, "recvTick": 27 }
   ]
 }
 ```
@@ -654,20 +793,20 @@ Since Phase 2 (replication) runs far more often than Phase 1 (leader election), 
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 70,
+  "ticks": 56,
   "trackHeight": 44,
   "stateBandOffset": 10,
   "servers": ["Phase-1 (P=4)", "Phase-2 (A=2)", "Node-1", "Node-2", "Node-3", "Node-4", "Node-5"],
   "states": [
-    { "server": "Phase-1 (P=4)","start": 5,  "end": 30, "state": "contacts N1,N2,N3,N4",  "color": "#4fc3f7" },
-    { "server": "Phase-2 (A=2)","start": 35, "end": 60, "state": "contacts N1,N2 only",   "color": "#ffb74d" },
-    { "server": "Node-1", "start": 0,  "end": 70, "state": "elected + accepted", "color": "#81c784" },
-    { "server": "Node-2", "start": 0,  "end": 70, "state": "elected + accepted", "color": "#81c784" },
-    { "server": "Node-3", "start": 0,  "end": 33, "state": "elected",            "color": "#4fc3f7" },
-    { "server": "Node-3", "start": 34, "end": 70, "state": "idle (not covered)", "color": "#b0bec5" },
-    { "server": "Node-4", "start": 0,  "end": 33, "state": "elected",            "color": "#4fc3f7" },
-    { "server": "Node-4", "start": 34, "end": 70, "state": "idle (not covered)", "color": "#b0bec5" },
-    { "server": "Node-5", "start": 0,  "end": 70, "state": "idle (not covered)", "color": "#b0bec5" }
+    { "server": "Phase-1 (P=4)","start": 2,  "end": 26, "state": "contacts N1,N2,N3,N4",  "color": "#4fc3f7" },
+    { "server": "Phase-2 (A=2)","start": 28, "end": 52, "state": "contacts N1,N2 only",   "color": "#ffb74d" },
+    { "server": "Node-1", "start": 0,  "end": 56, "state": "elected + accepted", "color": "#81c784" },
+    { "server": "Node-2", "start": 0,  "end": 56, "state": "elected + accepted", "color": "#81c784" },
+    { "server": "Node-3", "start": 0,  "end": 27, "state": "elected",            "color": "#4fc3f7" },
+    { "server": "Node-3", "start": 28, "end": 56, "state": "idle",               "color": "#b0bec5" },
+    { "server": "Node-4", "start": 0,  "end": 27, "state": "elected",            "color": "#4fc3f7" },
+    { "server": "Node-4", "start": 28, "end": 56, "state": "idle",               "color": "#b0bec5" },
+    { "server": "Node-5", "start": 0,  "end": 56, "state": "idle",               "color": "#b0bec5" }
   ]
 }
 ```
