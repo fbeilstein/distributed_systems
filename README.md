@@ -56,6 +56,7 @@
 
 * [Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/paxos/demo.json)
 * [Multi-Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/multi-paxos/demo.json)
+* [Fast Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/fast-paxos/demo.json)
 * [RAFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/raft/demo.json)
 * [PBFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/pbft/demo.json)
 

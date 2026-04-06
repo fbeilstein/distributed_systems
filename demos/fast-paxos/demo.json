@@ -1,37 +1,44 @@
 {
-    "nodes": 7,
-    "seed": 402,
-    "ticks": 200,
+    "nodes": 8,
+    "seed": 42,
+    "ticks": 150,
+    "labelWidth": 100,
+    "minLatency": 6,
+    "latencyJitter": 3,
     "names": [
-        "Coordinator",
-        "Proposer-1",
-        "Proposer-2",
-        "Acceptor-1",
-        "Acceptor-2",
-        "Acceptor-3",
-        "Acceptor-4"
+        "Proposer-A",
+        "Acc-1",
+        "Acc-2",
+        "Acc-3",
+        "Acc-4",
+        "Acc-5",
+        "Proposer-B",
+        "Client"
     ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "proposer.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "acceptor.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "acceptor.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "acceptor.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "acceptor.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "acceptor.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "proposer.js"
+        },
+        {
+            "codeFile": "client.js"
         }
     ]
 }
