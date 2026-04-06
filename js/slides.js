@@ -1,4 +1,7 @@
 import { SlideAddons } from './slides-addons.js';
+import './addons/matrix-parser.js';
+import './addons/youtube-parser.js';
+import './addons/image-parser.js';
 import './addons/static-timeline.js';
 import './addons/static-diagram.js';
 
@@ -127,8 +130,10 @@ function parseAndInjectSlides(markdownContent) {
         slideDiv.className = 'slide';
         if (index === 0) slideDiv.classList.add('active'); // First slide visible
 
-        // Convert Markdown (including raw HTML like flexboxes) to browser HTML
-        slideDiv.innerHTML = marked.parse(rawMd);
+        // Convert Markdown (including custom wrappers and flexboxes) to browser HTML
+        rawMd = SlideAddons.preProcess(rawMd);
+        const parsedHtml = marked.parse(rawMd);
+        slideDiv.innerHTML = `<div style="position: relative; width: 100%; height: 100%; aspect-ratio: 16 / 9; margin: 0 auto; display: flex; flex-direction: column;">${parsedHtml}</div>`;
         container.appendChild(slideDiv);
 
         // Browsers block <script> tags injected via innerHTML from executing automatically.
