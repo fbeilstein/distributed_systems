@@ -1,4 +1,4 @@
-# Consensus: Raft and PBFT
+# Consensus: ZAB, Raft, and PBFT
 ## From Crash Failures to Byzantine Adversaries
 
 ---
@@ -231,6 +231,22 @@ Observe the entire Raft life cycle: Follower timeouts, split votes, leader elect
         Launch Raft Demo
     </button>
 </div>
+
+---
+
+# Paxos vs. Raft
+
+[**Raft**](https://raft.github.io/) was designed explicitly to be a more **understandable** alternative to Paxos. Both achieve Multi-Paxos semantics, but differ in design philosophy:
+
+| Property | Paxos (Multi) | Raft |
+|---|---|---|
+| Leader election | Ballot-based, any node | Term-based, log-completeness check |
+| Log replication | Proposer-driven | Leader strictly append-only |
+| Membership changes | Ad-hoc per implementation | Joint-consensus protocol |
+| Understandability | Complex (many papers needed) | Single, complete paper |
+| Performance | Comparable | Comparable |
+
+> *Raft is Paxos made explicit: it trades some flexibility for clarity and a reference implementation.*
 
 ---
 

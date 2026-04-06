@@ -324,7 +324,7 @@ If the proposer crashes before it collects a quorum of PROMISE responses, nothin
 
 ---
 
-# Failure: Proposer Fails in Phase 2 — Value Adopted
+# Failure: Proposer Fails in Phase 2
 
 The proposer committed value `'X'` to Acceptor-1, then crashed before reaching the others. A new proposer sees that `'X'` was already accepted by Acceptor-1 and **must adopt it**.
 
@@ -650,44 +650,72 @@ Two types of rounds exist:
 {
   "zoom": 0.85,
   "ticks": 56,
-  "trackHeight": 48,
+  "trackHeight": 44,
   "stateBandOffset": 10,
+  "labelWidth": 100,
   "servers": ["Coordinator", "Proposer-1", "Acceptor-1", "Acceptor-2", "Acceptor-3"],
   "states": [
-    { "server": "Coordinator",  "start": 0,  "end": 26, "state": "accept any (fast)",  "color": "#81c784" },
-    { "server": "Coordinator",  "start": 27, "end": 56, "state": "decided 'Y'",         "color": "#4caf50" },
-    { "server": "Proposer-1",   "start": 0,  "end": 14, "state": "idle",               "color": "#b0bec5" },
-    { "server": "Proposer-1",   "start": 15, "end": 26, "state": "commit 'Y' direct",  "color": "#ffb74d" },
-    { "server": "Proposer-1",   "start": 27, "end": 56, "state": "decided",            "color": "#4caf50" },
-    { "server": "Acceptor-1",   "start": 0,  "end": 19, "state": "ready for any",      "color": "#b0bec5" },
-    { "server": "Acceptor-1",   "start": 20, "end": 26, "state": "accepted 'Y'",       "color": "#81c784" },
-    { "server": "Acceptor-1",   "start": 27, "end": 56, "state": "learned 'Y'",        "color": "#4caf50" },
-    { "server": "Acceptor-2",   "start": 0,  "end": 20, "state": "ready for any",      "color": "#b0bec5" },
-    { "server": "Acceptor-2",   "start": 21, "end": 56, "state": "accepted 'Y'",       "color": "#81c784" },
-    { "server": "Acceptor-3",   "start": 0,  "end": 21, "state": "ready for any",      "color": "#b0bec5" },
-    { "server": "Acceptor-3",   "start": 22, "end": 56, "state": "accepted 'Y'",       "color": "#81c784" }
+    { "server": "Coordinator",  "start": 0,  "end": 23, "state": "wait for fast quorum", "color": "#b0bec5" },
+    { "server": "Coordinator",  "start": 24, "end": 56, "state": "decided 'Y'",          "color": "#4caf50" },
+
+    { "server": "Proposer-1",   "start": 0,  "end": 11, "state": "idle",                 "color": "#cfd8dc" },
+    { "server": "Proposer-1",   "start": 12, "end": 28, "state": "propose 'Y' direct",   "color": "#ffb74d" },
+    { "server": "Proposer-1",   "start": 29, "end": 56, "state": "learned 'Y'",          "color": "#4caf50" },
+
+    { "server": "Acceptor-1",   "start": 0,  "end": 5,  "state": "idle",                 "color": "#cfd8dc" },
+    { "server": "Acceptor-1",   "start": 6,  "end": 15, "state": "accept ANY",           "color": "#ffe082" },
+    { "server": "Acceptor-1",   "start": 16, "end": 29, "state": "accepted 'Y'",         "color": "#4fc3f7" },
+    { "server": "Acceptor-1",   "start": 30, "end": 56, "state": "learned 'Y'",          "color": "#81c784" },
+
+    { "server": "Acceptor-2",   "start": 0,  "end": 6,  "state": "idle",                 "color": "#cfd8dc" },
+    { "server": "Acceptor-2",   "start": 7,  "end": 16, "state": "accept ANY",           "color": "#ffe082" },
+    { "server": "Acceptor-2",   "start": 17, "end": 30, "state": "accepted 'Y'",         "color": "#4fc3f7" },
+    { "server": "Acceptor-2",   "start": 31, "end": 56, "state": "learned 'Y'",          "color": "#81c784" },
+
+    { "server": "Acceptor-3",   "start": 0,  "end": 7,  "state": "idle",                 "color": "#cfd8dc" },
+    { "server": "Acceptor-3",   "start": 8,  "end": 17, "state": "accept ANY",           "color": "#ffe082" },
+    { "server": "Acceptor-3",   "start": 18, "end": 31, "state": "accepted 'Y'",         "color": "#4fc3f7" },
+    { "server": "Acceptor-3",   "start": 32, "end": 45, "state": "learned 'Y'",          "color": "#81c784" }
   ],
   "messages": [
-    { "from": "Coordinator", "to": "Acceptor-1", "sendTick": 3,  "recvTick": 6,  "label": "accept any" },
-    { "from": "Proposer-1",  "to": "Acceptor-1", "sendTick": 15, "recvTick": 20, "label": "ACCEPT 'Y'" },
-    { "from": "Proposer-1",  "to": "Acceptor-2", "sendTick": 15, "recvTick": 21 },
-    { "from": "Proposer-1",  "to": "Acceptor-3", "sendTick": 15, "recvTick": 22 },
-    { "from": "Acceptor-1",  "to": "Coordinator","sendTick": 21, "recvTick": 25, "label": "ACCEPTED 'Y'" },
-    { "from": "Acceptor-2",  "to": "Coordinator","sendTick": 22, "recvTick": 26 },
-    { "from": "Acceptor-3",  "to": "Coordinator","sendTick": 23, "recvTick": 27 }
+    { "from": "Coordinator", "to": "Acceptor-1", "sendTick": 2,  "recvTick": 6,  "label": "Any" },
+    { "from": "Coordinator", "to": "Acceptor-2", "sendTick": 2,  "recvTick": 7 },
+    { "from": "Coordinator", "to": "Acceptor-3", "sendTick": 2,  "recvTick": 8 },
+
+    { "from": "Proposer-1",  "to": "Acceptor-1", "sendTick": 12, "recvTick": 16, "label": "Fast Propose 'Y'" },
+    { "from": "Proposer-1",  "to": "Acceptor-2", "sendTick": 12, "recvTick": 17 },
+    { "from": "Proposer-1",  "to": "Acceptor-3", "sendTick": 12, "recvTick": 18 },
+
+    { "from": "Acceptor-1",  "to": "Coordinator","sendTick": 17, "recvTick": 21, "label": "Accepted 'Y'" },
+    { "from": "Acceptor-2",  "to": "Coordinator","sendTick": 18, "recvTick": 22 },
+    { "from": "Acceptor-3",  "to": "Coordinator","sendTick": 19, "recvTick": 23 },
+
+    { "from": "Coordinator", "to": "Proposer-1", "sendTick": 25, "recvTick": 29, "label": "Learn 'Y'" },
+    { "from": "Coordinator", "to": "Acceptor-1", "sendTick": 25, "recvTick": 30 },
+    { "from": "Coordinator", "to": "Acceptor-2", "sendTick": 25, "recvTick": 31 },
+    { "from": "Coordinator", "to": "Acceptor-3", "sendTick": 25, "recvTick": 32 }
   ]
 }
 ```
 
 > **Quorum increase required**: to survive collisions, Fast Paxos needs **3f + 1** total acceptors (vs. **2f + 1** in classic) and a fast quorum of **2f + 1** (vs. **f + 1**).
 
+---
+
+# Fast Paxos Demo
+
 <div class="callout-box">
-    <h4>What to watch</h4>
-    <p>Watch the Coordinator open a fast round, and two proposers bypass it to send conflicting ACCEPT messages simultaneously. The Coordinator detects the collision from the split votes and successfully falls back to a Classic Paxos round to resolve it.</p>
+    <h4>What to watch: Production vs. Academic Fast Paxos</h4>
+    <p>This demo illustrates how Fast Paxos is built in <strong>production systems</strong>, which differs from the strict academic model in two key ways:</p>
+    <ul>
+        <li><strong>Proxy Proposers:</strong> Instead of clients executing the complex Paxos protocol themselves, they send standard requests to dedicated Proposer nodes (acting as secure API Gateways).</li>
+        <li><strong>The "Implicit Any":</strong> To save network bandwidth, the Coordinator does not constantly broadcast "Accept Any." The Acceptors boot up already primed to accept fast messages.</li>
+    </ul>
+    <p><em>The Action:</em> Watch the two Proposers bypass the Coordinator to send conflicting messages simultaneously. When the Acceptors split their votes, notice how the system detects the <strong>Collision</strong> and falls back to a Classic Paxos round to recover.</p>
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/fast-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #43a047; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/fast-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Fast Paxos Demo
     </button>
 </div>
@@ -871,22 +899,6 @@ Paxos is more of a **family of algorithms** than a single protocol. Production s
 | **CockroachDB** | Multi-Raft (Raft groups per range) |
 
 > *Most systems that claim to use "Paxos" actually implement a Paxos **variant** optimized for their specific workload and deployment topology.*
-
----
-
-# Paxos vs. Raft
-
-[**Raft**](https://raft.github.io/) was designed explicitly to be a more **understandable** alternative to Paxos. Both achieve Multi-Paxos semantics, but differ in design philosophy:
-
-| Property | Paxos (Multi) | Raft |
-|---|---|---|
-| Leader election | Ballot-based, any node | Term-based, log-completeness check |
-| Log replication | Proposer-driven | Leader strictly append-only |
-| Membership changes | Ad-hoc per implementation | Joint-consensus protocol |
-| Understandability | Complex (many papers needed) | Single, complete paper |
-| Performance | Comparable | Comparable |
-
-> *Raft is Paxos made explicit: it trades some flexibility for clarity and a reference implementation.*
 
 ---
 
