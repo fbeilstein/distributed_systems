@@ -5,8 +5,9 @@ if (!timeline.engine.history || timeline.engine.history.length === 0) return;
 const scrubberX = timeline.tickToX(timeline.scrubberTick);
 const historyState = engine.history[timeline.scrubberTick].serverStates;
 
-const acceptors = [0, 1, 2];
-const labels = { 0: 'A1', 1: 'A2', 2: 'A3' };
+// UPDATED: Acceptors are now in slots 1, 2, and 3
+const acceptors = [1, 2, 3];
+const labels = { 1: 'A1', 2: 'A2', 3: 'A3' };
 
 const boxWidth = 30;
 const boxHeight = 15;

@@ -1,16 +1,21 @@
 {
     "seed": 42,
     "ticks": 150,
-    "nodes": 4,
+    "nodes": 5,
     "minLatency": 5,
+    "labelWidth": 100,
     "names": [
+        "Client-A",
         "Acceptor-1",
         "Acceptor-2",
         "Acceptor-3",
-        "Client"
+        "Client-B"
     ],
     "customRenderFile": "render.js",
     "servers": [
+        {
+            "codeFile": "client.js"
+        },
         {
             "codeFile": "acceptor.js"
         },
