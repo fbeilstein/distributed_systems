@@ -6,12 +6,11 @@ const SLOW_QUORUM = 3; // Standard majority
 
 class BaseReplicaState extends State {
 
-    // Explicit background handlers (Fixes the broken switch statement)
+    // Explicit background handlers
     handlePreAccept(msg) {
         const { inst, key } = msg.payload;
         const localDep = this.machine.keyDeps[key] || null;
 
-        // Update local dependency tracking
         this.machine.keyDeps[key] = inst;
 
         sendMessage(msg.from, {
@@ -26,17 +25,38 @@ class BaseReplicaState extends State {
         sendMessage(msg.from, { type: 'ACCEPT-OK', inst: inst }, 'blue');
     }
 
+    handleCommit(msg) {
+        const { key, val, inst } = msg.payload;
+        if (key && val) {
+            // DETERMINISTIC TIE-BREAKER: 
+            // Only overwrite if this instance ID is "higher" than the last one that wrote to this key.
+            // This forces all nodes to apply conflicting commits in the exact same order!
+            if (!this.machine.db_inst[key] || inst > this.machine.db_inst[key]) {
+                this.machine.db[key] = val;
+                this.machine.db_inst[key] = inst;
+            }
+        }
+    }
+
     getBackgroundHandlers() {
         return {
             'PRE-ACCEPT': (msg) => this.handlePreAccept(msg),
             'ACCEPT': (msg) => this.handleAccept(msg),
-            'COMMIT': (msg) => { /* Finalize commit locally */ }
+            'COMMIT': (msg) => this.handleCommit(msg)
         };
     }
 }
 
 class Idle extends BaseReplicaState {
-    getState() { return ['idle', '#cfd8dc']; }
+    getState() {
+        // Dynamically show the contents of the database while idle
+        const keys = Object.keys(this.machine.db);
+        if (keys.length === 0) return ['idle', '#cfd8dc'];
+
+        const dbState = keys.map(k => `${k}:${this.machine.db[k]}`).join(', ');
+        return [`idle [${dbState}]`, '#b0bec5']; // Slightly darker gray to indicate it holds data
+    }
+
     canTransition() { return ['preaccepting']; }
 
     registerMessageTypes() {
@@ -51,11 +71,9 @@ class Idle extends BaseReplicaState {
                 this.machine.initialDep = this.machine.keyDeps[key] || null;
                 this.machine.keyDeps[key] = this.machine.activeInst;
 
-                // IMPLICIT SELF-VOTE: We instantly approve our own command!
                 this.machine.preAcceptReplies = [serverId];
                 this.machine.depsMatch = true;
 
-                // Only broadcast to PEERS (Fixes the "sending message to itself" bug)
                 const peers = REPLICAS.filter(r => r !== serverId);
                 broadcast(peers, {
                     type: 'PRE-ACCEPT',
@@ -79,27 +97,29 @@ class Preaccepting extends BaseReplicaState {
                 const { inst, dep } = msg.payload;
                 if (inst !== this.machine.activeInst) return;
 
-                // Track peer votes
                 if (!this.machine.preAcceptReplies.includes(msg.from)) {
                     this.machine.preAcceptReplies.push(msg.from);
                 }
 
-                // If any replica reports a different dependency, the Fast Path is broken!
                 if (dep !== this.machine.initialDep) {
                     this.machine.depsMatch = false;
                 }
 
-                // Check for Quorum
                 if (this.machine.preAcceptReplies.length >= FAST_QUORUM) {
                     const peers = REPLICAS.filter(r => r !== serverId);
 
                     if (this.machine.depsMatch) {
-                        // FAST PATH! Unanimous agreement
-                        broadcast(peers, { type: 'COMMIT', inst: this.machine.activeInst }, 'purple');
+                        // FAST PATH! Broadcast the value so background nodes can save it
+                        broadcast(peers, {
+                            type: 'COMMIT',
+                            inst: this.machine.activeInst,
+                            key: this.machine.activeKey,
+                            val: this.machine.activeVal
+                        }, 'purple');
                         this.transition('committed');
                     } else {
-                        // SLOW PATH! Dependencies mismatched. Fallback to Accept Phase.
-                        this.machine.acceptReplies = [serverId]; // Implicit self-vote
+                        // SLOW PATH!
+                        this.machine.acceptReplies = [serverId];
                         broadcast(peers, { type: 'ACCEPT', inst: this.machine.activeInst, key: this.machine.activeKey }, 'blue');
                         this.transition('accepting');
                     }
@@ -125,7 +145,13 @@ class Accepting extends BaseReplicaState {
 
                 if (this.machine.acceptReplies.length >= SLOW_QUORUM) {
                     const peers = REPLICAS.filter(r => r !== serverId);
-                    broadcast(peers, { type: 'COMMIT', inst: this.machine.activeInst }, 'purple');
+                    // SLOW COMMIT! Broadcast the value so background nodes can save it
+                    broadcast(peers, {
+                        type: 'COMMIT',
+                        inst: this.machine.activeInst,
+                        key: this.machine.activeKey,
+                        val: this.machine.activeVal
+                    }, 'purple');
                     this.transition('committed');
                 }
             }
@@ -134,14 +160,18 @@ class Accepting extends BaseReplicaState {
 }
 
 class Committed extends BaseReplicaState {
-    getState() { return [`FAST Commit (${this.machine.activeKey})`, '#81c784']; }
+    getState() { return [`FAST Commit (${this.machine.activeVal})`, '#81c784']; }
 
     onEnter() {
+        // Save to the Command Leader's local database
+        this.machine.db[this.machine.activeKey] = this.machine.activeVal;
+
         if (!this.machine.depsMatch) {
-            this.getState = () => [`SLOW Commit (${this.machine.activeKey})`, '#4db6ac'];
+            this.getState = () => [`SLOW Commit (${this.machine.activeVal})`, '#4db6ac'];
         }
-        // Let the state linger visually, then return to idle to accept new commands
-        this.setTimeout(25, 'reset', 'commit_timer');
+
+        // Timeout reduced to 10 ticks!
+        this.setTimeout(10, 'reset', 'commit_timer');
     }
 
     reset() { this.transition('idle'); }
@@ -157,8 +187,12 @@ class ReplicaMachine extends Machine {
         this.localSeq = 0;
         this.keyDeps = {};
 
+        this.db = {};
+        this.db_inst = {};
+
         this.activeInst = null;
         this.activeKey = null;
+        this.activeVal = null;
         this.initialDep = null;
         this.depsMatch = true;
         this.preAcceptReplies = [];
