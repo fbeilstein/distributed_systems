@@ -74,6 +74,15 @@ html {
     transition: background-color 0.3s, box-shadow 0.3s;
 }
 
+/* Image Scaling Fix */
+.slide img {
+    max-width: 100%;
+    max-height: 75vh; /* 75vh leaves room for your slide titles */
+    object-fit: contain;
+    display: block;
+    margin: 10px auto; /* Centers the image horizontally */
+}
+
 .slide.active {
     display: block;
     animation: fade-in 0.3s ease-out forwards;
