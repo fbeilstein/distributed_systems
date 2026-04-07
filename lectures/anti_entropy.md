@@ -171,6 +171,7 @@ To actively detect exactly which bytes differ between the network responses, dat
 
 # Digest Reads
 
+
 ```static-timeline
 {
   "zoom": 1.0,
@@ -197,6 +198,7 @@ To actively detect exactly which bytes differ between the network responses, dat
   ]
 }
 ```
+
 
 While Read Repair guarantees consistency, there is a fundamental network problem: **reading full payloads of data from every single node in the Quorum takes far too long.**
 

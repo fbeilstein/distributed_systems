@@ -724,13 +724,13 @@ Two types of rounds exist:
 
 # Egalitarian Paxos (EPaxos)
 
-Classic Paxos and Multi-Paxos rely on a **single leader** — a bottleneck and point of failure.
+Classic Paxos and Multi-Paxos rely on a **single leader** - a bottleneck and point of failure.
 
 **EPaxos** (Egalitarian Paxos) allows **any replica to act as leader** for its own proposals. Order is established not by voting sequence, but by tracking **dependencies**: two commands that potentially conflict must be ordered relative to each other via a dependency graph.
 
 Each proposal includes:
-* **A dependency set** — all potentially interfering commands not yet committed.
-* **A sequence number** — breaks cycles in the dependency graph.
+* **A dependency set** - all potentially interfering commands not yet committed.
+* **A sequence number** - breaks cycles in the dependency graph.
 
 ---
 
@@ -745,54 +745,77 @@ EPaxos has two execution paths:
 
 Commands are executed **after all their dependencies** (and their dependencies' dependencies) are committed and executed. Non-conflicting commands can execute in parallel.
 
-> *The key insight: sharing data between acceptors isn't the problem — the problem is applying operations in a consistent order without corrupting local storage.*
+> *The key insight: sharing data between acceptors isn't the problem - the problem is applying operations in a consistent order without corrupting local storage.*
 
 ---
 
 # EPaxos Timeline
 
+Notice how <strong>R1</strong> receives unanimous agreement that <code>X</code> has no dependencies, allowing it to commit instantly on the Fast Path. Shortly after, <strong>R5</strong> tries to fast-track <code>Y</code>. However, its own local state says <code>Y</code> has no dependencies, while its peers reply that <code>Y</code> depends on <code>X</code>. Because these dependencies mismatch, R5 is mathematically forced into the Slow Path to safely lock in the order.
+
 ```static-timeline
 {
-  "zoom": 0.85,
-  "ticks": 56,
+  "zoom": 0.9,
+  "ticks": 30,
   "trackHeight": 44,
   "stateBandOffset": 10,
-  "servers": ["Leader-1 (cmd X)", "Leader-2 (cmd Y)", "Replica-1", "Replica-2", "Replica-3"],
+  "labelWidth": 120,
+  "float": "center",
+  "width": "65%",
+  "servers": ["R1 (Cmd X)", "R2", "R3", "R4", "R5 (Cmd Y)"],
   "states": [
-    { "server": "Leader-1 (cmd X)", "start": 0,  "end": 13, "state": "pre-accept(X,{})",    "color": "#4fc3f7" },
-    { "server": "Leader-1 (cmd X)", "start": 14, "end": 28, "state": "commit X",            "color": "#4caf50" },
-    { "server": "Leader-2 (cmd Y)", "start": 12, "end": 26, "state": "pre-accept(Y,{})",    "color": "#ffb74d" },
-    { "server": "Leader-2 (cmd Y)", "start": 27, "end": 39, "state": "slow path: dep={X}",  "color": "#ef5350" },
-    { "server": "Leader-2 (cmd Y)", "start": 40, "end": 56, "state": "commit Y after X",    "color": "#4caf50" },
-    { "server": "Replica-1",        "start": 0,  "end": 56, "state": "log: [X, Y]",         "color": "#b0bec5" },
-    { "server": "Replica-2",        "start": 0,  "end": 56, "state": "log: [X, Y]",         "color": "#b0bec5" },
-    { "server": "Replica-3",        "start": 0,  "end": 56, "state": "log: [X, Y]",         "color": "#b0bec5" }
+    { "server": "R1 (Cmd X)", "start": 0,  "end": 8,  "state": "Pre-Accept (X)",  "color": "#ffb74d" },
+    { "server": "R1 (Cmd X)", "start": 9,  "end": 30, "state": "FAST COMMIT (X)", "color": "#81c784" },
+    
+    { "server": "R5 (Cmd Y)", "start": 5,  "end": 13, "state": "Pre-Accept (Y)",  "color": "#ffb74d" },
+    { "server": "R5 (Cmd Y)", "start": 14, "end": 22, "state": "Slow Accept (Y)", "color": "#64b5f6" },
+    { "server": "R5 (Cmd Y)", "start": 23, "end": 30, "state": "SLOW COMMIT (Y)", "color": "#4db6ac" },
+    
+    { "server": "R2", "start": 0, "end": 30, "state": "idle", "color": "#cfd8dc" },
+    { "server": "R3", "start": 0, "end": 30, "state": "idle", "color": "#cfd8dc" },
+    { "server": "R4", "start": 0, "end": 30, "state": "idle", "color": "#cfd8dc" }
   ],
   "messages": [
-    { "from": "Leader-1 (cmd X)", "to": "Replica-1",        "sendTick": 3,  "recvTick": 7,  "label": "pre-accept X" },
-    { "from": "Leader-1 (cmd X)", "to": "Replica-2",        "sendTick": 3,  "recvTick": 8 },
-    { "from": "Leader-1 (cmd X)", "to": "Replica-3",        "sendTick": 3,  "recvTick": 9 },
-    { "from": "Replica-1",        "to": "Leader-1 (cmd X)", "sendTick": 8,  "recvTick": 13, "label": "ok, no deps" },
-    { "from": "Replica-2",        "to": "Leader-1 (cmd X)", "sendTick": 9,  "recvTick": 14 },
-    { "from": "Leader-2 (cmd Y)", "to": "Replica-1",        "sendTick": 17, "recvTick": 20 },
-    { "from": "Leader-2 (cmd Y)", "to": "Replica-2",        "sendTick": 17, "recvTick": 21, "label": "pre-accept Y" },
-    { "from": "Leader-2 (cmd Y)", "to": "Replica-3",        "sendTick": 17, "recvTick": 22 },
-    { "from": "Replica-2",        "to": "Leader-2 (cmd Y)", "sendTick": 22, "recvTick": 26, "label": "dep={X} conflict!" },
-    { "from": "Replica-3",        "to": "Leader-2 (cmd Y)", "sendTick": 23, "recvTick": 27 }
+    { "from": "R1 (Cmd X)", "to": "R2", "sendTick": 1, "recvTick": 4, "label": "PreAc(X)" },
+    { "from": "R1 (Cmd X)", "to": "R3", "sendTick": 1, "recvTick": 4 },
+    { "from": "R1 (Cmd X)", "to": "R4", "sendTick": 1, "recvTick": 4 },
+    { "from": "R2", "to": "R1 (Cmd X)", "sendTick": 4, "recvTick": 8, "label": "OK(dep=[])" },
+    { "from": "R3", "to": "R1 (Cmd X)", "sendTick": 4, "recvTick": 8 },
+    { "from": "R4", "to": "R1 (Cmd X)", "sendTick": 4, "recvTick": 8 },
+
+    { "from": "R5 (Cmd Y)", "to": "R2", "sendTick": 6, "recvTick": 9, "label": "PreAc(Y)" },
+    { "from": "R5 (Cmd Y)", "to": "R3", "sendTick": 6, "recvTick": 9 },
+    { "from": "R5 (Cmd Y)", "to": "R4", "sendTick": 6, "recvTick": 9 },
+    
+    { "from": "R2", "to": "R5 (Cmd Y)", "sendTick": 9, "recvTick": 13, "label": "OK(dep=[X])" },
+    { "from": "R3", "to": "R5 (Cmd Y)", "sendTick": 9, "recvTick": 13 },
+    { "from": "R4", "to": "R5 (Cmd Y)", "sendTick": 9, "recvTick": 13 },
+
+    { "from": "R5 (Cmd Y)", "to": "R2", "sendTick": 14, "recvTick": 18, "label": "Accept(Y, [X])" },
+    { "from": "R5 (Cmd Y)", "to": "R3", "sendTick": 14, "recvTick": 18 },
+    { "from": "R5 (Cmd Y)", "to": "R4", "sendTick": 14, "recvTick": 18 },
+    
+    { "from": "R2", "to": "R5 (Cmd Y)", "sendTick": 18, "recvTick": 22, "label": "Accept-OK" },
+    { "from": "R3", "to": "R5 (Cmd Y)", "sendTick": 18, "recvTick": 22 },
+    { "from": "R4", "to": "R5 (Cmd Y)", "sendTick": 18, "recvTick": 22 }
   ]
 }
 ```
 
-<div class="callout-box">
-    <h4>What to watch</h4>
-    <p>Watch two leaders propose conflicting commands (set_x and inc_x) simultaneously. Leader-1 commits immediately via the Fast Path, while Leader-2's replicas detect the conflict, forcing Leader-2 into the Slow Path to merge dependencies. Both execute sequentially in correct dependency order.</p>
-</div>
+
+---
+
+# Demo
+
+> Note: In the demo, we use a deterministic tie-breaker to keep the visual simulation readable (highest Instance ID wins). In real EPaxos, replicas do not apply data to the database the moment a COMMIT message arrives. Instead, they write the commit to a pending log, perform a topological sort on the dependency graph, and then execute the commands in the determined order.
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/epaxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #8e24aa; color: white; border: none; border-radius: 6px; cursor: pointer;">
-        Launch EPaxos Demo
-    </button>
+<button class="demo-btn" onclick="showDemo('demos/epaxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+Launch EPaxos Demo
+</button>
 </div>
+
+> Replicas in real EPaxos do not apply data to the database the moment a COMMIT message arrives. Instead, they write the commit to a pending log, perform a **topological sort** on the dependency graph, and then execute the commands in the determined order.
 
 ---
 
@@ -818,30 +841,64 @@ Since Phase 2 (replication) runs far more often than Phase 1 (leader election), 
 | Flexible (latency-optimized) | 4 | 2 | Faster writes |
 | Flexible (election-heavy) | 5 | 1 | Single-node accepts |
 
+
+**Vertical Paxos** applies the same idea to read/write quorums: read quorums and write quorums must intersect, allowing smaller write quorums.
+
+---
+
+# Flexible Paxos Timeline
+
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 56,
+  "ticks": 45,
   "trackHeight": 44,
   "stateBandOffset": 10,
-  "servers": ["Phase-1 (P=4)", "Phase-2 (A=2)", "Node-1", "Node-2", "Node-3", "Node-4", "Node-5"],
+  "labelWidth": 100,
+  "servers": ["Leader", "Node-1", "Node-2", "Node-3", "Node-4", "Node-5"],
   "states": [
-    { "server": "Phase-1 (P=4)","start": 2,  "end": 26, "state": "contacts N1,N2,N3,N4",  "color": "#4fc3f7" },
-    { "server": "Phase-2 (A=2)","start": 28, "end": 52, "state": "contacts N1,N2 only",   "color": "#ffb74d" },
-    { "server": "Node-1", "start": 0,  "end": 56, "state": "elected + accepted", "color": "#81c784" },
-    { "server": "Node-2", "start": 0,  "end": 56, "state": "elected + accepted", "color": "#81c784" },
-    { "server": "Node-3", "start": 0,  "end": 27, "state": "elected",            "color": "#4fc3f7" },
-    { "server": "Node-3", "start": 28, "end": 56, "state": "idle",               "color": "#b0bec5" },
-    { "server": "Node-4", "start": 0,  "end": 27, "state": "elected",            "color": "#4fc3f7" },
-    { "server": "Node-4", "start": 28, "end": 56, "state": "idle",               "color": "#b0bec5" },
-    { "server": "Node-5", "start": 0,  "end": 56, "state": "idle",               "color": "#b0bec5" }
+    { "server": "Leader", "start": 0,  "end": 4,  "state": "idle", "color": "#cfd8dc" },
+    { "server": "Leader", "start": 5,  "end": 22, "state": "Phase 1 (P=4)", "color": "#ffb74d" },
+    { "server": "Leader", "start": 23, "end": 45, "state": "Phase 2 (A=2)", "color": "#4fc3f7" },
+    
+    { "server": "Node-1", "start": 0,  "end": 7,  "state": "idle", "color": "#cfd8dc" },
+    { "server": "Node-1", "start": 8,  "end": 26, "state": "promised", "color": "#ffe082" },
+    { "server": "Node-1", "start": 27, "end": 45, "state": "accepted", "color": "#81c784" },
+    
+    { "server": "Node-2", "start": 0,  "end": 8,  "state": "idle", "color": "#cfd8dc" },
+    { "server": "Node-2", "start": 9,  "end": 27, "state": "promised", "color": "#ffe082" },
+    { "server": "Node-2", "start": 28, "end": 45, "state": "accepted", "color": "#81c784" },
+    
+    { "server": "Node-3", "start": 0,  "end": 9,  "state": "idle", "color": "#cfd8dc" },
+    { "server": "Node-3", "start": 10, "end": 45, "state": "promised (excluded from P2)", "color": "#ffe082" },
+    
+    { "server": "Node-4", "start": 0,  "end": 10, "state": "idle", "color": "#cfd8dc" },
+    { "server": "Node-4", "start": 11, "end": 45, "state": "promised (excluded from P2)", "color": "#ffe082" },
+    
+    { "server": "Node-5", "start": 0,  "end": 45, "state": "idle (excluded entirely)", "color": "#cfd8dc" }
+  ],
+  "messages": [
+    { "from": "Leader", "to": "Node-1", "sendTick": 5, "recvTick": 8, "label": "PREPARE" },
+    { "from": "Leader", "to": "Node-2", "sendTick": 5, "recvTick": 9 },
+    { "from": "Leader", "to": "Node-3", "sendTick": 5, "recvTick": 10 },
+    { "from": "Leader", "to": "Node-4", "sendTick": 5, "recvTick": 11 },
+    
+    { "from": "Node-1", "to": "Leader", "sendTick": 9,  "recvTick": 13, "label": "PROMISE" },
+    { "from": "Node-2", "to": "Leader", "sendTick": 10, "recvTick": 14 },
+    { "from": "Node-3", "to": "Leader", "sendTick": 11, "recvTick": 15 },
+    { "from": "Node-4", "to": "Leader", "sendTick": 12, "recvTick": 16 },
+    
+    { "from": "Leader", "to": "Node-1", "sendTick": 23, "recvTick": 27, "label": "ACCEPT" },
+    { "from": "Leader", "to": "Node-2", "sendTick": 23, "recvTick": 28 },
+    
+    { "from": "Node-1", "to": "Leader", "sendTick": 28, "recvTick": 32, "label": "ACCEPTED" },
+    { "from": "Node-2", "to": "Leader", "sendTick": 29, "recvTick": 33 }
   ]
 }
 ```
 
 > *Nodes 1 and 2 are the intersection — they participated in both phases, ensuring a new leader in Phase 1 will always overlap with at least one node that saw the committed value.*
 
-**Vertical Paxos** applies the same idea to read/write quorums: read quorums and write quorums must intersect, allowing smaller write quorums.
 
 ---
 
@@ -855,6 +912,10 @@ A more recent reformulation simplifies Paxos to a few core concepts, removing th
   * Unwritten
   * Containing a value
   * Containing **nil** (explicitly empty)
+
+---
+
+# Generalized Solution to Consensus
 
 **Register sets**: registers with the same index across servers form a **register set**. Each has one or more quorums, each in one of four states:
 
@@ -875,6 +936,14 @@ A more recent reformulation simplifies Paxos to a few core concepts, removing th
 2. If the register is unwritten, the server sets all lower registers to **nil** (preventing writes to previous slots) and responds with its known register set.
 3. If a majority responds, the client picks the nonempty value with the largest index — or its own value if all registers are unwritten.
 4. Otherwise, restart Phase 1.
+
+> A register can never be overwritten once it transitions away from the "unwritten" state.
+
+> We set lower registers to nil. In traditional Paxos, this is exactly what a "Promise" is. By promising not to accept older ballots, an acceptor is essentially doing a bulk-write of nil to every register index from $0$ up to $N-1$.
+
+---
+
+# Generalized Algorithm Phases
 
 **Phase 2 — P2A**
 
