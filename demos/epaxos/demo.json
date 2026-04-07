@@ -1,29 +1,36 @@
 {
-    "nodes": 5,
-    "seed": 283,
-    "ticks": 100,
+    "nodes": 6,
+    "seed": 42,
+    "ticks": 140,
+    "labelWidth": 90,
+    "minLatency": 5,
+    "latencyJitter": 2,
     "names": [
-        "Leader-1 (set_x)",
-        "Leader-2 (inc_x)",
         "Replica-1",
         "Replica-2",
-        "Replica-3"
+        "Replica-3",
+        "Replica-4",
+        "Replica-5",
+        "Client"
     ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "replica.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "replica.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "replica.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "replica.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "replica.js"
+        },
+        {
+            "codeFile": "client.js"
         }
     ]
 }
