@@ -85,15 +85,24 @@ html {
 
 /* --- Fix for images inside the custom Matrix Grid --- */
 
+/* --- Fix for Matrix Grid Content --- */
+
 .matrix-cell {
     display: flex;
     flex-direction: column;
+    justify-content: flex-start; /* Текст будет аккуратно прижиматься к верхнему краю */
 }
 
-/* Marked.js wraps images in <p> tags. We force the <p> to perfectly fill the grid cell */
+/* 1. Обычные текстовые абзацы: запрещаем раздувать сетку, возвращаем нормальные отступы */
 .matrix-cell p {
+    min-height: 0; 
+    margin-top: 0;
+    margin-bottom: 15px; 
+}
+
+/* 2. ТОЛЬКО абзацы с картинками получают flex: 1 для центрирования и масштабирования */
+.matrix-cell p:has(img) {
     flex: 1; 
-    min-height: 0; /* CRITICAL: Prevents flexbox from stretching beyond the grid row */
     margin: 0;
     display: flex;
     align-items: center;
@@ -102,7 +111,7 @@ html {
 
 .matrix-cell img {
     max-width: 100%;
-    max-height: 100%; /* Now constrained to the 42% cell height, NOT the 75vh screen height! */
+    max-height: 100%; 
     object-fit: contain;
     margin: 0; 
 }
