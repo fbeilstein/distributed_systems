@@ -9,6 +9,8 @@
 * [Consistency](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/consistency.md)
 * [Anti-Entropy and Dissemination](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/anti_entropy.md)
 * [Distributed Transactions](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/distributed_transactions.md)
+* [Consensus: Paxos](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/consensus_paxos.md)
+
 
 ## Demos
 
@@ -52,11 +54,17 @@
 * [3 Phase Commit](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/transactions-three-phase-commit/demo.json)
 * [Consistent Hashing](https://fbeilstein.github.io/distributed_systems/demos/transactions-consistent-hashing/index.html)
 
-### Consensus (under development)
+### Consensus: Paxos
 
-* [Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/paxos/demo.json)
-* [Multi-Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/multi-paxos/demo.json)
-* [Fast Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/fast-paxos/demo.json)
+* [Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/consensus-paxos/demo.json)
+* [Multi-Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/consensus-multi-paxos/demo.json)
+* [Fast Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/consensus-fast-paxos/demo.json)
+* [Egalitarian Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/consensus-egalitarian-paxos/demo.json)
+* [Flexible Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/consensus-flexible-paxos/demo.json)
+* [Generalized Paxos](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/consensus-generalized-paxos/demo.json)
+
+### Consensus: ZAB, Raft, PBFT (under development)
+
 * [RAFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/raft/demo.json)
 * [PBFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/pbft/demo.json)
 

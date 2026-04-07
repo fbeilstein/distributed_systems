@@ -220,7 +220,7 @@ This simulation demonstrates the complete Paxos flow — **two proposers start s
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/consensus-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Classic Paxos Demo
     </button>
 </div>
@@ -625,7 +625,7 @@ This simulation shows the optimization in action. The first round is a full Paxo
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/multi-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/consensus-multi-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Multi-Paxos Demo
     </button>
 </div>
@@ -715,7 +715,7 @@ Two types of rounds exist:
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/fast-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/consensus-fast-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
         Launch Fast Paxos Demo
     </button>
 </div>
@@ -810,8 +810,8 @@ Notice how <strong>R1</strong> receives unanimous agreement that <code>X</code> 
 > Note: In the demo, we use a deterministic tie-breaker to keep the visual simulation readable (highest Instance ID wins). In real EPaxos, replicas do not apply data to the database the moment a COMMIT message arrives. Instead, they write the commit to a pending log, perform a topological sort on the dependency graph, and then execute the commands in the determined order.
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-<button class="demo-btn" onclick="showDemo('demos/epaxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
-Launch EPaxos Demo
+<button class="demo-btn" onclick="showDemo('demos/consensus-egalitarian-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+Launch Egalitarian Paxos Demo
 </button>
 </div>
 
@@ -830,6 +830,12 @@ If the total number of participants is `N`, Phase 1 quorum size is `P`, and Phas
 $$A + P > N$$
 
 Since Phase 2 (replication) runs far more often than Phase 1 (leader election), we can make `A` much smaller than `P`.
+
+<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+<button class="demo-btn" onclick="showDemo('demos/consensus-flexible-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+Launch Flexible Paxos Demo
+</button>
+</div>
 
 ---
 
@@ -952,6 +958,12 @@ A more recent reformulation simplifies Paxos to a few core concepts, removing th
 3. Otherwise, restart from Phase 1.
 
 > *This generalizes single-decree Paxos: the ballot number maps to the register index, and the promise/accept mechanism maps to the nil/value write rules.*
+
+<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
+<button class="demo-btn" onclick="showDemo('demos/consensus-generalized-paxos/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+Launch Generalized Paxos Demo
+</button>
+</div>
 
 ---
 
