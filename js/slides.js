@@ -133,7 +133,7 @@ function parseAndInjectSlides(markdownContent) {
         // Convert Markdown (including custom wrappers and flexboxes) to browser HTML
         rawMd = SlideAddons.preProcess(rawMd);
         const parsedHtml = marked.parse(rawMd);
-        slideDiv.innerHTML = `<div style="position: relative; width: 100%; height: 100%; margin: 0 auto; display: block;">${parsedHtml}</div>`;
+        slideDiv.innerHTML = `<div style="position: relative; width: 100%; margin: 0 auto; display: block;">${parsedHtml}</div>`;
         container.appendChild(slideDiv);
 
         // Browsers block <script> tags injected via innerHTML from executing automatically.
