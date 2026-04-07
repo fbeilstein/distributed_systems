@@ -83,6 +83,30 @@ html {
     margin: 10px auto; /* Centers the image horizontally */
 }
 
+/* --- Fix for images inside the custom Matrix Grid --- */
+
+.matrix-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Marked.js wraps images in <p> tags. We force the <p> to perfectly fill the grid cell */
+.matrix-cell p {
+    flex: 1; 
+    min-height: 0; /* CRITICAL: Prevents flexbox from stretching beyond the grid row */
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.matrix-cell img {
+    max-width: 100%;
+    max-height: 100%; /* Now constrained to the 42% cell height, NOT the 75vh screen height! */
+    object-fit: contain;
+    margin: 0; 
+}
+
 .slide.active {
     display: block;
     animation: fade-in 0.3s ease-out forwards;
