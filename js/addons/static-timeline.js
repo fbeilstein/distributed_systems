@@ -83,9 +83,16 @@ SlideAddons.register('static-timeline', (block) => {
 
         // Apply custom alignment formatting
         if (config.float) {
-            container.style.float = config.float;
-            container.style.margin = '15px';
-            container.style.marginTop = '5px';
+            if (config.float === 'center') {
+                container.style.marginLeft = 'auto';
+                container.style.marginRight = 'auto';
+                container.style.float = 'none';
+                container.style.display = 'block';
+            } else {
+                container.style.float = config.float;
+                container.style.margin = '15px';
+                container.style.marginTop = '5px';
+            }
         }
         if (config.width) {
             container.style.width = config.width;
