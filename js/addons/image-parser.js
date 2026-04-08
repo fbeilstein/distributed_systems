@@ -1,17 +1,21 @@
 import { SlideAddons } from '../slides-addons.js';
 
 export function parseImages(markdown) {
-    // Match extended markdown images: ![alt](url){config}
-    const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)\s*\{([^}]+)\}/g;
+    // UPDATED REGEX: The {config} block at the end is now optional (?:...)?
+    const imgRegex = /!\[([^\]]*)\]\(([^)]+)\)(?:\s*\{([^}]+)\})?/g;
 
     return markdown.replace(imgRegex, (match, alt, src, configStr) => {
         // Skip youtube blocks since they have their own parser
         if (alt === 'youtube') return match;
 
         const config = {};
-        const configMatches = configStr.matchAll(/([a-zA-Z0-9_-]+)(?:=(?:"([^"]+)"|([^\s}]+)))?/g);
-        for (const m of configMatches) {
-            config[m[1]] = m[2] !== undefined ? m[2] : (m[3] !== undefined ? m[3] : true);
+        
+        // Only parse parameters if the {config} block actually exists
+        if (configStr) {
+            const configMatches = configStr.matchAll(/([a-zA-Z0-9_-]+)(?:=(?:"([^"]+)"|([^\s}]+)))?/g);
+            for (const m of configMatches) {
+                config[m[1]] = m[2] !== undefined ? m[2] : (m[3] !== undefined ? m[3] : true);
+            }
         }
 
         const parseDim = (val) => {

@@ -116,6 +116,11 @@ html {
     margin: 0;
 }
 
+/* Defeats the hidden <p> tag injected by marked.js */
+.cell-media p {
+    display: contents; 
+}
+
 
 
 
