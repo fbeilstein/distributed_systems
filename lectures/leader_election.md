@@ -143,7 +143,7 @@ While elegant in its simplicity, the Bully algorithm has two fatal flaws in prod
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/election-bully/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/election-bully/demo.json')">
         Launch Bully Election Demo
     </button>
 </div>
@@ -175,7 +175,7 @@ The initial leader was node 6, and it provides alternative node 5. Node 6 crashe
 As a result, we require fewer steps during the election if the next-in-line process is alive.
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/election-failover/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/election-failover/demo.json')">
         Launch Failover Demo
     </button>
 </div>
@@ -219,7 +219,7 @@ Node 6 crashes. Look, for example, at how ordinary process 3 behaves:
 * `3 -notify-> 1, 2, 4, 5`
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/election-candidates/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/election-candidates/demo.json')">
         Launch Optimized Bully Demo
     </button>
 </div>
@@ -278,7 +278,7 @@ To prevent this **"Double Surrender Deadlock"**, algorithms use a strict, asymme
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/election-invitation/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/election-invitation/demo.json')">
         Launch Invitation Demo
     </button>
 </div>
@@ -328,7 +328,7 @@ Since the physical ring can be perfectly partitioned in two or more parts, with 
 This approach **doesn’t hold a safety property**, meaning it fails to protect against Split-Brain scenarios.
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/election-ring/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/election-ring/demo.json')">
         Launch Ring Demo
     </button>
 </div>

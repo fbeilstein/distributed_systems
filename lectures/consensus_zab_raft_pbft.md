@@ -44,18 +44,6 @@ An atomic broadcast guarantees two essential properties:
 
 ---
 
-# Virtual Synchrony
-
-Most protocols assume a fixed group of processes. **Virtual synchrony** delivers totally ordered messages to a *dynamic* group of peers.
-
-* Messages are associated with a specific **group view**.
-* A group view changes when a node joins, leaves, or fails.
-* The view change acts as a **barrier**: a message sent in one view is delivered *only* in that view.
-
-While technically sound, virtual synchrony has largely been superseded in modern systems by replicated state machines using Paxos or Raft.
-
----
-
 # Zookeeper Atomic Broadcast (ZAB)
 
 [Apache ZooKeeper](https://zookeeper.apache.org/) uses a custom atomic broadcast protocol called **ZAB** to keep its replicas consistent.
@@ -82,12 +70,25 @@ When a new prospective leader emerges, it executes three phases:
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/zab/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #e65100; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/zab/demo.json')">
         Launch ZAB Epoch Sync Demo
     </button>
 </div>
 
 ---
+
+# Virtual Synchrony
+
+Most protocols assume a fixed group of processes. **Virtual synchrony** delivers totally ordered messages to a *dynamic* group of peers.
+
+* Messages are associated with a specific **group view**.
+* A group view changes when a node joins, leaves, or fails.
+* The view change acts as a **barrier**: a message sent in one view is delivered *only* in that view.
+
+While technically sound, virtual synchrony has largely been superseded in modern systems by replicated state machines using Paxos or Raft.
+
+---
+
 
 # Raft: Understandable Consensus
 
@@ -210,7 +211,7 @@ If the logs diverge, the leader systematically decrements its local `nextIndex` 
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/raft-divergence/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #004d40; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/raft-divergence/demo.json')">
         Launch Raft Log Divergence Demo
     </button>
 </div>
@@ -227,7 +228,7 @@ Observe the entire Raft life cycle: Follower timeouts, split votes, leader elect
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/raft/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #00796b; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/raft/demo.json')">
         Launch Raft Demo
     </button>
 </div>
@@ -362,7 +363,7 @@ Since the log grows indefinitely, PBFT periodically generates **stable checkpoin
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/pbft-checkpointing/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #c62828; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/pbft-checkpointing/demo.json')">
         Launch PBFT Checkpointing Demo
     </button>
 </div>
@@ -379,7 +380,7 @@ The sandbox includes a BFT demonstration featuring $f=1$ traitors out of a 4-nod
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/pbft/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #e53935; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/pbft/demo.json')">
         Launch PBFT Demo
     </button>
 </div>

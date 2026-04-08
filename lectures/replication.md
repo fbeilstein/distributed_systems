@@ -544,7 +544,7 @@ This simulation natively models the exact **"Retry Problem"**: Client 1 attempts
 5. Client 1 will seamlessly receive the deduplicated response and enter a unique **BRIGHT BLUE** `DONE_CACHED` state instead of its standard green `DONE` state.
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/replication-rifl/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/replication-rifl/demo.json')">
         Launch RIFL Demo
     </button>
 </div>

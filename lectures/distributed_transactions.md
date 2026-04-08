@@ -250,7 +250,7 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/transactions-two-phase-commit/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/transactions-two-phase-commit/demo.json')">
         Launch 2PC Demo
     </button>
 </div>
@@ -382,7 +382,7 @@ The sandbox shows the three-phase handshake: `PROPOSE → VOTE → PREPARE → A
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/transactions-three-phase-commit/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/transactions-three-phase-commit/demo.json')">
         Launch 3PC Demo
     </button>
 </div>

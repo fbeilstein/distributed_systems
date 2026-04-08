@@ -208,7 +208,7 @@ Because of this intense structural overhead across the wire, some systems (like 
 * Because events fire completely asynchronously and randomly in this simulation, you can visually track the explicit causal history of exactly who has talked to who simply by reading the mathematical arrays organically floating on the screen!
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/consistency-vector-clocks/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/consistency-vector-clocks/demo.json')">
         Launch Vector Clocks Demo
     </button>
 </div>

@@ -277,7 +277,7 @@ This hint waits in the background until the target node finally comes back onlin
 
 <!-- Custom Embedded Interactive Hinted Handoff Demo -->
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-hinted-handoff/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-hinted-handoff/demo.json')">
         Launch Hinted Handoff Sandbox
     </button>
 </div>
@@ -475,7 +475,7 @@ To get two nodes back in sync, they exchange logical clocks, identify the gaps r
 
 <!-- Custom Embedded Interactive Bitmap Version Vector Demo -->
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-version-vectors/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-version-vectors/demo.json')">
         Launch Bitmap Version Vectors Demo
     </button>
 </div>
@@ -512,7 +512,7 @@ To involve other nodes and propagate updates with the **reach** of a broadcast a
 3. As soon as holder processes become certain the update is fully propagated, they move to a "removed" state and stop sending.
 
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-gossip/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-gossip/demo.json')">
         Launch Gossip Dissemination Demo
     </button>
 </div>
@@ -568,7 +568,7 @@ Selecting nodes randomly improves robustness against partitions, but is **not me
 
 <!-- Custom Embedded Interactive Plumtree Demo -->
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-plumtree/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/anti-entropy-plumtree/demo.json')">
         Launch Plumtree / Hybrid Gossip Demo
     </button>
 </div>

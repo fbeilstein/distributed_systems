@@ -243,6 +243,30 @@ html {
     color: var(--text-color);
 }
 
+.demo-btn {
+    display: inline-block;
+    background-color: #2196f3;
+    color: white !important;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1.5rem;
+    padding: 15px 30px;
+    transition: background-color 0.2s, transform 0.1s;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.demo-btn:hover {
+    background-color: #1976d2;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.demo-btn:active {
+    transform: translateY(0);
+}
+
 .small-text,
 .small-text * {
     font-size: 0.9em !important;

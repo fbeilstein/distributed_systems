@@ -153,7 +153,7 @@ In this demonstration, **Node 0** explicitly reaches out to nodes 1-4 with a `PI
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/failure-pings/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-pings/demo.json')">
         Launch Pings Demo
     </button>
 </div>
@@ -170,7 +170,7 @@ Alternatively, in this demonstration, **Node 0** is completely silent. Nodes 1-4
 </div>
 
 <div style="text-align: center; margin-top: 15px;">
-    <button class="demo-btn" onclick="showDemo('demos/failure-heartbeats/demo.json')" style="font-size: 1.5rem; padding: 10px 20px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-heartbeats/demo.json')">
         Launch Heartbeats Demo
     </button>
 </div>
@@ -235,7 +235,7 @@ However, interpreting these counters can be incredibly tricky: we have to pick a
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/failure-timeout-free/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-timeout-free/demo.json')">
         Launch Timeout-Free Demo
     </button>
 </div>
@@ -284,7 +284,7 @@ Outsourced heartbeats distribute the responsibility for checking process livenes
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/failure-swim/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-swim/demo.json')">
         Launch SWIM Demo
     </button>
 </div>
@@ -364,7 +364,7 @@ If $\Phi$ crosses an arbitrary threshold (e.g. $\Phi > 8$), we mark the node as 
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/failure-phi/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-phi/demo.json')">
         Launch Phi-Accrual Demo
     </button>
 </div>
@@ -421,7 +421,7 @@ $P_3$ physically crashes and its CPU halts.
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/failure-gossip/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-gossip/demo.json')">
         Launch Gossip Demo
     </button>
 </div>
@@ -470,7 +470,7 @@ This approach converts any individual process failure instantly into a massive, 
 </div>
 
 <div style="text-align: center; margin-top: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/failure-fuse/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #2196f3; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/failure-fuse/demo.json')">
         Launch FUSE Demo
     </button>
 </div>

@@ -183,7 +183,7 @@ TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval
 </div>
 
 <div style="text-align: center; margin-top: 30px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/percolator/demo.json')" style="font-size: 1.5rem; padding: 15px 30px; background: #00695c; color: white; border: none; border-radius: 6px; cursor: pointer;">
+    <button class="demo-btn" onclick="showDemo('demos/percolator/demo.json')">
         Launch Percolator Demo
     </button>
 </div>
