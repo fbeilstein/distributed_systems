@@ -2,6 +2,7 @@
     "nodes": 5,
     "seed": 732,
     "ticks": 180,
+    "minLatency": 5,
     "names": [
         "Leader",
         "Follower-1",
