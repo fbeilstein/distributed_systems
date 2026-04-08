@@ -1,18 +1,19 @@
 {
     "nodes": 5,
-    "seed": 732,
+    "seed": 42,
     "ticks": 180,
-    "minLatency": 5,
+    "trackPaddingTop": 30,
+    "trackHeight": 70,
     "names": [
-        "Leader",
-        "Follower-1",
-        "Follower-2",
-        "Lagging-1",
-        "Lagging-2"
+        "Client",
+        "ZAB Node 1",
+        "ZAB Node 2",
+        "ZAB Node 3",
+        "ZAB Node 4"
     ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "client.js"
         },
         {
             "codeFile": "node.js"
