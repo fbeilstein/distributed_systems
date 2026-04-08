@@ -90,22 +90,33 @@ export function parseMatrices(markdown) {
             const attrStr = cellMatch[3] || "";
             const content = cellMatch[4].trim();
 
-            // Extract classes and inline styles from the {} block
-            const classMatches = attrStr.match(/\.[\w-]+/g) || [];
-            const classes = classMatches.map(c => c.substring(1)).join(' ');
-            const cssStyle = attrStr.replace(/\.[\w-]+/g, '').trim();
+            // Split the cell content into distinct blocks based on double-newlines
+            const blocks = content.split(/\n\s*\n/);
+            let innerHtml = '';
 
+            for (const block of blocks) {
+                // Regex checks if the ENTIRE block is just an image (either standard markdown or your custom image-parser tag)
+                const isPureImageBlock = /^\s*(?:!\[[^\]]*\]\([^)]+\)(?:\s*\{[^}]+\})?|<img[^>]+>)\s*$/.test(block);
+
+                if (isPureImageBlock) {
+                    // Wrap isolated images in a dedicated media container
+                    innerHtml += `<div class="cell-media">\n\n${block}\n\n</div>\n`;
+                } else {
+                    // Wrap text, math, lists, and inline-images in a text container
+                    innerHtml += `<div class="cell-text">\n\n${block}\n\n</div>\n`;
+                }
+            }
+
+            // Build the cell styles
             let cellStyle = `grid-row: ${rowStr};`;
             if (colStr) cellStyle += ` grid-column: ${colStr};`;
             if (cssStyle) cellStyle += ` ${cssStyle}`;
             if (isDebug) cellStyle += ` outline: 1px dashed rgba(0, 255, 0, 0.8); background: rgba(0, 255, 0, 0.05);`;
 
-            // Hard constrain cells avoiding Grid blowout bugs while allowing text to dynamically flow safely out 
-            cellStyle += ` min-width: 0; min-height: 0; overflow: visible;`;
-
             const classAttr = classes ? ` matrix-cell ${classes}` : ` matrix-cell`;
 
-            cellsHtml += `<div class="${classAttr.trim()}" style="${cellStyle}">\n\n${content}\n\n</div>\n\n`;
+            // Inject our carefully wrapped blocks into the parent cell
+            cellsHtml += `<div class="${classAttr.trim()}" style="${cellStyle}">\n${innerHtml}\n</div>\n\n`;
         }
 
         // If no cells matched but there is content, just dump it or assume syntax failure

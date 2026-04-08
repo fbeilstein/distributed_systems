@@ -85,42 +85,39 @@ html {
 
 /* --- Fix for images inside the custom Matrix Grid --- */
 
-
-/* --- Fix for Matrix Grid Content --- */
+/* --- Matrix Architecture --- */
 
 .matrix-cell {
     display: flex;
     flex-direction: column;
-    justify-content: flex-start;
-    height: 100%; /* ГЛАВНЫЙ ФИКС: Заставляет браузер вычислять проценты для картинок */
+    height: 100%; /* Allows the flexbox to calculate percentages */
+    gap: 10px; /* Adds consistent spacing if a cell has text AND an image */
 }
 
-/* 1. Обычные текстовые абзацы */
-.matrix-cell p {
-    min-height: 0; 
-    margin-top: 0;
-    margin-bottom: 15px; 
+/* Text blocks take exactly the space they need, no more, no less */
+.cell-text {
+    flex: 0 0 auto; 
+    display: flow-root; /* Prevents text margins from breaking the layout */
 }
 
-/* 2. Если картинка попала в <p> (оставляем на всякий случай) */
-.matrix-cell p:has(img) {
-    flex: 1; 
-    height: 100%; 
-    min-height: 0; 
-    margin: 0;
+/* Media blocks absorb all remaining empty space in the cell */
+.cell-media {
+    flex: 1;
+    min-height: 0; /* Prevents flexbox overflow */
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-/* 3. Для "голых" картинок (ваш текущий случай из-за image-parser.js) */
-.matrix-cell img {
+.cell-media img {
     max-width: 100%;
-    max-height: 100%; 
+    max-height: 100%;
     object-fit: contain;
-    margin: auto; /* Идеальное центрирование прямо внутри ячейки по всем осям */
-    flex-shrink: 1; /* Гарантирует, что картинка сожмется, если места мало */
+    margin: 0;
 }
+
+
+
 
 .slide.active {
     display: block;
