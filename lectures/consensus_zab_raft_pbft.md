@@ -80,7 +80,7 @@ ZAB stamps every transaction with a 64-bit **Zxid**.
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/zab/demo.json')">
+    <button class="demo-btn" onclick="showDemo('demos/consensus-zab/demo.json')">
         Launch ZAB Epoch Sync Demo
     </button>
 </div>
@@ -223,7 +223,7 @@ Observe the entire Raft life cycle: Follower timeouts, split votes, leader elect
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/raft/demo.json')">
+    <button class="demo-btn" onclick="showDemo('demos/consensus-raft/demo.json')">
         Launch Raft Demo
     </button>
 </div>
@@ -371,7 +371,7 @@ Since the log grows indefinitely, PBFT periodically generates **stable checkpoin
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/pbft-checkpointing/demo.json')">
+    <button class="demo-btn" onclick="showDemo('demos/consensus-pbft/demo.json')">
         Launch PBFT Checkpointing Demo
     </button>
 </div>
@@ -388,7 +388,7 @@ The sandbox includes a BFT demonstration featuring $f=1$ traitors out of a 4-nod
 </div>
 
 <div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/pbft/demo.json')">
+    <button class="demo-btn" onclick="showDemo('demos/consensus-pbft/demo.json')">
         Launch PBFT Demo
     </button>
 </div>

@@ -10,6 +10,7 @@
 * [Anti-Entropy and Dissemination](slides.html?file=lectures/anti_entropy.md)
 * [Distributed Transactions](slides.html?file=lectures/distributed_transactions.md)
 * [Consensus: Paxos](slides.html?file=lectures/consensus_paxos.md)
+* [Consensus: ZAB, Raft, and PBFT](slides.html?file=lectures/consensus_zab_raft_pbft.md)
 
 
 ## Demos
@@ -63,16 +64,16 @@
 * [Flexible Paxos](js/distributed_systems/index.html?code=../../demos/consensus-flexible-paxos/demo.json)
 * [Generalized Paxos](js/distributed_systems/index.html?code=../../demos/consensus-generalized-paxos/demo.json)
 
-### Consensus: ZAB, Raft, PBFT (under development)
+### Consensus: ZAB, Raft, and PBFT
 
-* [ZAB](js/distributed_systems/index.html?code=../../demos/zab/demo.json)
-* [RAFT](js/distributed_systems/index.html?code=../../demos/raft/demo.json)
-* [PBFT](js/distributed_systems/index.html?code=../../demos/pbft/demo.json)
+* [ZAB](js/distributed_systems/index.html?code=../../demos/consensus-zab/demo.json)
+* [RAFT](js/distributed_systems/index.html?code=../../demos/consensus-raft/demo.json)
+* [PBFT](js/distributed_systems/index.html?code=../../demos/consensus-pbft/demo.json)
 
 
 ## Guides
 
-* [How to write slides](./how_to_write_slides.md)
-* [How to write demos](./how_to_write_demos.md)
-* [How to create static timelines](./how_to_write_timelines.md)
+* [How to write slides](guides/how_to_write_slides.md)
+* [How to write demos](guides/how_to_write_demos.md)
+* [How to create static timelines](guides/how_to_write_timelines.md)
 
