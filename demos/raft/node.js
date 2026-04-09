@@ -1,157 +1,233 @@
-// Raft Node - Config-Driven "Speaking" Pattern
-const allIds = Array.from({ length: config.nodes }, (_, i) => i);
-const peers = allIds.filter(id => id !== serverId && id !== config.clientId);
-const majority = Math.ceil((config.nodes - 1) / 2); // E.g., 3 out of 5 servers
+// Raft Consensus — Safety and Log Replication
+const SERVERS = allServerIds.filter(id => id !== 5); // 5 is the Client
+const MAJORITY = Math.floor(SERVERS.length / 2) + 1;
+const TIMEOUT_MIN = 15;
+const TIMEOUT_JITTER = 30;
 
-const raft = {
-    term: 0,
-    votedFor: null,
-    log: [],
-    leaderId: null,
-    votesReceived: 0,
-
-    updateTerm(newTerm) {
-        this.term = newTerm;
-        this.votedFor = null;
-        dumpState(this); // Persist term changes
-    },
-
-    syncUI() {
-        // Expose all protocol data to the StateInspector
-        dumpState({
-            fsm: automat.serialize(),
-            term: this.term,
-            votedFor: this.votedFor,
-            votesReceived: this.votesReceived,
-            leaderId: this.leaderId,
-            log: this.log
-        });
+class RaftBase extends State {
+    onUp() {
+        this.transition('Follower', false);
     }
-};
 
-class Follower extends State {
-    getState() { return ['follower', '#b2dfdb']; }
-    canTransition() { return ['candidate']; }
-    onEnter() { this.resetTimeout(); raft.syncUI(); }
+    // Raft Rule: If RPC request or response contains term T > currentTerm: 
+    // set currentTerm = T, convert to follower.
+    checkTerm(msgTerm) {
+        if (msgTerm > this.machine.term) {
+            this.machine.term = msgTerm;
+            this.machine.votedFor = null;
+            this.transition('Follower', false);
+            return true;
+        }
+        return false;
+    }
+}
 
-    /** (Section 5.2) Reset election timeout on AppendEntries or granting vote */
-    resetTimeout() { this.addTimeout(getRandom(17, 31), 'becomeCandidate'); }
-    becomeCandidate() { this.transition('candidate'); }
+/** FOLLOWER ROLE */
+class Follower extends RaftBase {
+    getUI() { return ['Follower', '#cfd8dc']; }
+    canTransition() { return ['Candidate', 'Follower']; }
 
-    registerMessageTypes() {
-        return {
-            'AppendEntries': this.onAppendEntries,
-            'RequestVote': 'onRequestVote',
-            'CLIENT_REQUEST': 'onClientRequest'
-        };
+    onEnter() {
+        this.resetTimeout();
+    }
+
+    resetTimeout() {
+        // WIDER random window to prevent initial ties
+        this.setTimeout(TIMEOUT_MIN + getRandom(0, TIMEOUT_JITTER), 'startElection', 'elec');
+    }
+
+    startElection() {
+        this.transition('Candidate');
+    }
+
+    onClientRequest(msg) {
+        // If we know who the leader is, forward the client's request to them
+        if (this.machine.leaderId) {
+            sendMessage(this.machine.leaderId, msg.payload, 'gray');
+        }
     }
 
     onAppendEntries(msg) {
-        this.resetTimeout();
-        raft.leaderId = msg.payload.leaderId;
-        raft.syncUI();
+        this.checkTerm(msg.payload.term);
+        const m = msg.payload;
+
+        if (m.term >= this.machine.term) {
+            this.machine.term = m.term; // Sync term in case of equality
+            this.machine.leaderId = msg.from;
+            this.resetTimeout(); // We heard from a valid leader!
+
+            // Accept the leader's log
+            if (m.leaderLog) {
+                this.machine.log = JSON.parse(JSON.stringify(m.leaderLog));
+            }
+            if (m.commitIndex > this.machine.commitIndex) {
+                this.machine.commitIndex = m.commitIndex;
+            }
+
+            // ACK the replication back to the leader
+            sendMessage(msg.from, {
+                type: 'AppendAck',
+                term: this.machine.term,
+                logLength: this.machine.log.length
+            }, 'blue');
+        }
     }
 
     onRequestVote(msg) {
+        this.checkTerm(msg.payload.term);
         const m = msg.payload;
-        // (Section 5.2, 5.4) Basic safety: check term and log (omitted log check for simplicity)
-        const ok = (m.term >= raft.term && (raft.votedFor === null || raft.votedFor === m.candidateId));
-        if (ok) { raft.votedFor = m.candidateId; this.resetTimeout(); }
-        sendMessage(msg.from, { type: 'RequestVoteReply', term: raft.term, voteGranted: ok }, 'gray');
-        raft.syncUI();
-    }
 
-    onClientRequest(msg) {
-        sendMessage(msg.from, { type: 'REDIRECT', leaderId: raft.leaderId });
+        // Grant vote if term is good and we haven't voted for someone else
+        if (m.term === this.machine.term && (this.machine.votedFor === null || this.machine.votedFor === msg.from)) {
+            this.machine.votedFor = msg.from;
+            this.resetTimeout(); // Granting a vote resets the election timer
+            sendMessage(msg.from, { type: 'VoteReply', term: this.machine.term, granted: true }, 'green');
+        } else {
+            sendMessage(msg.from, { type: 'VoteReply', term: this.machine.term, granted: false }, 'red');
+        }
     }
 }
 
-class Candidate extends State {
-    getState() { return [`candidate (${raft.votesReceived}/${majority})`, '#ffb74d']; }
-    canTransition() { return ['leader', 'follower']; }
-    onEnter() { this.startElection(); }
+/** CANDIDATE ROLE */
+class Candidate extends RaftBase {
+    getUI() { return ['Candidate', '#ffb74d']; }
+    canTransition() { return ['Leader', 'Follower', 'Candidate']; }
 
-    /** (Section 5.2) Start election: increment term, vote for self, request votes */
-    startElection() {
-        raft.term++;
-        raft.votedFor = serverId;
-        raft.votesReceived = 1;
-        this.addTimeout(getRandom(12, 18), 'startElection');
-        broadcast(peers, { type: 'RequestVote', term: raft.term, candidateId: serverId }, true, 'black');
-        raft.syncUI();
+    onEnter() {
+        this.machine.term++;
+        this.machine.votedFor = serverId;
+        this.machine.voteCount = 1;
+
+        broadcast(SERVERS.filter(id => id !== serverId), {
+            type: 'RequestVote',
+            term: this.machine.term,
+            lastLogIndex: this.machine.log.length - 1,
+            lastLogTerm: this.machine.log[this.machine.log.length - 1].term
+        }, 'orange');
+
+        // CRITICAL FIX: Candidate timeout MUST be randomized to break split vote ties
+        this.setTimeout(TIMEOUT_MIN + getRandom(0, TIMEOUT_JITTER), 'onElectionTimeout', 'elec_to');
     }
 
-    registerMessageTypes() {
-        return {
-            'RequestVoteReply': this.onVoteReply,
-            'AppendEntries': this.onAppendEntries
-        };
+    onElectionTimeout() {
+        this.transition('Candidate'); // Restart election on split vote
     }
 
     onVoteReply(msg) {
-        const m = msg.payload;
-        if (m.voteGranted && m.term === raft.term) {
-            raft.votesReceived++;
-            if (raft.votesReceived >= majority) this.transition('leader');
-            raft.syncUI();
+        if (this.checkTerm(msg.payload.term)) return; // We stepped down
+
+        if (msg.payload.granted && msg.payload.term === this.machine.term) {
+            this.machine.voteCount++;
+            if (this.machine.voteCount >= MAJORITY) {
+                this.transition('Leader');
+            }
         }
     }
 
     onAppendEntries(msg) {
-        if (msg.payload.term >= raft.term) {
-            raft.leaderId = msg.payload.leaderId;
-            this.transition('follower');
+        this.checkTerm(msg.payload.term);
+        if (msg.payload.term >= this.machine.term) {
+            this.machine.term = msg.payload.term;
+            this.transition('Follower');
+        }
+    }
+
+    onRequestVote(msg) {
+        // If they have a higher term, checkTerm stepped us down to Follower.
+        if (this.checkTerm(msg.payload.term)) {
+            this.machine.votedFor = msg.from;
+            sendMessage(msg.from, { type: 'VoteReply', term: this.machine.term, granted: true }, 'green');
+        } else {
+            sendMessage(msg.from, { type: 'VoteReply', term: this.machine.term, granted: false }, 'red');
         }
     }
 }
 
-class Leader extends State {
-    getState() { return ['leader', '#90caf9']; }
-    canTransition() { return ['follower']; }
-    onEnter() { this.heartbeat(); }
+/** LEADER ROLE */
+class Leader extends RaftBase {
+    getUI() { return ['Leader', '#81c784']; }
+    canTransition() { return ['Follower']; }
 
-    /** (Section 5.2) Send periodic heartbeats to maintain leadership */
-    heartbeat() {
-        this.addTimeout(10, 'heartbeat');
-        broadcast(peers, { type: 'AppendEntries', term: raft.term, leaderId: serverId }, true, 'gray');
-        raft.syncUI();
+    onEnter() {
+        this.machine.leaderId = serverId;
+        this.machine.matchIndex = {};
+        SERVERS.forEach(id => this.machine.matchIndex[id] = 0);
+
+        // CRITICAL FIX: Fire the heartbeat immediately to suppress other candidates!
+        this.heartbeat();
     }
 
-    registerMessageTypes() {
-        return { 'CLIENT_REQUEST': this.onClientRequest };
+    heartbeat() {
+        broadcast(allServerIds.filter(id => id !== serverId), {
+            type: 'AppendEntries',
+            term: this.machine.term,
+            leaderId: serverId,
+            commitIndex: this.machine.commitIndex,
+            leaderLog: this.machine.log
+        }, '#ba68c8');
+
+        this.setTimeout(10, 'heartbeat', 'hb');
     }
 
     onClientRequest(msg) {
-        raft.log.push({ term: raft.term, data: msg.payload.data });
-        sendMessage(msg.from, { type: 'CLIENT_RESPONSE', success: true });
-        raft.syncUI();
+        this.machine.log.push({ term: this.machine.term, cmd: msg.payload.cmd });
+        this.clearTimeout('hb');
+        this.heartbeat();
+    }
+
+    onAppendAck(msg) {
+        if (this.checkTerm(msg.payload.term)) return;
+
+        this.machine.matchIndex[msg.from] = msg.payload.logLength;
+
+        for (let n = this.machine.log.length; n > this.machine.commitIndex; n--) {
+            let count = 1;
+            SERVERS.forEach(id => {
+                if (id !== serverId && this.machine.matchIndex[id] >= n) count++;
+            });
+
+            if (count >= MAJORITY) {
+                this.machine.commitIndex = n;
+                break;
+            }
+        }
+    }
+
+    onAppendEntries(msg) {
+        this.checkTerm(msg.payload.term);
+    }
+
+    onRequestVote(msg) {
+        if (this.checkTerm(msg.payload.term)) {
+            this.machine.votedFor = msg.from;
+            sendMessage(msg.from, { type: 'VoteReply', term: this.machine.term, granted: true }, 'green');
+        } else {
+            sendMessage(msg.from, { type: 'VoteReply', term: this.machine.term, granted: false }, 'red');
+        }
     }
 }
 
-const ROLES = [new Follower(), new Candidate(), new Leader()];
-const automat = new Automat({ states: ROLES, initial: 'follower' });
 
-function onUp() {
-    // Load persistent state (if any) back into the live raft object
-    const saved = loadState();
-    if (saved.term !== undefined) {
-        raft.term = saved.term;
-        raft.votedFor = saved.votedFor;
-        raft.log = saved.log || [];
-        raft.leaderId = saved.leaderId;
+class RaftMachine extends Machine {
+    constructor() {
+        super();
+        this.states = [new Follower(), new Candidate(), new Leader()];
+        this.term = 0;
+        this.votedFor = null;
+        this.leaderId = null;
+        this.log = [{ term: 0, cmd: 'INIT' }];
+        this.commitIndex = 0;
+        this.voteCount = 0;
     }
 
-    automat.transition('follower');
-    raft.syncUI();
-}
-
-function onTimer(t) { automat.onTimer(t); }
-
-function onMessage(m) {
-    // (Section 5.1) If RPC request/response contains term T > currentTerm, update term and revert to follower
-    if (m.payload.term && m.payload.term > raft.term) {
-        raft.updateTerm(m.payload.term);
-        automat.transition('follower');
+    syncUI() {
+        this.current_leader = this.leaderId !== null ? `DB-${this.leaderId}` : 'None';
+        this.log_view = `[${this.log.length} entries] Commits: ${this.commitIndex}`;
     }
-    automat.onMessage(m);
 }
+
+const MACHINE = new RaftMachine();
+
+function onUp() { MACHINE.onUp(); }
+function onTimer(t) { MACHINE.onTimer(t); }
+function onMessage(m) { MACHINE.onMessage(m); }
