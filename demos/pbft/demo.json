@@ -1,18 +1,21 @@
 {
     "nodes": 6,
     "seed": 161,
-    "ticks": 80,
+    "ticks": 200,
+    "labelWidth": 100,
+    "minDelay": 5,
+    "minLatency": 5,
     "names": [
+        "Client",
         "Primary",
         "Replica-1",
         "Replica-2",
-        "Traitor",
         "Replica-4",
-        "Client"
+        "Traitor"
     ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "client.js"
         },
         {
             "codeFile": "node.js"
@@ -27,7 +30,7 @@
             "codeFile": "node.js"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "traitor.js"
         }
     ]
 }
