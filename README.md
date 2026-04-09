@@ -70,6 +70,9 @@
 * [RAFT](js/distributed_systems/index.html?code=../../demos/consensus-raft/demo.json)
 * [PBFT](js/distributed_systems/index.html?code=../../demos/consensus-pbft/demo.json)
 
+## Sandbox
+
+* [Distributed Systems Visualization Playground](js/distributed_systems/index.html)
 
 ## Guides
 
