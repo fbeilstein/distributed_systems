@@ -86,8 +86,8 @@ SlideAddons.register('static-diagram', (block) => {
                     const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
                     const mx = (parseFloat(line.getAttribute("x1")) + parseFloat(line.getAttribute("x2"))) / 2;
                     const my = (parseFloat(line.getAttribute("y1")) + parseFloat(line.getAttribute("y2"))) / 2;
-                    label.setAttribute("x", mx);
-                    label.setAttribute("y", my - 5);
+                    label.setAttribute("x", mx + (l.labelOffsetX || 0));
+                    label.setAttribute("y", my - 5 + (l.labelOffsetY || 0));
                     label.setAttribute("text-anchor", "middle");
                     label.setAttribute("fill", l.color || "#666");
                     label.setAttribute("font-size", "12px");

@@ -1,4 +1,6 @@
-# Distributed Databases: Global Consenus & Determinism
+# Epilogue: From Theory to Practice
+
+## Distributed Databases: Global Consenus & Determinism
 
 After understanding **Paxos** and **Raft**, we can now explore how global-scale databases use these consensus engines as building blocks for ACID transactions across the planet.
 
@@ -53,34 +55,37 @@ After understanding **Paxos** and **Raft**, we can now explore how global-scale 
 }
 ```
 
-### Calvin Phase Trace
+---
+
+# Calvin Phase Trace
 
 ```static-timeline
 {
-  "ticks": 60,
-  "labelWidth": 120,
+  "ticks": 56,
+  "zoom": 0.85,
+  "labelWidth": 100,
   "servers": [
-    { "id": "cl", "name": "Client 1" },
-    { "id": "sq", "name": "Sequencer" },
-    { "id": "sc", "name": "Scheduler" },
-    { "id": "w1", "name": "Worker 1" },
-    { "id": "w2", "name": "Worker 2" }
+    "Client 1",
+    "Sequencer",
+    "Scheduler",
+    "Worker 1",
+    "Worker 2"
   ],
   "states": [
-    { "server": "cl", "start": 5, "end": 10, "label": "Write D", "color": "#ffcdd2" },
-    { "server": "cl", "start": 12, "end": 17, "label": "Read A", "color": "#c8e6c9" },
-    { "server": "sq", "start": 20, "end": 28, "label": "Batched", "color": "#fff9c4" },
-    { "server": "sc", "start": 30, "end": 35, "label": "Locked", "color": "#ffccbc" },
-    { "server": "sc", "start": 37, "end": 42, "label": "Planned", "color": "#d1c4e9" },
-    { "server": "w1", "start": 44, "end": 50, "label": "Execute", "color": "#b3e5fc" },
-    { "server": "w2", "start": 46, "end": 52, "label": "Execute", "color": "#b3e5fc" }
+    { "server": "Client 1", "start": 5, "end": 10, "state": "Write D", "color": "#ffcdd2" },
+    { "server": "Client 1", "start": 12, "end": 17, "state": "Read A", "color": "#c8e6c9" },
+    { "server": "Sequencer", "start": 13, "end": 28, "state": "Batched", "color": "#fff9c4" },
+    { "server": "Scheduler", "start": 30, "end": 37, "state": "Locked", "color": "#ffccbc" },
+    { "server": "Scheduler", "start": 37, "end": 42, "state": "Planned", "color": "#d1c4e9" },
+    { "server": "Worker 1", "start": 44, "end": 50, "state": "Execute", "color": "#b3e5fc" },
+    { "server": "Worker 2", "start": 50, "end": 54, "state": "Execute", "color": "#b3e5fc" }
   ],
-  "arrows": [
-    { "from": "cl", "to": "sq", "time": 10 },
-    { "from": "cl", "to": "sq", "time": 17 },
-    { "from": "sq", "to": "sc", "time": 28 },
-    { "from": "sc", "to": "w1", "time": 42 },
-    { "from": "sc", "to": "w2", "time": 42 }
+  "messages": [
+    { "from": "Client 1", "to": "Sequencer", "sendTick": 10, "recvTick": 13 },
+    { "from": "Client 1", "to": "Sequencer", "sendTick": 17, "recvTick": 20 },
+    { "from": "Sequencer", "to": "Scheduler", "sendTick": 28, "recvTick": 30 },
+    { "from": "Scheduler", "to": "Worker 1", "sendTick": 42, "recvTick": 44 },
+    { "from": "Scheduler", "to": "Worker 2", "sendTick": 42, "recvTick": 50 }
   ]
 }
 ```
@@ -91,12 +96,22 @@ After understanding **Paxos** and **Raft**, we can now explore how global-scale 
 
 Google **Spanner** takes a contrasting approach: **per-shard Paxos groups with 2PC across shards**. 
 
-### System Hierarchy: The Universe View
+### TrueTime & External Consistency
+
+TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval $[earliest, latest]$ that is guaranteed to contain the absolute real time.
+
+**The Commit Wait Rule**:
+1. **Pick Timestamp**: The coordinator picks $s = TT.now().latest$.
+2. **Commit Wait**: The coordinator must not commit (reply to client) until $TT.now().earliest > s$.
+
+---
+
+# System Hierarchy: The Universe View
 
 ```static-diagram
 {
   "width": 600,
-  "height": 380,
+  "height": 340,
   "nodes": [
     { "id": "client", "x": 250, "y": 5, "label": "Client App", "type": "pill", "width": 100, "fill": "#f5f5f5" },
     { "id": "tt", "x": 10, "y": 5, "label": "TrueTime Master", "type": "pill", "width": 130, "fill": "#fff9c4", "fontSize": "10px" },
@@ -124,7 +139,7 @@ Google **Spanner** takes a contrasting approach: **per-shard Paxos groups with 2
     { "from": "p3", "to": "db3" },
     { "from": "p1", "to": "p2", "color": "#2196f3", "width": 1 },
     { "from": "p2", "to": "p3", "color": "#2196f3", "width": 1 },
-    { "from": "p1", "to": "p3", "label": "Paxos Group (1 per shard)", "color": "#2196f3", "width": 1 }
+    { "from": "p1", "to": "p3", "label": "Paxos Group (1 per shard)", "labelOffsetY": -20, "color": "#2196f3", "width": 1 }
   ],
   "groups": [
     { "x": 40, "y": 70, "width": 120, "height": 220, "label": "Zone: US-East-1", "dashed": true },
@@ -134,17 +149,11 @@ Google **Spanner** takes a contrasting approach: **per-shard Paxos groups with 2
 }
 ```
 
-### TrueTime & External Consistency
-
-TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval $[earliest, latest]$ that is guaranteed to contain the absolute real time.
-
-**The Commit Wait Rule**:
-1. **Pick Timestamp**: The coordinator picks $s = TT.now().latest$.
-2. **Commit Wait**: The coordinator must not commit (reply to client) until $TT.now().earliest > s$.
-
 ---
 
 # Distributed Transactions: Percolator
+
+<small>
 
 **Percolator** (Google) provided a way to layer multi-row transactions on top of Bigtable (which only supports single-row atomicity).
 
@@ -152,30 +161,54 @@ TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval
 - **Timestamp Oracle**: Relies on a centralized service (Oracle) to provide monotonically increasing timestamps for Snapshot Isolation.
 - **Primary vs. Secondary**: Uses a "Primary Lock" to handle recovery. If the client crashes, the node that finds the lock checks the primary to decide whether to roll forward or back.
 
-### Percolator State Walk-Through
+> Locks are released starting from the primary. Readers that observe uncommitted locks can consult the primary lock to determine if the transaction succeeded and proceed accordingly.
 
-**Initial state** (after previous transaction at $t=0$):
+</small>
 
-| Account | Timestamp | Data | Lock | Write Metadata |
-|---|---|---|---|---|
-| A1 | 1 | 100$ | — | latest @ t=0 |
-| A2 | 1 | 200$ | — | latest @ t=0 |
+```static-timeline
+{
+  "zoom": 0.85,
+  "ticks": 56,
+  "labelWidth": 100,
+  "trackHeight": 60,
+  "servers": ["TS Oracle","Coordinator", "Row A1", "Row A2"],
+  "states": [
+    { "server": "Coordinator", "start": 10, "end": 26, "state": "Prewrite (TS=1)", "color": "#fff9c4" },
+    { "server": "Coordinator", "start": 32, "end": 49, "state": "Commit (TS=2)", "color": "#e8f5e9" },
 
-**After Prewrite** (new transaction, start timestamp $t=1$):
+    { "server": "Row A1", "start": 0, "end": 13, "state": "$100 (W: t=0)", "color": "#e3f2fd" },
+    { "server": "Row A1", "start": 14, "end": 36, "state": "LOCKED (Primary)", "color": "#ffe0b2" },
+    { "server": "Row A1", "start": 37, "end": 55, "state": "$150 (W: t=1)", "color": "#c8e6c9" },
 
-| Account | Timestamp | Data | Lock | Write Metadata |
-|---|---|---|---|---|
-| A1 | 1 | 100$ | **primary** | latest @ t=0 |
-| A2 | 1 | 200$ | primary @ A1 | latest @ t=0 |
+    { "server": "Row A2", "start": 0, "end": 21, "state": "$200 (W: t=0)", "color": "#e3f2fd" },
+    { "server": "Row A2", "start": 22, "end": 44, "state": "LOCKED (@A1)", "color": "#ffe0b2" },
+    { "server": "Row A2", "start": 45, "end": 55, "state": "$150 (W: t=1)", "color": "#c8e6c9" }
+  ],
+  "messages": [
+    { "from": "Coordinator", "to": "TS Oracle", "sendTick": 2, "recvTick": 5 },
+    { "from": "TS Oracle", "to": "Coordinator", "sendTick": 6, "recvTick": 9 },
 
-**After Commit** (commit timestamp $t=2$):
+    { "from": "Coordinator", "to": "Row A1", "sendTick": 11, "recvTick": 14 },
+    { "from": "Row A1", "to": "Coordinator", "sendTick": 15, "recvTick": 18 },
 
-| Account | Timestamp | Data | Lock | Write Metadata |
-|---|---|---|---|---|
-| A1 | 2 | 150$ | — | latest @ t=1 |
-| A2 | 2 | 150$ | — | latest @ t=1 |
+    { "from": "Coordinator", "to": "Row A2", "sendTick": 19, "recvTick": 22 },
+    { "from": "Row A2", "to": "Coordinator", "sendTick": 23, "recvTick": 26 },
 
-*Locks are released starting from the primary. Readers that observe uncommitted locks can consult the primary lock to determine if the transaction succeeded and proceed accordingly.*
+    { "from": "Coordinator", "to": "TS Oracle", "sendTick": 27, "recvTick": 29 },
+    { "from": "TS Oracle", "to": "Coordinator", "sendTick": 30, "recvTick": 32 },
+
+    { "from": "Coordinator", "to": "Row A1", "sendTick": 34, "recvTick": 37 },
+    { "from": "Row A1", "to": "Coordinator", "sendTick": 38, "recvTick": 41 },
+
+    { "from": "Coordinator", "to": "Row A2", "sendTick": 42, "recvTick": 45 },
+    { "from": "Row A2", "to": "Coordinator", "sendTick": 46, "recvTick": 49 }
+  ]
+}
+```
+
+---
+
+# Percolator Demo
 
 <div class="callout-box">
     <h4>What to watch in the Demo</h4>
