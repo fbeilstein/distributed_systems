@@ -1,10 +1,13 @@
 {
     "nodes": 6,
     "seed": 161,
-    "ticks": 200,
+    "ticks": 360,
     "labelWidth": 100,
     "minDelay": 5,
     "minLatency": 5,
+    "customRenderFile": "render.js",
+    "trackHeight": 120,
+    "trackPaddingTop": 100,
     "names": [
         "Client",
         "Primary",
