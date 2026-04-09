@@ -1,19 +1,24 @@
 {
-    "nodes": 4,
+    "nodes": 5,
     "seed": 42,
-    "ticks": 200,
+    "ticks": 250,
+    "minLatency": 3,
     "names": [
-        "Coordinator",
         "Oracle",
+        "Coordinator",
         "Shard-A",
-        "Shard-B"
+        "Shard-B",
+        "Shard-C"
     ],
     "servers": [
+        {
+            "codeFile": "oracle.js"
+        },
         {
             "codeFile": "coordinator.js"
         },
         {
-            "codeFile": "oracle.js"
+            "codeFile": "shard.js"
         },
         {
             "codeFile": "shard.js"
