@@ -167,72 +167,102 @@ TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval
 
 ```static-timeline
 {
-  "zoom": 0.85,
+  "zoom": 0.8,
   "ticks": 56,
-  "labelWidth": 100,
+  "labelWidth": 140,
   "trackHeight": 60,
-  "servers": ["TS Oracle","Coordinator", "Row A1", "Row A2"],
+  "servers": [
+    "Oracle",
+    "Coordinator",
+    "Shard-A (row A1)",
+    "Shard-B (row B75)",
+    "Shard-C (row C13)"
+  ],
   "states": [
-    { "server": "Coordinator", "start": 10, "end": 26, "state": "Prewrite (TS=1)", "color": "#fff9c4" },
-    { "server": "Coordinator", "start": 32, "end": 49, "state": "Commit (TS=2)", "color": "#e8f5e9" },
+    { "server": "Oracle", "start": 0, "end": 56, "state": "ONLINE (TSO)", "color": "#b3e5fc" },
 
-    { "server": "Row A1", "start": 0, "end": 13, "state": "$100 (W: t=0)", "color": "#e3f2fd" },
-    { "server": "Row A1", "start": 14, "end": 36, "state": "LOCKED (Primary)", "color": "#ffe0b2" },
-    { "server": "Row A1", "start": 37, "end": 55, "state": "$150 (W: t=1)", "color": "#c8e6c9" },
+    { "server": "Coordinator", "start": 5, "end": 10, "state": "GET_START_TS", "color": "#cfd8dc" },
+    { "server": "Coordinator", "start": 11, "end": 28, "state": "PREWRITE (TS=100)", "color": "#fff9c4" },
+    { "server": "Coordinator", "start": 29, "end": 34, "state": "GET_COMMIT_TS", "color": "#cfd8dc" },
+    { "server": "Coordinator", "start": 35, "end": 52, "state": "COMMIT (TS=101)", "color": "#e8f5e9" },
+    { "server": "Coordinator", "start": 53, "end": 56, "state": "DONE", "color": "#81c784" },
 
-    { "server": "Row A2", "start": 0, "end": 21, "state": "$200 (W: t=0)", "color": "#e3f2fd" },
-    { "server": "Row A2", "start": 22, "end": 44, "state": "LOCKED (@A1)", "color": "#ffe0b2" },
-    { "server": "Row A2", "start": 45, "end": 55, "state": "$150 (W: t=1)", "color": "#c8e6c9" }
+    { "server": "Shard-A (row A1)", "start": 0, "end": 12, "state": "READY, $100", "color": "#e3f2fd" },
+    { "server": "Shard-A (row A1)", "start": 13, "end": 36, "state": "LOCKED (Primary), $100", "color": "#ffe0b2" },
+    { "server": "Shard-A (row A1)", "start": 37, "end": 56, "state": "COMMITTED, $0", "color": "#c8e6c9" },
+
+    { "server": "Shard-B (row B75)", "start": 0, "end": 18, "state": "READY, $10", "color": "#e3f2fd" },
+    { "server": "Shard-B (row B75)", "start": 19, "end": 42, "state": "LOCKED (@A), $10", "color": "#ffe0b2" },
+    { "server": "Shard-B (row B75)", "start": 43, "end": 56, "state": "COMMITTED, $60", "color": "#c8e6c9" },
+
+    { "server": "Shard-C (row C13)", "start": 0, "end": 24, "state": "READY, $5", "color": "#e3f2fd" },
+    { "server": "Shard-C (row C13)", "start": 25, "end": 48, "state": "LOCKED (@A), $5", "color": "#ffe0b2" },
+    { "server": "Shard-C (row C13)", "start": 49, "end": 56, "state": "COMMITTED, $55", "color": "#c8e6c9" }
   ],
   "messages": [
-    { "from": "Coordinator", "to": "TS Oracle", "sendTick": 2, "recvTick": 5 },
-    { "from": "TS Oracle", "to": "Coordinator", "sendTick": 6, "recvTick": 9 },
+    { "from": "Coordinator", "to": "Oracle", "sendTick": 5, "recvTick": 8 },
+    { "from": "Oracle", "to": "Coordinator", "sendTick": 9, "recvTick": 10 },
 
-    { "from": "Coordinator", "to": "Row A1", "sendTick": 11, "recvTick": 14 },
-    { "from": "Row A1", "to": "Coordinator", "sendTick": 15, "recvTick": 18 },
+    { "from": "Coordinator", "to": "Shard-A (row A1)", "sendTick": 11, "recvTick": 14 },
+    { "from": "Shard-A (row A1)", "to": "Coordinator", "sendTick": 15, "recvTick": 16 },
 
-    { "from": "Coordinator", "to": "Row A2", "sendTick": 19, "recvTick": 22 },
-    { "from": "Row A2", "to": "Coordinator", "sendTick": 23, "recvTick": 26 },
+    { "from": "Coordinator", "to": "Shard-B (row B75)", "sendTick": 17, "recvTick": 20 },
+    { "from": "Shard-B (row B75)", "to": "Coordinator", "sendTick": 21, "recvTick": 22 },
 
-    { "from": "Coordinator", "to": "TS Oracle", "sendTick": 27, "recvTick": 29 },
-    { "from": "TS Oracle", "to": "Coordinator", "sendTick": 30, "recvTick": 32 },
+    { "from": "Coordinator", "to": "Shard-C (row C13)", "sendTick": 23, "recvTick": 26 },
+    { "from": "Shard-C (row C13)", "to": "Coordinator", "sendTick": 27, "recvTick": 28 },
 
-    { "from": "Coordinator", "to": "Row A1", "sendTick": 34, "recvTick": 37 },
-    { "from": "Row A1", "to": "Coordinator", "sendTick": 38, "recvTick": 41 },
+    { "from": "Coordinator", "to": "Oracle", "sendTick": 29, "recvTick": 32 },
+    { "from": "Oracle", "to": "Coordinator", "sendTick": 33, "recvTick": 34 },
 
-    { "from": "Coordinator", "to": "Row A2", "sendTick": 42, "recvTick": 45 },
-    { "from": "Row A2", "to": "Coordinator", "sendTick": 46, "recvTick": 49 }
+    { "from": "Coordinator", "to": "Shard-A (row A1)", "sendTick": 35, "recvTick": 38 },
+    { "from": "Shard-A (row A1)", "to": "Coordinator", "sendTick": 39, "recvTick": 40 },
+
+    { "from": "Coordinator", "to": "Shard-B (row B75)", "sendTick": 41, "recvTick": 44 },
+    { "from": "Shard-B (row B75)", "to": "Coordinator", "sendTick": 45, "recvTick": 46 },
+
+    { "from": "Coordinator", "to": "Shard-C (row C13)", "sendTick": 47, "recvTick": 50 },
+    { "from": "Shard-C (row C13)", "to": "Coordinator", "sendTick": 51, "recvTick": 52 }
   ]
 }
 ```
 
 ---
 
-# Percolator Demo
+# Percolator: Lazy Crash Recovery
 
-<div class="callout-box">
-    <h4>What to watch in the Demo</h4>
-    <p>The Coordinator runs sequential transactions. Watch the <b>Shard-A</b> and <b>Shard-B</b> inspector: their <b>lock</b> field fills during Prewrite and clears on Commit. The Oracle's <b>ts</b> counter increments twice per transaction. Try crashing the Oracle mid-transaction to see the coordinator stall waiting for a timestamp.</p>
-</div>
+In a traditional 2PC, a crashed coordinator stalls the database. Percolator avoids this by storing locks directly in the data rows and relying entirely on Lazy Recovery.
 
-<div style="text-align: center; margin-top: 30px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/percolator/demo.json')">
-        Launch Percolator Demo
-    </button>
-</div>
+* **Shards are "Dumb" (No Timeouts):** Storage nodes (Bigtable) never run background timers. If a coordinator dies, the shard will hold its lock forever. Timeouts are guesses, and guessing destroys ACID safety.
+
+* **The Client as Detective:** If a new transaction bumps into an old lock, the new client is forced to investigate. It checks the original coordinator's heartbeat in a coordination service (like Chubby/ZooKeeper).
+
+* **Block and Clean:** If the heartbeat is dead, the new client looks up the Primary Lock to see if the transaction committed before the crash, and then safely rolls the blocked row forward or backward itself.
 
 ---
 
 # Pillar 2: High Availability (AP / BASE)
 
+<small>
+
 While Spanner and Calvin fight for ACID properties, many systems choose the **Dynamo Path**: prioritizing availability even at the cost of temporary divergence.
 
-### The Dynamo Legacy (DynamoDB, Riak)
+</small>
+
+**The Dynamo Legacy (DynamoDB, Riak)**
+
+<small>
+
 - **Vector Clocks**: Used to detect causal conflicts. Every mutation carries a vector $[node_1: c_1, node_2: c_2, \dots]$. If two vectors are incomparable, a conflict has occurred (divergent branch).
 - **Sloppy Quorums**: If the designated $N$ nodes are down, the system writes to *handoff* nodes to ensure availability, which are then cleaned up via **Hinted Handoff**.
 - **Merkle Trees**: Used in the background to detect differences between replicas (Anti-Entropy).
 
-### Large Scale: Apache Cassandra
+</small>
+
+**Large Scale: Apache Cassandra**
+
+<small>
+
 Cassandra borrows the Dynamo architecture but optimizes for simpler conflict resolution:
 - **Last-Write-Wins (LWW)**: Instead of complex vector clock merges, it uses the server's microsecond wall-clock timestamp to resolve conflicts.
 - **Tunable Consistency**:
@@ -240,10 +270,17 @@ Cassandra borrows the Dynamo architecture but optimizes for simpler conflict res
   - **CL.QUORUM**: Acknowledgement from $\lfloor N/2 \rfloor + 1$.
   - **CL.ALL**: Acknowledgement from every node.
 
-### Conflict-Free: Redis CRDTs
+</small>
+
+**Conflict-Free: Redis CRDTs**
+
+<small>
+
 For **Strong Eventual Consistency (SEC)**, Redis uses CRDTs (Conflict-Free Replicated Data Types):
 - **G-Counter**: Increments only, uses vectors to track contributions and merges by taking the maximum of each index.
 - **PN-Counter**: Supports increments and decrements by fusing two vectors.
+
+</small>
 
 ---
 
