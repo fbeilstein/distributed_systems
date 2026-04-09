@@ -8,8 +8,8 @@ const ELECTION_DURATION = 10;
 const CANDIDATE_IDS = [2, 3, 4];
 
 class Monitor extends State {
-    getState() { return ['ordinary', '#cfd8dc']; }
-    canTransition() { return ['waiting_election']; }
+    getUI() { return ['ordinary', '#cfd8dc']; }
+    canTransition() { return ['WaitingElection']; }
 
     onEnter() {
         this.resetTimer();
@@ -24,7 +24,7 @@ class Monitor extends State {
 
     onLeaderTimeout() {
         broadcast(CANDIDATE_IDS, { type: 'ELECTION' }, 'orange');
-        this.transition('waiting_election');
+        this.transition('WaitingElection');
     }
 
     onHEARTBEAT(msg) {
@@ -39,8 +39,8 @@ class Monitor extends State {
 }
 
 class WaitingElection extends State {
-    getState() { return ['waiting_election', '#fff59d']; }
-    canTransition() { return ['ordinary']; }
+    getUI() { return ['waiting_election', '#fff59d']; }
+    canTransition() { return ['Monitor']; }
 
     onEnter() {
         this.machine.aliveCandidates = [];
@@ -63,23 +63,23 @@ class WaitingElection extends State {
 
         // Returning to ordinary will inherently call Monitor's onEnter()
         // which cleanly and natively resets the leader timeout clock!
-        this.transition('ordinary');
+        this.transition('Monitor');
     }
 
     onHEARTBEAT(msg) {
         this.machine.leaderId = msg.payload.leader || msg.from;
-        this.transition('ordinary');
+        this.transition('Monitor');
     }
 
     onCOORDINATOR(msg) {
         this.machine.leaderId = msg.payload.leader || msg.from;
-        this.transition('ordinary');
+        this.transition('Monitor');
     }
 }
 
 class OrdinaryMachine extends Machine {
     constructor() {
-        super({ initial: 'ordinary' });
+        super({ initial: 'Monitor' });
         this.states = [new Monitor(), new WaitingElection()];
         this.leaderId = -1;
     }

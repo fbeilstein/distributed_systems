@@ -5,14 +5,14 @@ const HEARTBEAT_INTERVAL = 10;
 const PEERS = allServerIds.filter(id => id !== serverId);
 
 class Follower extends State {
-    getState() { return ['candidate', '#cfd8dc']; }
-    canTransition() { return ['electing', 'leader']; }
+    getUI() { return ['candidate', '#cfd8dc']; }
+    canTransition() { return ['Electing', 'Leader']; }
 
     onELECTION(msg) {
         // The ordinary process initiates election by contacting candidate nodes.
         // We just respond ALIVE and visually enter the "electing" phase to show we are participating.
         sendMessage(msg.from, { type: 'ALIVE' }, 'blue');
-        this.transition('electing');
+        this.transition('Electing');
     }
 
     onHEARTBEAT(msg) {
@@ -21,13 +21,13 @@ class Follower extends State {
 
     onCOORDINATOR(msg) {
         this.machine.leaderId = msg.payload.leader || msg.from;
-        if (this.machine.leaderId === serverId) this.transition('leader');
+        if (this.machine.leaderId === serverId) this.transition('Leader');
     }
 }
 
 class Electing extends State {
-    getState() { return ['electing', '#ffb74d']; }
-    canTransition() { return ['leader', 'candidate']; }
+    getUI() { return ['electing', '#ffb74d']; }
+    canTransition() { return ['Leader', 'Follower']; }
 
     onELECTION(msg) {
         sendMessage(msg.from, { type: 'ALIVE' }, 'blue');
@@ -35,19 +35,19 @@ class Electing extends State {
 
     onHEARTBEAT(msg) {
         this.machine.leaderId = msg.payload.leader || msg.from;
-        this.transition('candidate');
+        this.transition('Follower');
     }
 
     onCOORDINATOR(msg) {
         this.machine.leaderId = msg.payload.leader || msg.from;
-        if (this.machine.leaderId === serverId) this.transition('leader');
-        else this.transition('candidate');
+        if (this.machine.leaderId === serverId) this.transition('Leader');
+        else this.transition('Follower');
     }
 }
 
 class Leader extends State {
-    getState() { return ['leader', '#8bc34a']; }
-    canTransition() { return ['candidate']; }
+    getUI() { return ['leader', '#8bc34a']; }
+    canTransition() { return ['Follower']; }
 
     onEnter() {
         this.machine.leaderId = serverId;
@@ -65,18 +65,18 @@ class Leader extends State {
 
     onHEARTBEAT(msg) {
         this.machine.leaderId = msg.payload.leader || msg.from;
-        this.transition('candidate');
+        this.transition('Follower');
     }
 
     onCOORDINATOR(msg) {
         this.machine.leaderId = msg.payload.leader || msg.from;
-        if (this.machine.leaderId !== serverId) this.transition('candidate');
+        if (this.machine.leaderId !== serverId) this.transition('Follower');
     }
 }
 
 class CandidateMachine extends Machine {
     constructor() {
-        super({ initial: 'candidate' });
+        super({ initial: 'Follower' });
         this.states = [new Follower(), new Electing(), new Leader()];
         this.leaderId = -1;
     }

@@ -43,7 +43,7 @@
 ### Anti-Entropy and Dissemination
 
 * [Read Repair & Hinted Handoff](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-hinted-handoff/demo.json)
-* [Merkle Tree](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-merkle-tree/demo.json)
+* [Merkle Tree](https://fbeilstein.github.io/distributed_systems/demos/anti-entropy-merkle-tree/index.html)
 * [Bitmap Version Vectors](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-version-vectors/demo.json)
 * [Gossip Dissemination](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-gossip/demo.json)
 * [Plumtree](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/anti-entropy-plumtree/demo.json)

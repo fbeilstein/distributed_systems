@@ -1,7 +1,7 @@
 // Generalized Paxos — Acceptor / Register Set
 
 class Active extends State {
-    getState() { return ['Active', '#cfd8dc']; }
+    getUI() { return ['Active', '#cfd8dc']; }
 
     registerMessageTypes() {
         return {

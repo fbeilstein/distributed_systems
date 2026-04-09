@@ -28,7 +28,7 @@ class ClientMachine extends Machine {
 }
 
 class Idle extends State {
-    getState() { return ['Idle', '#cfd8dc']; }
+    getUI() { return ['Idle', '#cfd8dc']; }
     canTransition() { return ['Phase1']; }
 
     onEnter() {
@@ -42,7 +42,7 @@ class Idle extends State {
 }
 
 class Phase1 extends State {
-    getState() { return [`P1A (Reg ${this.machine.targetReg})`, '#ffb74d']; }
+    getUI() { return [`P1A (Reg ${this.machine.targetReg})`, '#ffb74d']; }
     canTransition() { return ['Phase2']; }
 
     onEnter() {
@@ -82,7 +82,7 @@ class Phase1 extends State {
 }
 
 class Phase2 extends State {
-    getState() { return [`P2A ('${this.machine.val}')`, '#4fc3f7']; }
+    getUI() { return [`P2A ('${this.machine.val}')`, '#4fc3f7']; }
     canTransition() { return ['Success', 'Failed']; }
 
     registerMessageTypes() {
@@ -102,11 +102,11 @@ class Phase2 extends State {
 }
 
 class Success extends State {
-    getState() { return ['Decided!', '#81c784']; }
+    getUI() { return ['Decided!', '#81c784']; }
 }
 
 class Failed extends State {
-    getState() { return ['Failed (Invalidated)', '#e57373']; }
+    getUI() { return ['Failed (Invalidated)', '#e57373']; }
 }
 
 const MACHINE = new ClientMachine();

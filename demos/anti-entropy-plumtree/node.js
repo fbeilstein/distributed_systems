@@ -61,7 +61,7 @@ class BaseState extends State {
             if (!this.machine.seen[id]) {
                 if (!this.machine.targets.includes(m.from)) this.machine.targets.push(m.from);
                 this.machine.gId = id;
-                this.transition('SYNC', false);
+                this.transition('Syncing', false);
             }
         });
     }
@@ -93,35 +93,35 @@ class BaseState extends State {
 }
 
 class Waiting extends BaseState {
-    getState() { return ['WAIT', '#cfd8dc']; }
-    canTransition() { return ['SYNC', 'GOT_MSG']; }
-    onUp() { this.transition('WAIT'); }
+    getUI() { return ['WAIT', '#cfd8dc']; }
+    canTransition() { return ['Syncing', 'GotMsg']; }
+    onUp() { this.transition('Waiting'); }
 
     onCLIENT_REQ(m) {
-        if (this.receivePayload(m, true)) this.transition('GOT_MSG');
+        if (this.receivePayload(m, true)) this.transition('GotMsg');
     }
     onEAGER_PUSH(m) {
-        if (this.receivePayload(m, true)) this.transition('GOT_MSG');
+        if (this.receivePayload(m, true)) this.transition('GotMsg');
     }
 }
 
 class Syncing extends BaseState {
-    getState() { return ['SYNC', '#ffb74d']; }
-    canTransition() { return ['GOT_MSG']; }
-    onUp() { this.transition('WAIT'); }
+    getUI() { return ['SYNC', '#ffb74d']; }
+    canTransition() { return ['GotMsg']; }
+    onUp() { this.transition('Waiting'); }
     onEnter() { this.doGraft(); }
 
     onCLIENT_REQ(m) {
         if (this.receivePayload(m, true)) {
             this.clearTimeout('g');
-            this.transition('GOT_MSG');
+            this.transition('GotMsg');
         }
     }
 
     onEAGER_PUSH(m) {
         if (this.receivePayload(m, false)) { // Silent repair (no forwarding)
             this.clearTimeout('g');
-            this.transition('GOT_MSG');
+            this.transition('GotMsg');
         }
     }
 
@@ -136,12 +136,12 @@ class Syncing extends BaseState {
 }
 
 class GotMsg extends BaseState {
-    getState() { return ['GOT_MSG', '#81c784']; }
-    canTransition() { return ['WAIT']; }
-    onUp() { this.transition('WAIT', false); }
+    getUI() { return ['GOT_MSG', '#81c784']; }
+    canTransition() { return ['Waiting']; }
+    onUp() { this.transition('Waiting', false); }
 
     onEnter() { this.resetFlash(); }
-    revertToWait() { this.transition('WAIT'); }
+    revertToWait() { this.transition('Waiting'); }
 
     resetFlash() {
         this.clearTimeout('flash');

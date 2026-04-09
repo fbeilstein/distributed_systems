@@ -3,8 +3,8 @@ const SERVER_ID = 0;
 const RETRY_TIMEOUT = 30;
 
 class RIFL_Client extends State {
-    get name() { return 'client: idle'; }
-    getState() { return ['client: idle', '#cfd8dc']; }
+    getUI() { return ['client: idle', '#cfd8dc']; }
+    canTransition() { return ['Waiting', 'Done', 'DoneCached']; }
     onEnter() {
         this.machine.started = false;
         this.machine.seq = 1;
@@ -22,14 +22,14 @@ class RIFL_Client extends State {
     sendRequest(t) {
         sendMessage(SERVER_ID, { type: 'WRITE_RPC', cid: serverId, seq: this.machine.seq, val: this.machine.val }, 'blue');
         this.machine.pendingAt = t;
-        this.transition('client: waiting');
+        this.transition('Waiting');
     }
     registerMessageTypes() {
         return {
             'ACK': (msg) => {
                 if (msg.payload.seq === this.machine.seq) {
                     this.machine.pendingAt = null;
-                    this.transition(msg.payload.status === 'CACHED' ? 'client: DONE (CACHED)' : 'client: DONE');
+                    this.transition(msg.payload.status === 'CACHED' ? 'DoneCached' : 'Done');
                 }
             }
         };
@@ -37,8 +37,8 @@ class RIFL_Client extends State {
 }
 
 class Waiting extends State {
-    get name() { return 'client: waiting'; }
-    getState() { return ['client: waiting', '#fff59d']; }
+    getUI() { return ['client: waiting', '#fff59d']; }
+    canTransition() { return ['Done', 'DoneCached']; }
     onTimer(t) {
         if (this.machine.pendingAt && t - this.machine.pendingAt >= RETRY_TIMEOUT) {
             sendMessage(SERVER_ID, { type: 'WRITE_RPC', cid: serverId, seq: this.machine.seq, val: this.machine.val }, 'blue');
@@ -50,7 +50,7 @@ class Waiting extends State {
             'ACK': (msg) => {
                 if (msg.payload.seq === this.machine.seq) {
                     this.machine.pendingAt = null;
-                    this.transition(msg.payload.status === 'CACHED' ? 'client: DONE (CACHED)' : 'client: DONE');
+                    this.transition(msg.payload.status === 'CACHED' ? 'DoneCached' : 'Done');
                 }
             }
         };
@@ -58,13 +58,11 @@ class Waiting extends State {
 }
 
 class Done extends State {
-    get name() { return 'client: DONE'; }
-    getState() { return ['client: DONE', '#4caf50']; }
+    getUI() { return ['client: DONE', '#4caf50']; }
 }
 
 class DoneCached extends State {
-    get name() { return 'client: DONE (CACHED)'; }
-    getState() { return ['client: DONE (CACHED)', '#4fc3f7']; }
+    getUI() { return ['client: DONE (CACHED)', '#4fc3f7']; }
 }
 
 class RIFLClientMachine extends Machine {

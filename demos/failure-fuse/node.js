@@ -13,8 +13,8 @@ function shouldPing(tick) {
 
 /** LISTEN: Normal operation, pinging and listening */
 class Listen extends State {
-    getState() { return ['Listen', '#3182bd']; }
-    canTransition() { return ['Fuse Blown']; }
+    getUI() { return ['Listen', '#3182bd']; }
+    canTransition() { return ['Blown']; }
 
     onTimer(tick) {
         this.machine.tick = tick;
@@ -27,7 +27,7 @@ class Listen extends State {
             const gap = tick - (p.lastSeen || 0);
             if (gap > TIMEOUT) {
                 p.status = 'failed';
-                this.transition('Fuse Blown');
+                this.transition('Blown');
                 break;
             }
         }
@@ -51,7 +51,7 @@ class Listen extends State {
 
 /** BLOWN: Final state, totally inactive */
 class Blown extends State {
-    getState() { return ['Fuse Blown', '#e57373']; }
+    getUI() { return ['Fuse Blown', '#e57373']; }
     // No message handlers or timers in this state
 }
 

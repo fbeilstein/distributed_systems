@@ -4,8 +4,8 @@
 const CLIENT_IDS = [1, 2];
 
 class LinearizableServer extends State {
-    get name() { return 'server: ready'; }
-    getState() { return ['server: ready', '#cfd8dc']; }
+    getUI() { return ['server: ready', '#cfd8dc']; }
+    canTransition() { return ['StateA', 'StateB']; }
     registerMessageTypes() {
         return {
             'WRITE_RPC': (msg) => {
@@ -19,7 +19,7 @@ class LinearizableServer extends State {
                     this.machine.data = val;
                     this.machine.completions[cid] = seq;
                     sendMessage(cid, { type: 'ACK', seq, status: 'SUCCESS' }, 'green');
-                    this.transition(val === 'A' ? 'state: A' : 'state: B');
+                    this.transition(val === 'A' ? 'StateA' : 'StateB');
                 }
             }
         };
@@ -27,8 +27,8 @@ class LinearizableServer extends State {
 }
 
 class StateA extends State {
-    get name() { return 'state: A'; }
-    getState() { return ['state: A', '#81c784']; }
+    getUI() { return ['state: A', '#81c784']; }
+    canTransition() { return ['StateA', 'StateB']; }
     registerMessageTypes() {
         return {
             'WRITE_RPC': (msg) => {
@@ -40,7 +40,7 @@ class StateA extends State {
                     this.machine.data = val;
                     this.machine.completions[cid] = seq;
                     sendMessage(cid, { type: 'ACK', seq, status: 'SUCCESS' }, 'green');
-                    this.transition(val === 'A' ? 'state: A' : 'state: B');
+                    this.transition(val === 'A' ? 'StateA' : 'StateB');
                 }
             }
         };
@@ -48,8 +48,8 @@ class StateA extends State {
 }
 
 class StateB extends State {
-    get name() { return 'state: B'; }
-    getState() { return ['state: B', '#ffb74d']; }
+    getUI() { return ['state: B', '#ffb74d']; }
+    canTransition() { return ['StateA', 'StateB']; }
     registerMessageTypes() {
         return {
             'WRITE_RPC': (msg) => {
@@ -61,7 +61,7 @@ class StateB extends State {
                     this.machine.data = val;
                     this.machine.completions[cid] = seq;
                     sendMessage(cid, { type: 'ACK', seq, status: 'SUCCESS' }, 'green');
-                    this.transition(val === 'A' ? 'state: A' : 'state: B');
+                    this.transition(val === 'A' ? 'StateA' : 'StateB');
                 }
             }
         };

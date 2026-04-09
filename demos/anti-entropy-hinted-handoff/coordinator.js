@@ -50,12 +50,12 @@ class CoordinatorState extends State {
 }
 
 class Idle extends CoordinatorState {
-    getState() { return ['Idle', '#cfd8dc']; }
+    getUI() { return ['Idle', '#cfd8dc']; }
     canTransition() { return ['Writing', 'Reading', 'HasHints']; }
 }
 
 class Writing extends CoordinatorState {
-    getState() { return ['Writing', '#ffb74d']; }
+    getUI() { return ['Writing', '#ffb74d']; }
     canTransition() { return ['HasHints', 'Idle']; }
 
     onEnter() {
@@ -83,7 +83,7 @@ class Writing extends CoordinatorState {
 }
 
 class Reading extends CoordinatorState {
-    getState() { return ['Reading', '#4fc3f7']; }
+    getUI() { return ['Reading', '#4fc3f7']; }
     canTransition() { return ['Repairing', 'HasHints', 'Idle']; }
 
     onEnter() {
@@ -118,7 +118,7 @@ class Reading extends CoordinatorState {
 }
 
 class Repairing extends CoordinatorState {
-    getState() { return ['Repairing', '#ab47bc']; }
+    getUI() { return ['Repairing', '#ab47bc']; }
     canTransition() { return ['HasHints', 'Idle']; }
 
     onEnter() {
@@ -152,7 +152,7 @@ class Repairing extends CoordinatorState {
 }
 
 class HasHints extends CoordinatorState {
-    getState() { return ['HasHints', '#ef5350']; }
+    getUI() { return ['HasHints', '#ef5350']; }
     canTransition() { return ['Idle', 'Writing', 'Reading']; }
 }
 

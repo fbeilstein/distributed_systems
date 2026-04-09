@@ -4,6 +4,7 @@
     "ticks": 180,
     "trackPaddingTop": 30,
     "trackHeight": 70,
+    "labelWidth": 100,
     "names": [
         "Client",
         "ZAB Node 1",

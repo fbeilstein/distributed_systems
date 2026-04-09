@@ -18,24 +18,24 @@ class BaseGossipState extends State {
         if (m.payload.type === 'RUMOR') {
             if (this.machine.rumorSeen) {
                 this.machine.redundantCount++;
-                if (this.machine.redundantCount >= 3) this.transition('REMOVED');
+                if (this.machine.redundantCount >= 3) this.transition('Removed');
             } else {
                 this.machine.rumorSeen = true;
-                this.transition('INFECTED');
+                this.transition('Infected');
             }
         }
     }
 }
 
 class Susceptible extends BaseGossipState {
-    getState() { return ['SUSCEPTIBLE', '#cfd8dc']; }
-    canTransition() { return ['INFECTED']; }
-    onUp() { this.transition('SUSCEPTIBLE'); }
+    getUI() { return ['SUSCEPTIBLE', '#cfd8dc']; }
+    canTransition() { return ['Infected']; }
+    onUp() { this.transition('Susceptible'); }
 }
 
 class Infected extends BaseGossipState {
-    getState() { return ['INFECTED', '#ffb74d']; }
-    canTransition() { return ['REMOVED']; }
+    getUI() { return ['INFECTED', '#ffb74d']; }
+    canTransition() { return ['Removed']; }
 
     onEnter() {
         this.machine.rumorSeen = true;
@@ -51,7 +51,7 @@ class Infected extends BaseGossipState {
         if (t % GOSSIP_INTERVAL === offset) {
             this.machine.rounds++;
             if (this.machine.rounds > 5) {
-                this.transition('REMOVED');
+                this.transition('Removed');
             } else {
                 this.doGossip();
             }
@@ -74,7 +74,7 @@ class Infected extends BaseGossipState {
 }
 
 class Removed extends State {
-    getState() { return ['REMOVED', '#37474f']; }
+    getUI() { return ['REMOVED', '#37474f']; }
     canTransition() { return []; }
 }
 

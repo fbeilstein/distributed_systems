@@ -59,7 +59,7 @@ class BVVState extends State {
 }
 
 class Idle extends BVVState {
-    getState() { return ['Idle', '#4fc3f7']; }
+    getUI() { return ['Idle', '#4fc3f7']; }
     canTransition() { return ['Syncing']; }
 
     onSYNC_DATA(msg) {
@@ -79,7 +79,7 @@ class Idle extends BVVState {
 }
 
 class Syncing extends BVVState {
-    getState() { return ['Syncing', '#9c27b0']; }
+    getUI() { return ['Syncing', '#9c27b0']; }
     canTransition() { return ['Idle']; }
     onEnter() { this.setTimeout(20, 'returnIdle', 'sync'); }
     returnIdle() { this.transition('Idle'); }

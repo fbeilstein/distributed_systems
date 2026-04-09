@@ -1,8 +1,8 @@
 // Paxos (Single Degree) — Acceptor Role
 
 class Ready extends State {
-    getState() { return ['ready', '#cfd8dc']; }
-    canTransition() { return ['promised', 'accepted']; }
+    getUI() { return ['ready', '#cfd8dc']; }
+    canTransition() { return ['Promised', 'Accepted']; }
     registerMessageTypes() {
         return {
             'PREPARE': (msg) => {
@@ -14,7 +14,7 @@ class Ready extends State {
                         prevBallot: this.machine.acceptedBallot,
                         prevVal: this.machine.acceptedVal
                     }, 'green');
-                    this.transition('promised');
+                    this.transition('Promised');
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }
@@ -26,7 +26,7 @@ class Ready extends State {
                     this.machine.acceptedBallot = ballot;
                     this.machine.acceptedVal = val;
                     sendMessage(msg.from, { type: 'ACCEPTED', ballot, val }, 'green');
-                    this.transition('accepted');
+                    this.transition('Accepted');
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }
@@ -36,14 +36,14 @@ class Ready extends State {
 }
 
 class Promised extends State {
-    getState() {
+    getUI() {
         let label = `P:${this.machine.promised}`;
         if (this.machine.acceptedVal !== null) {
             label += ` (v:${this.machine.acceptedVal})`;
         }
         return [label, '#ffe082'];
     }
-    canTransition() { return ['promised', 'accepted']; }
+    canTransition() { return ['Promised', 'Accepted']; }
     registerMessageTypes() {
         return {
             'PREPARE': (msg) => {
@@ -55,7 +55,7 @@ class Promised extends State {
                         prevBallot: this.machine.acceptedBallot,
                         prevVal: this.machine.acceptedVal
                     }, 'green');
-                    this.transition('promised', false); // stay/re-enter Promised
+                    this.transition('Promised', false); // stay/re-enter Promised
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }
@@ -67,7 +67,7 @@ class Promised extends State {
                     this.machine.acceptedBallot = ballot;
                     this.machine.acceptedVal = val;
                     sendMessage(msg.from, { type: 'ACCEPTED', ballot, val }, 'green');
-                    this.transition('accepted');
+                    this.transition('Accepted');
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }
@@ -77,11 +77,11 @@ class Promised extends State {
 }
 
 class Accepted extends State {
-    getState() {
+    getUI() {
         const val = this.machine.acceptedVal !== null ? this.machine.acceptedVal : '-';
         return [`A:${this.machine.acceptedBallot}:${val}`, '#81c784'];
     }
-    canTransition() { return ['promised', 'accepted']; }
+    canTransition() { return ['Promised', 'Accepted']; }
     registerMessageTypes() {
         return {
             'PREPARE': (msg) => {
@@ -93,7 +93,7 @@ class Accepted extends State {
                         prevBallot: this.machine.acceptedBallot,
                         prevVal: this.machine.acceptedVal
                     }, 'green');
-                    this.transition('promised');
+                    this.transition('Promised');
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }
@@ -105,7 +105,7 @@ class Accepted extends State {
                     this.machine.acceptedBallot = ballot;
                     this.machine.acceptedVal = val;
                     sendMessage(msg.from, { type: 'ACCEPTED', ballot, val }, 'green');
-                    this.transition('accepted', false); // stay/re-enter Accepted
+                    this.transition('Accepted', false); // stay/re-enter Accepted
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }

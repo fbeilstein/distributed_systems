@@ -6,7 +6,7 @@ class State {
   }
 
   /** Subclasses should return [displayName, color] */
-  getState() { return [this.name || 'unknown', '#ccc']; }
+  getUI() { return [this.name || 'unknown', '#ccc']; }
 
   // Transition name (internal ID) - defaults to class name ( intuitive, case-sensitive )
   get name() { return this.constructor.name; }
@@ -68,10 +68,27 @@ class Automat {
       if (s instanceof State) {
         s.automat = this;
         s.machine = this.machine;
-        const [displayName, color] = s.getState();
-        const name = (s.name || displayName || 'unknown').toLowerCase();
+        const [displayName, color] = s.getUI();
+        const className = s.constructor.name;
+        const explicitName = (s.name || 'unknown');
+        const rawDisplay = (displayName || 'unknown');
+
+        // Register under canonical name (class name)
+        const name = className;
+        s.__name = name; // Tag the state instance with its canonical ID
         this.states[name] = s;
+
+        // Also register under explicit 'name' and display name as an aliases if they differ
+        if (explicitName !== name) {
+          this.states[explicitName] = s;
+        }
+        if (rawDisplay !== name && rawDisplay !== explicitName) {
+          this.states[rawDisplay] = s;
+        }
+
         if (!this._colors[name]) this._colors[name] = color;
+        if (!this._colors[explicitName]) this._colors[explicitName] = color;
+        if (!this._colors[rawDisplay]) this._colors[rawDisplay] = color;
         if (!resolvedInitialName) resolvedInitialName = name;
 
         // Discovery
@@ -80,7 +97,7 @@ class Automat {
           if (Array.isArray(targets)) {
             if (!this._graph[name]) this._graph[name] = {};
             targets.forEach(t => {
-              const target = (t || '').toLowerCase();
+              const target = (t || '');
               this._graph[name][target] = target;
             });
           }
@@ -100,7 +117,6 @@ class Automat {
     this.stateName = resolvedInitialName;
     this.current = this.states[this.stateName];
 
-    // Trigger onEnter for the initial state if NOT handled by Machine
     if (!this.skipInitialEnter && this.current && this.current.onEnter) {
       this.current.onEnter();
     }
@@ -159,12 +175,16 @@ class Automat {
   }
 
   transition(targetName, reenter = true) {
-    const target = (targetName || '').toLowerCase();
+    const target = (targetName || '');
     const next = (this._graph[this.stateName] && this._graph[this.stateName][target]) || target;
-    if (!this.states[next]) return false;
+    const nextState = this.states[next];
+    if (!nextState) return false;
+
+    // Resolve aliases to canonical name for internal tracking
+    const canonicalNext = nextState.__name || next;
 
     // Warn on undeclared transitions (helps catch typos and missing canTransition entries)
-    if (this._graph[this.stateName] && Object.keys(this._graph[this.stateName]).length > 0 && !this._graph[this.stateName][targetName]) {
+    if (this._graph[this.stateName] && Object.keys(this._graph[this.stateName]).length > 0 && !this._graph[this.stateName][target]) {
       console.warn('[Automat] Undeclared transition: ' + this.stateName + ' → ' + targetName);
     }
 
@@ -181,26 +201,33 @@ class Automat {
       if (this.current.onExit) this.current.onExit();
       this.current.clearAllTimeouts();
     }
-    this.stateName = next;
-    this.current = this.states[next];
+    this.stateName = canonicalNext;
+    this.current = nextState;
     if (this.current && this.current.onEnter) this.current.onEnter();
     return true;
   }
 
   serialize() {
     const stateData = {};
-    for (const [n, s] of Object.entries(this.states)) {
-      stateData[n] = { _timeouts: s._timeouts };
+    const labels = {};
+    for (const [id, s] of Object.entries(this.states)) {
+      stateData[id] = { _timeouts: s._timeouts };
+      if (s.__name === id) { // Only map the canonical ID
+        labels[id] = s.getUI()[0];
+      }
     }
-    const [display, color] = this.current ? this.current.getState() : [this.stateName, '#ccc'];
+
+    const [display, color] = this.current ? this.current.getUI() : [this.stateName, '#ccc'];
     if (this.stateName) this._colors[this.stateName] = color;
 
     return {
-      state: display,
+      state: this.stateName, // Canonical ID (Used for highlighting in graph)
+      displayState: display,  // Visual Label (Used for badge)
       color: color,
       stateName: this.stateName,
       stateData: stateData,
       graph: this._graph,
+      labels: labels, // Mapping: ID -> Label
       colors: this._colors
     };
   }
@@ -212,7 +239,7 @@ class Automat {
       graph: obj.graph,
       colors: obj.colors,
       skipInitialEnter: true,
-      machine: stateInstances.length > 0 ? stateInstances[0].machine : null // Carry over if possible
+      machine: stateInstances.length > 0 ? stateInstances[0].machine : null
     });
     if (obj.stateData) {
       for (const [name, data] of Object.entries(obj.stateData)) {
@@ -241,13 +268,11 @@ class Machine {
       }
     }
 
-    // Truly fresh if no serialized FSM or no valid state name
     const isFresh = !s.fsm || !s.fsm.stateName;
     if (isFresh) {
       const automatConfig = Object.assign({ states: this.states, skipInitialEnter: true, machine: this }, this._config);
       this._automat = new Automat(automatConfig);
     } else {
-      // For deserialization, we need the machine reference ready
       this.states.forEach(st => { st.machine = this; });
       this._automat = Automat.deserialize(s.fsm, this.states);
     }
@@ -257,7 +282,6 @@ class Machine {
       stateObj.machine = this;
     }
 
-    // Trigger initial onEnter ONLY on a fresh start AND after links are settled
     if (isFresh && this._automat.current && this._automat.current.onEnter) {
       this._automat.current.onEnter();
     }
@@ -268,7 +292,7 @@ class Machine {
     if (typeof this.syncUI === 'function') this.syncUI();
     if (this._automat) {
       s.fsm = this._automat.serialize();
-      s.ui_state = s.fsm.state;
+      s.ui_state = s.fsm.displayState; // Aesthetic Label for track/badge
       s.ui_color = s.fsm.color;
       s.ui_graph = s.fsm.graph;
       s.ui_colors = s.fsm.colors;
@@ -277,7 +301,7 @@ class Machine {
     for (const key of Object.keys(this)) {
       if (key !== 'states' && key !== '_automat' && key !== '_config') {
         data[key] = this[key];
-        s[key] = this[key]; // Expose to state inspector visually
+        s[key] = this[key];
       }
     }
     s.machineData = data;

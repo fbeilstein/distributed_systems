@@ -11,7 +11,7 @@ class BaseProposerState extends State {
         this.machine.nacks = 0;
 
         broadcast(ACCEPTORS, { type: 'PREPARE', ballot: this.machine.ballot }, 'orange');
-        this.transition('preparing');
+        this.transition('Preparing');
     }
 
     startAccept(slot, val) {
@@ -26,7 +26,7 @@ class BaseProposerState extends State {
             ballot: this.machine.ballot,
             val: val
         }, 'blue');
-        this.transition('leader');
+        this.transition('Leader');
     }
 
     handleNack() {
@@ -35,15 +35,15 @@ class BaseProposerState extends State {
             // We lost leadership!
             this.machine.isLeader = false;
             const jitter = getRandom(5, 20);
-            this.transition('failed');
+            this.transition('Failed');
             this.automat.current.setTimeout(jitter, 'onRetry', 'retry_timer');
         }
     }
 }
 
 class Idle extends BaseProposerState {
-    getState() { return ['idle', '#cfd8dc']; }
-    canTransition() { return ['preparing', 'leader']; }
+    getUI() { return ['idle', '#cfd8dc']; }
+    canTransition() { return ['Preparing', 'Leader']; }
 
     registerMessageTypes() {
         return {
@@ -65,8 +65,8 @@ class Idle extends BaseProposerState {
 }
 
 class Preparing extends BaseProposerState {
-    getState() { return ['preparing', '#ffb74d']; }
-    canTransition() { return ['leader', 'failed']; }
+    getUI() { return ['preparing', '#ffb74d']; }
+    canTransition() { return ['Leader', 'Failed']; }
 
     onEnter() {
         this.setTimeout(25, 'handleNack', 'prep_timeout'); // Treat timeout like a NACK
@@ -89,7 +89,7 @@ class Preparing extends BaseProposerState {
                         const slot = this.machine.nextSlot++;
                         this.startAccept(slot, cmd);
                     }
-                    this.transition('leader');
+                    this.transition('Leader');
                 }
             },
             'NACK': () => this.handleNack()
@@ -98,8 +98,8 @@ class Preparing extends BaseProposerState {
 }
 
 class Leader extends BaseProposerState {
-    getState() { return ['LEADER', '#4fc3f7']; }
-    canTransition() { return ['failed', 'leader']; }
+    getUI() { return ['LEADER', '#4fc3f7']; }
+    canTransition() { return ['Failed', 'Leader']; }
 
     registerMessageTypes() {
         return {
@@ -126,8 +126,8 @@ class Leader extends BaseProposerState {
 }
 
 class Failed extends BaseProposerState {
-    getState() { return ['failed', '#e57373']; }
-    canTransition() { return ['preparing']; }
+    getUI() { return ['failed', '#e57373']; }
+    canTransition() { return ['Preparing']; }
     onRetry() { this.startPrepare(); }
 }
 

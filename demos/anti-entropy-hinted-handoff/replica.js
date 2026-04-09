@@ -42,17 +42,17 @@ class ReplicaState extends State {
 }
 
 class V0 extends ReplicaState {
-    getState() { return ['V0', '#cfd8dc']; }
+    getUI() { return ['V0', '#cfd8dc']; }
     canTransition() { return ['V1', 'V2']; }
 }
 
 class V1 extends ReplicaState {
-    getState() { return ['V1', '#81c784']; }
+    getUI() { return ['V1', '#81c784']; }
     canTransition() { return ['V2']; }
 }
 
 class V2 extends ReplicaState {
-    getState() { return ['V2', '#2e7d32']; }
+    getUI() { return ['V2', '#2e7d32']; }
     canTransition() { return []; }
 }
 

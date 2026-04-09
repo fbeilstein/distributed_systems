@@ -38,7 +38,7 @@ class ZabState extends State {
 // ======================================
 
 class Looking extends ZabState {
-    getState() { return ['LOOKING', '#ffb74d']; }
+    getUI() { return ['LOOKING', '#ffb74d']; }
     canTransition() { return ['LeadingSync', 'FollowingSync', 'Looking']; }
 
     onEnter() {
@@ -112,7 +112,7 @@ class Looking extends ZabState {
 // ======================================
 
 class LeadingSync extends ZabState {
-    getState() { return ['LEADING_SYNC', '#64b5f6']; }
+    getUI() { return ['LEADING_SYNC', '#64b5f6']; }
     canTransition() { return ['Broadcast', 'Looking']; }
 
     onEnter() {
@@ -147,7 +147,7 @@ class LeadingSync extends ZabState {
 // ======================================
 
 class FollowingSync extends ZabState {
-    getState() { return ['FOLLOWING_SYNC', '#4dd0e1']; }
+    getUI() { return ['FOLLOWING_SYNC', '#4dd0e1']; }
     canTransition() { return ['Follower', 'Looking']; }
 
     onEnter() {
@@ -178,7 +178,7 @@ class FollowingSync extends ZabState {
 // ======================================
 
 class Broadcast extends ZabState {
-    getState() { return ['BROADCAST', '#8bc34a']; }
+    getUI() { return ['BROADCAST', '#8bc34a']; }
     canTransition() { return ['Looking']; }
 
     onEnter() {
@@ -245,7 +245,7 @@ class Broadcast extends ZabState {
 // ======================================
 
 class Follower extends ZabState {
-    getState() { return ['FOLLOWER', '#4db6ac']; }
+    getUI() { return ['FOLLOWER', '#4db6ac']; }
     canTransition() { return ['Looking']; }
 
     onEnter() {

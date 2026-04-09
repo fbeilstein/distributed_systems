@@ -78,7 +78,7 @@ class RingState extends State {
 
 
 class Follower extends RingState {
-    getState() { return ['Follower', '#cfd8dc']; }
+    getUI() { return ['Follower', '#cfd8dc']; }
     canTransition() { return ['Candidate']; }
 
     onEnter() {
@@ -102,7 +102,7 @@ class Follower extends RingState {
 
 
 class Candidate extends RingState {
-    getState() { return ['Candidate', '#ffb74d']; }
+    getUI() { return ['Candidate', '#ffb74d']; }
     canTransition() { return ['Follower', 'Leader']; }
 
     onEnter() {
@@ -127,7 +127,7 @@ class Candidate extends RingState {
 
 
 class Leader extends RingState {
-    getState() { return ['Leader', '#4caf50']; }
+    getUI() { return ['Leader', '#4caf50']; }
 
     onEnter() {
         this.machine.leader = serverId;

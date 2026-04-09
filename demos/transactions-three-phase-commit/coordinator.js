@@ -3,8 +3,8 @@ const CLIENT_ID = 4;
 const COHORTS = allServerIds.filter(id => id !== serverId && id !== CLIENT_ID);
 
 class Idle extends State {
-    getState() { return ['idle', '#cfd8dc']; }
-    canTransition() { return ['voting']; }
+    getUI() { return ['idle', '#cfd8dc']; }
+    canTransition() { return ['Voting']; }
     registerMessageTypes() {
         return {
             'CLIENT_TX_START': (msg) => {
@@ -14,15 +14,15 @@ class Idle extends State {
                 this.machine.votes = [];
                 this.machine.acks = [];
                 broadcast(COHORTS, { type: 'CAN_COMMIT', txId, val }, 'orange', true);
-                this.transition('voting');
+                this.transition('Voting');
             }
         };
     }
 }
 
 class Voting extends State {
-    getState() { return ['voting', '#ffe082']; }
-    canTransition() { return ['prepare', 'abort']; }
+    getUI() { return ['voting', '#ffe082']; }
+    canTransition() { return ['Prepare', 'Abort']; }
     onEnter() {
         this.setTimeout(18, 'onVoteTimeout');
     }
@@ -33,7 +33,7 @@ class Voting extends State {
         const txId = this.machine.txId;
         broadcast(COHORTS, { type: 'DO_ABORT', txId }, 'red', true);
         this.machine.history.push(`TX${txId}:abort`); // Trigger render.js
-        this.transition('abort');
+        this.transition('Abort');
     }
     registerMessageTypes() {
         return {
@@ -47,7 +47,7 @@ class Voting extends State {
 
                 if (this.machine.votes.length === COHORTS.length) {
                     broadcast(COHORTS, { type: 'PREPARE', txId }, 'blue', true);
-                    this.transition('prepare');
+                    this.transition('Prepare');
                 }
             },
             'VOTE_NO': (msg) => {
@@ -56,16 +56,15 @@ class Voting extends State {
 
                 broadcast(COHORTS, { type: 'DO_ABORT', txId }, 'red', true);
                 this.machine.history.push(`TX${txId}:abort`); // Trigger render.js
-                this.transition('abort');
+                this.transition('Abort');
             }
         };
     }
 }
 
 class Prepare extends State {
-    get name() { return 'prepare'; }
-    getState() { return ['prepare', '#90caf9']; }
-    canTransition() { return ['commit']; }
+    getUI() { return ['prepare', '#90caf9']; }
+    canTransition() { return ['Commit']; }
     onEnter() {
         this.setTimeout(18, 'onAckTimeout');
     }
@@ -76,7 +75,7 @@ class Prepare extends State {
         const txId = this.machine.txId;
         broadcast(COHORTS, { type: 'DO_COMMIT', txId }, 'green', true);
         this.machine.history.push(`TX${txId}:commit`); // Trigger render.js
-        this.transition('commit');
+        this.transition('Commit');
     }
     registerMessageTypes() {
         return {
@@ -91,7 +90,7 @@ class Prepare extends State {
                 if (this.machine.acks.length === COHORTS.length) {
                     broadcast(COHORTS, { type: 'DO_COMMIT', txId }, 'green', true);
                     this.machine.history.push(`TX${txId}:commit`); // Trigger render.js
-                    this.transition('commit');
+                    this.transition('Commit');
                 }
             }
         };
@@ -99,24 +98,24 @@ class Prepare extends State {
 }
 
 class Commit extends State {
-    getState() { return ['commit', '#81c784']; }
-    canTransition() { return ['idle']; }
+    getUI() { return ['commit', '#81c784']; }
+    canTransition() { return ['Idle']; }
     onEnter() {
         this.setTimeout(5, 'onCleanup');
     }
     onCleanup() {
-        this.transition('idle');
+        this.transition('Idle');
     }
 }
 
 class Abort extends State {
-    getState() { return ['abort', '#e57373']; }
-    canTransition() { return ['idle']; }
+    getUI() { return ['abort', '#e57373']; }
+    canTransition() { return ['Idle']; }
     onEnter() {
         this.setTimeout(5, 'onCleanup');
     }
     onCleanup() {
-        this.transition('idle');
+        this.transition('Idle');
     }
 }
 

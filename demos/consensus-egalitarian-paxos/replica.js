@@ -48,7 +48,7 @@ class BaseReplicaState extends State {
 }
 
 class Idle extends BaseReplicaState {
-    getState() {
+    getUI() {
         // Dynamically show the contents of the database while idle
         const keys = Object.keys(this.machine.db);
         if (keys.length === 0) return ['idle', '#cfd8dc'];
@@ -57,7 +57,7 @@ class Idle extends BaseReplicaState {
         return [`idle [${dbState}]`, '#b0bec5']; // Slightly darker gray to indicate it holds data
     }
 
-    canTransition() { return ['preaccepting']; }
+    canTransition() { return ['Preaccepting']; }
 
     registerMessageTypes() {
         return Object.assign(this.getBackgroundHandlers(), {
@@ -81,15 +81,15 @@ class Idle extends BaseReplicaState {
                     key: key
                 }, 'orange');
 
-                this.transition('preaccepting');
+                this.transition('Preaccepting');
             }
         });
     }
 }
 
 class Preaccepting extends BaseReplicaState {
-    getState() { return [`Pre-Accept (${this.machine.activeKey})`, '#ffb74d']; }
-    canTransition() { return ['accepting', 'committed', 'idle']; }
+    getUI() { return [`Pre-Accept (${this.machine.activeKey})`, '#ffb74d']; }
+    canTransition() { return ['Accepting', 'Committed', 'Idle']; }
 
     registerMessageTypes() {
         return Object.assign(this.getBackgroundHandlers(), {
@@ -116,12 +116,12 @@ class Preaccepting extends BaseReplicaState {
                             key: this.machine.activeKey,
                             val: this.machine.activeVal
                         }, 'purple');
-                        this.transition('committed');
+                        this.transition('Committed');
                     } else {
                         // SLOW PATH!
                         this.machine.acceptReplies = [serverId];
                         broadcast(peers, { type: 'ACCEPT', inst: this.machine.activeInst, key: this.machine.activeKey }, 'blue');
-                        this.transition('accepting');
+                        this.transition('Accepting');
                     }
                 }
             }
@@ -130,8 +130,8 @@ class Preaccepting extends BaseReplicaState {
 }
 
 class Accepting extends BaseReplicaState {
-    getState() { return [`Slow Accept (${this.machine.activeKey})`, '#64b5f6']; }
-    canTransition() { return ['committed', 'idle']; }
+    getUI() { return [`Slow Accept (${this.machine.activeKey})`, '#64b5f6']; }
+    canTransition() { return ['Committed', 'Idle']; }
 
     registerMessageTypes() {
         return Object.assign(this.getBackgroundHandlers(), {
@@ -152,7 +152,7 @@ class Accepting extends BaseReplicaState {
                         key: this.machine.activeKey,
                         val: this.machine.activeVal
                     }, 'purple');
-                    this.transition('committed');
+                    this.transition('Committed');
                 }
             }
         });
@@ -160,7 +160,7 @@ class Accepting extends BaseReplicaState {
 }
 
 class Committed extends BaseReplicaState {
-    getState() { return [`FAST Commit (${this.machine.activeVal})`, '#81c784']; }
+    getUI() { return [`FAST Commit (${this.machine.activeVal})`, '#81c784']; }
 
     onEnter() {
         // Save to the Command Leader's local database
@@ -174,7 +174,7 @@ class Committed extends BaseReplicaState {
         this.setTimeout(10, 'reset', 'commit_timer');
     }
 
-    reset() { this.transition('idle'); }
+    reset() { this.transition('Idle'); }
 
     registerMessageTypes() {
         return this.getBackgroundHandlers();

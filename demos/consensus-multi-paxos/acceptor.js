@@ -13,7 +13,7 @@ class AcceptorState extends State {
                         type: 'PROMISE',
                         log: this.machine.log
                     }, 'green');
-                    this.transition('active');
+                    this.transition('Active');
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }
@@ -31,7 +31,7 @@ class AcceptorState extends State {
                     this.machine.log[slot].acceptedVal = val;
 
                     sendMessage(msg.from, { type: 'ACCEPTED', slot, ballot, val }, 'green');
-                    this.transition('active', false);
+                    this.transition('Active', false);
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }
@@ -41,16 +41,16 @@ class AcceptorState extends State {
 }
 
 class Ready extends AcceptorState {
-    getState() { return ['ready', '#cfd8dc']; }
-    canTransition() { return ['active']; }
+    getUI() { return ['ready', '#cfd8dc']; }
+    canTransition() { return ['Active']; }
 }
 
 class Active extends AcceptorState {
-    getState() {
+    getUI() {
         const numEntries = Object.keys(this.machine.log).length;
         return [`P:${this.machine.promised} | log:${numEntries}`, '#81c784'];
     }
-    canTransition() { return ['active']; }
+    canTransition() { return ['Active']; }
 }
 
 class AcceptorMachine extends Machine {

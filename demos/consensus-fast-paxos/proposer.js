@@ -9,7 +9,7 @@ class BaseProposerState extends State {
     startFastAccept() {
         this.machine.fastAccepts = [];
         broadcast(ACCEPTORS, { type: 'FAST_ACCEPT', val: this.machine.val }, 'purple');
-        this.transition('fastaccepting'); // FIXED: Matches class name
+        this.transition('Fastaccepting'); // FIXED: Matches class name
     }
 
     startPrepare() {
@@ -19,26 +19,26 @@ class BaseProposerState extends State {
         this.machine.fastValuesSeen = [];
         this.machine.nacks = 0;
         broadcast(ACCEPTORS, { type: 'PREPARE', ballot: this.machine.ballot }, 'orange');
-        this.transition('preparing');
+        this.transition('Preparing');
     }
 
     startAccept() {
         this.machine.accepts = [];
         this.machine.nacks = 0;
         broadcast(ACCEPTORS, { type: 'ACCEPT', ballot: this.machine.ballot, val: this.machine.val }, 'blue');
-        this.transition('accepting');
+        this.transition('Accepting');
     }
 
     scheduleRetry() {
         const jitter = getRandom(5, 20);
-        this.transition('failed');
+        this.transition('Failed');
         this.automat.current.setTimeout(jitter, 'onRetry', 'retry_timer');
     }
 }
 
 class Idle extends BaseProposerState {
-    getState() { return ['idle', '#cfd8dc']; }
-    canTransition() { return ['fastaccepting']; } // FIXED: Permit transition
+    getUI() { return ['idle', '#cfd8dc']; }
+    canTransition() { return ['Fastaccepting']; } // FIXED: Permit transition
 
     registerMessageTypes() {
         return {
@@ -52,14 +52,14 @@ class Idle extends BaseProposerState {
 }
 
 class Fastaccepting extends BaseProposerState {
-    getState() { return ['fast accept', '#ce93d8']; }
-    canTransition() { return ['success', 'collision']; }
+    getUI() { return ['fast accept', '#ce93d8']; }
+    canTransition() { return ['Success', 'Collision']; }
 
     onEnter() {
         this.setTimeout(25, 'fallback', 'fast_timeout');
     }
 
-    fallback() { this.transition('collision'); }
+    fallback() { this.transition('Collision'); }
 
     registerMessageTypes() {
         return {
@@ -68,20 +68,20 @@ class Fastaccepting extends BaseProposerState {
                     this.machine.fastAccepts.push(msg.from);
                 }
                 if (this.machine.fastAccepts.length >= FAST_QUORUM) {
-                    this.transition('success');
+                    this.transition('Success');
                 }
             },
             'NACK': () => {
                 // Instantly detect the collision!
-                this.transition('collision');
+                this.transition('Collision');
             }
         };
     }
 }
 
 class Collision extends BaseProposerState {
-    getState() { return ['COLLISION!', '#ff9800']; }
-    canTransition() { return ['preparing']; }
+    getUI() { return ['COLLISION!', '#ff9800']; }
+    canTransition() { return ['Preparing']; }
 
     onEnter() {
         // Pause so the audience can see the collision detected
@@ -93,8 +93,8 @@ class Collision extends BaseProposerState {
 }
 
 class Preparing extends BaseProposerState {
-    getState() { return [`recovering...`, '#ffb74d']; }
-    canTransition() { return ['accepting', 'failed']; }
+    getUI() { return [`recovering...`, '#ffb74d']; }
+    canTransition() { return ['Accepting', 'Failed']; }
 
     onEnter() { this.setTimeout(30, 'scheduleRetry', 'prep_timeout'); }
 
@@ -149,8 +149,8 @@ class Preparing extends BaseProposerState {
 }
 
 class Accepting extends BaseProposerState {
-    getState() { return ['accepting (classic)', '#64b5f6']; }
-    canTransition() { return ['success', 'failed']; }
+    getUI() { return ['accepting (classic)', '#64b5f6']; }
+    canTransition() { return ['Success', 'Failed']; }
 
     onEnter() { this.setTimeout(25, 'scheduleRetry', 'acc_timeout'); }
 
@@ -161,7 +161,7 @@ class Accepting extends BaseProposerState {
                     this.machine.accepts.push(msg.from);
                 }
                 if (this.machine.accepts.length >= CLASSIC_QUORUM) {
-                    this.transition('success');
+                    this.transition('Success');
                 }
             },
             'NACK': () => {
@@ -173,13 +173,13 @@ class Accepting extends BaseProposerState {
 }
 
 class Failed extends BaseProposerState {
-    getState() { return ['failed', '#e57373']; }
-    canTransition() { return ['preparing']; }
+    getUI() { return ['failed', '#e57373']; }
+    canTransition() { return ['Preparing']; }
     onRetry() { this.startPrepare(); }
 }
 
 class Success extends BaseProposerState {
-    getState() { return [`success (${this.machine.val})`, '#81c784']; }
+    getUI() { return [`success (${this.machine.val})`, '#81c784']; }
 }
 
 class ProposerMachine extends Machine {

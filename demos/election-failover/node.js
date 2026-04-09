@@ -34,7 +34,7 @@ class BullyState extends State {
 
 /** FOLLOWER: Waiting for heartbeats or probe signals */
 class Follower extends BullyState {
-    getState() { return ['Follower', '#cfd8dc']; }
+    getUI() { return ['Follower', '#cfd8dc']; }
     canTransition() { return ['Probing', 'Electing', 'Leader']; }
     onEnter() { this.wait_leader(); }
     onLeaderTimeout() {
@@ -48,7 +48,7 @@ class Follower extends BullyState {
 
 /** PROBING: Fast handover attempt before falling back to full election */
 class Probing extends BullyState {
-    getState() { return ['Probing', '#fff59d']; }
+    getUI() { return ['Probing', '#fff59d']; }
     canTransition() { return ['Electing', 'Follower', 'Leader']; }
 
     onEnter() {
@@ -63,7 +63,7 @@ class Probing extends BullyState {
 
 /** ELECTING: Standard Bully fallback storm */
 class Electing extends BullyState {
-    getState() { return ['Electing', '#ffb74d']; }
+    getUI() { return ['Electing', '#ffb74d']; }
     canTransition() { return ['Leader', 'Follower']; }
 
     onEnter() {
@@ -99,7 +99,7 @@ class Electing extends BullyState {
 
 /** LEADER: Established authority designating a successor */
 class Leader extends BullyState {
-    getState() { return ['Leader', '#81c784']; }
+    getUI() { return ['Leader', '#81c784']; }
     canTransition() { return ['Follower']; }
 
     onEnter() {

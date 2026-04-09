@@ -194,8 +194,8 @@ Every state is a class inheriting from `State`. Key methods to override:
 
 | Method | When Called | Typical Use |
 | :--- | :--- | :--- |
-| `getState()` | On serialization | Return `[displayName, color]`. **The display name is the transition target.** |
-| `canTransition()` | On construction | Return array of valid target state names (for graph visualization). |
+| `getUI()` | On serialization | Return `[displayName, color]`. Used for labeling the state band in the UI. Defaults to `this.name`. |
+| `canTransition()` | On construction | Return array of valid target Class Names (for graph visualization). |
 | `onEnter()` | After transitioning INTO this state | Start timers, send initial messages |
 | `onExit()` | Before transitioning OUT of this state | Cleanup (timers are auto-cleared) |
 | `onUp()` | When node reboots | Force transition to a safe state (e.g., `this.transition('Follower')`) |
@@ -208,6 +208,7 @@ Every state is a class inheriting from `State`. Key methods to override:
 
 | Property / Method | Description |
 | :--- | :--- |
+| `this.name` | The internal identity of the state. Defaults to the **PascalCase Class Name**. |
 | `this.activeTimers` | Getter: returns `{ name: ticksLeft, ... }` for all active timers. |
 | `this.setTimeout(ticks, cb, name)` | Register a timer. |
 | `this.clearTimeout(name)` | Clear a specific timer. |
@@ -255,7 +256,10 @@ onMessage(msg) {
 }
 ```
 
-**Case sensitivity matters!** `this.transition('follower')` will FAIL if `getState()` returns `'Follower'`.
+**State Identity & Transitions**:
+- **Prefer PascalCase Class Names**: Use the class name (e.g., `'Follower'`) in `this.transition()` and `canTransition()`.
+- **Identity over Display**: Never compare `getUI()[0]`. Use `this.name === 'Follower'` for logical checks.
+- **Optional Aliasing**: If you must use a different ID, override `get name() { return 'my-alias'; }`. The class name will still remain a valid transition target.
 
 ### 5.2 The `Machine` Class
 

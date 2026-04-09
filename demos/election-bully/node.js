@@ -34,7 +34,7 @@ class BullyState extends State {
 
 /** FOLLOWER: Waiting for heartbeats or delegations */
 class Follower extends BullyState {
-    getState() { return ['Follower', '#cfd8dc']; }
+    getUI() { return ['Follower', '#cfd8dc']; }
     canTransition() { return ['Electing', 'Leader']; }
     onEnter() { this.wait_leader(); }
     onLeaderTimeout() { this.transition('Electing'); }
@@ -42,7 +42,7 @@ class Follower extends BullyState {
 
 /** ELECTING: The Handover Phase */
 class Electing extends BullyState {
-    getState() { return ['Electing', '#ffb74d']; }
+    getUI() { return ['Electing', '#ffb74d']; }
     canTransition() { return ['Leader', 'Follower']; }
 
     onEnter() {
@@ -72,7 +72,7 @@ class Electing extends BullyState {
 
 /** LEADER: Victory and Heartbeats */
 class Leader extends BullyState {
-    getState() { return ['Leader', '#81c784']; }
+    getUI() { return ['Leader', '#81c784']; }
     canTransition() { return ['Follower']; }
 
     onEnter() {

@@ -62,13 +62,14 @@ export class StateInspector {
 
             // State badge (decoupled)
             const serverState = simState ? simState.serverStates[server.id] : {};
-            const uiState = (serverState && serverState.ui_state !== undefined) ? serverState.ui_state : (serverState && serverState.fsm ? serverState.fsm.state : null);
+            const activeBadgeLabel = (serverState && serverState.ui_state !== undefined) ? serverState.ui_state : (serverState && serverState.fsm ? serverState.fsm.displayState : null);
+            const activeGraphId = (serverState && serverState.fsm) ? serverState.fsm.state : activeBadgeLabel;
             const uiColor = (serverState && serverState.ui_color !== undefined) ? serverState.ui_color : (serverState && serverState.fsm ? serverState.fsm.color : null);
 
-            if (uiState !== null) {
+            if (activeBadgeLabel !== null) {
                 const badge = document.createElement('span');
                 badge.className = 'state-badge';
-                badge.textContent = String(uiState);
+                badge.textContent = String(activeBadgeLabel);
                 const badgeColor = uiColor || '#78909c';
                 badge.style.backgroundColor = badgeColor;
                 badge.style.color = this._contrastColor(badgeColor);
@@ -80,8 +81,9 @@ export class StateInspector {
             // Render Graph directly into the header if available
             const uiGraph = (serverState && serverState.ui_graph) ? serverState.ui_graph : (serverState && serverState.fsm ? serverState.fsm.graph : null);
             const uiColors = (serverState && serverState.ui_colors !== undefined) ? serverState.ui_colors : (serverState && serverState.fsm ? serverState.fsm.colors : null);
+            const nodeLabels = (serverState && serverState.fsm) ? serverState.fsm.labels : null;
             if (uiGraph) {
-                this._renderFsmGraphToCard(server.id, uiState, uiGraph, uiColors, header);
+                this._renderFsmGraphToCard(server.id, activeGraphId, uiGraph, uiColors, header, nodeLabels);
             }
 
             card.appendChild(header);
@@ -93,8 +95,8 @@ export class StateInspector {
                 ([k]) => k !== '__error__' && k !== 'fsm' && !k.startsWith('ui_')
             );
 
-            if (uiState !== null) {
-                entries.unshift(['state', String(uiState)]);
+            if (activeBadgeLabel !== null) {
+                entries.unshift(['state', String(activeBadgeLabel)]);
             }
 
             if (entries.length === 0) {
@@ -175,7 +177,7 @@ export class StateInspector {
         input.addEventListener('blur', commit);
     }
 
-    async _renderFsmGraphToCard(serverId, activeState, graph, colors, bodyElement) {
+    async _renderFsmGraphToCard(serverId, activeState, graph, colors, bodyElement, nodeLabels) {
         if (!graph) return;
 
         // Generate the Mermaid definition entirely in the inspector
@@ -186,9 +188,12 @@ export class StateInspector {
         const quote = (label) => `"${label.replace(/"/g, "'")}"`;
 
         const drawnEdges = new Set();
+        const labels = nodeLabels || {};
+
         for (const [fromState, transitions] of Object.entries(graph)) {
             const fromId = sanitize(fromState);
-            graphDefinition += `  state ${quote(fromState)} as ${fromId}\n`;
+            const label = labels[fromState] || fromState;
+            graphDefinition += `  state ${quote(label)} as ${fromId}\n`;
 
             if (Object.keys(transitions).length === 0) {
                 graphDefinition += `  ${fromId}\n`;

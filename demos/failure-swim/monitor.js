@@ -13,7 +13,7 @@ const INDIRECT_TIMEOUT = 25;
 /** ---------------- STATES ---------------- **/
 
 class SwimState extends State {
-    getState() { return [this.name, this.color]; }
+    getUI() { return [this.name, this.color]; }
 }
 
 class Monitoring extends SwimState {

@@ -32,7 +32,7 @@ class InvitationState extends State {
 }
 
 class Leader extends InvitationState {
-    getState() {
+    getUI() {
         return ['Leader', this.machine && this.machine.isUltimateLeader ? '#4caf50' : '#81c784'];
     }
     canTransition() { return ['Follower']; }
@@ -131,7 +131,7 @@ class Leader extends InvitationState {
 }
 
 class Follower extends InvitationState {
-    getState() { return ['Follower', this.machine && this.machine.hasSeenHeartbeat ? '#a5d6a7' : '#cfd8dc']; }
+    getUI() { return ['Follower', this.machine && this.machine.hasSeenHeartbeat ? '#a5d6a7' : '#cfd8dc']; }
     canTransition() { return ['Leader']; }
 
     onEnter() {

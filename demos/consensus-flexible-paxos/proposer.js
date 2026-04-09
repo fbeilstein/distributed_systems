@@ -21,7 +21,7 @@ class BaseProposerState extends State {
         this.machine.nacks = 0;
 
         broadcast(ACCEPTORS, { type: 'PREPARE', ballot: this.machine.ballot }, 'orange');
-        this.transition('preparing');
+        this.transition('Preparing');
     }
 
     // Helper to start Phase 2 (Accept)
@@ -34,13 +34,13 @@ class BaseProposerState extends State {
             ballot: this.machine.ballot,
             val: this.machine.val
         }, 'blue');
-        this.transition('accepting');
+        this.transition('Accepting');
     }
 
     // Retry logic with random jitter to prevent livelock
     scheduleRetry() {
         const jitter = getRandom(5, 20);
-        this.transition('failed'); // Briefly flash red
+        this.transition('Failed'); // Briefly flash red
 
         // Use the stale-reference safe method to set a timer on the NEW 'failed' state
         this.automat.current.setTimeout(jitter, 'onRetry', 'retry_timer');
@@ -48,8 +48,8 @@ class BaseProposerState extends State {
 }
 
 class Idle extends BaseProposerState {
-    getState() { return ['idle', '#cfd8dc']; }
-    canTransition() { return ['preparing']; }
+    getUI() { return ['idle', '#cfd8dc']; }
+    canTransition() { return ['Preparing']; }
 
     registerMessageTypes() {
         return {
@@ -63,11 +63,11 @@ class Idle extends BaseProposerState {
 }
 
 class Preparing extends BaseProposerState {
-    getState() {
+    getUI() {
         const source = this.machine.valueSource === 'original' ? '' : ' (adopted)';
         return [`preparing${source}`, '#ffb74d'];
     }
-    canTransition() { return ['accepting', 'failed']; }
+    canTransition() { return ['Accepting', 'Failed']; }
 
     onEnter() {
         // If we don't get a quorum of promises in 25 ticks, retry
@@ -103,8 +103,8 @@ class Preparing extends BaseProposerState {
 }
 
 class Accepting extends BaseProposerState {
-    getState() { return ['accepting', '#64b5f6']; }
-    canTransition() { return ['success', 'failed']; }
+    getUI() { return ['accepting', '#64b5f6']; }
+    canTransition() { return ['Success', 'Failed']; }
 
     onEnter() {
         // If we don't get a quorum of accepts in 25 ticks, start completely over
@@ -120,7 +120,7 @@ class Accepting extends BaseProposerState {
 
                 // Consensus is ACTUALLY reached here!
                 if (this.machine.accepts.length >= PHASE_2_QUORUM) {
-                    this.transition('success');
+                    this.transition('Success');
                 }
             },
             'NACK': (msg) => {
@@ -132,8 +132,8 @@ class Accepting extends BaseProposerState {
 }
 
 class Failed extends BaseProposerState {
-    getState() { return ['failed', '#e57373']; }
-    canTransition() { return ['preparing']; }
+    getUI() { return ['failed', '#e57373']; }
+    canTransition() { return ['Preparing']; }
 
     onRetry() {
         this.startPrepare();
@@ -141,7 +141,7 @@ class Failed extends BaseProposerState {
 }
 
 class Success extends BaseProposerState {
-    getState() { return ['success', '#81c784']; }
+    getUI() { return ['success', '#81c784']; }
 }
 
 class ProposerMachine extends Machine {

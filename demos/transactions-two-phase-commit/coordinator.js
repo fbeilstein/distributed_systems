@@ -33,8 +33,8 @@ class BaseCoordinatorState extends State {
 }
 
 class Idle extends BaseCoordinatorState {
-    getState() { return ['idle', '#8bc34a']; }
-    canTransition() { return ['prepare']; }
+    getUI() { return ['idle', '#8bc34a']; }
+    canTransition() { return ['Prepare']; }
     onCLIENT_TX_START(m) { this.startTx(m.payload.txId, m.payload.val); }
     startTx(txId, data) {
         this.machine.txId = txId;
@@ -43,13 +43,13 @@ class Idle extends BaseCoordinatorState {
             to: id,
             msg: { type: 'PREPARE', txId: txId, data: data }
         }));
-        this.transition('prepare');
+        this.transition('Prepare');
     }
 }
 
 class Prepare extends BaseCoordinatorState {
-    getState() { return ['prepare', '#ffc107']; }
-    canTransition() { return ['collecting']; }
+    getUI() { return ['prepare', '#ffc107']; }
+    canTransition() { return ['Collecting']; }
     onEnter() { this.setTimeout(2, 'sendNext', 'p'); }
     sendNext() {
         if (this.machine.outbox.length > 0) {
@@ -57,14 +57,14 @@ class Prepare extends BaseCoordinatorState {
             sendMessage(next.to, next.msg, 'orange');
             this.setTimeout(2, 'sendNext', 'p');
         } else {
-            this.transition('collecting');
+            this.transition('Collecting');
         }
     }
 }
 
 class Collecting extends BaseCoordinatorState {
-    getState() { return ['collecting', '#ff9800']; }
-    canTransition() { return ['committing', 'aborting']; }
+    getUI() { return ['collecting', '#ff9800']; }
+    canTransition() { return ['Committing', 'Aborting']; }
     onEnter() { this.setTimeout(15, 'onTimeout', 't'); }
     onVOTE_COMMIT(m) {
         if (m.payload.txId !== this.machine.txId) return;
@@ -75,26 +75,26 @@ class Collecting extends BaseCoordinatorState {
         if (m.payload.txId !== this.machine.txId) return;
         this.machine.history.push(`TX${this.machine.txId}:abort`);
         this.machine.outbox = this.machine.cohorts.map(id => ({ to: id, msg: { type: 'ABORT', txId: this.machine.txId } }));
-        this.transition('aborting');
+        this.transition('Aborting');
     }
     onTimeout() {
         this.machine.history.push(`TX${this.machine.txId}:abort`);
         this.machine.outbox = this.machine.cohorts.map(id => ({ to: id, msg: { type: 'ABORT', txId: this.machine.txId } }));
-        this.transition('aborting');
+        this.transition('Aborting');
     }
     checkVotes() {
         const allVoted = this.machine.cohorts.every(id => this.machine.votes[id] === 'commit');
         if (allVoted) {
             this.machine.history.push(`TX${this.machine.txId}:commit`);
             this.machine.outbox = this.machine.cohorts.map(id => ({ to: id, msg: { type: 'COMMIT', txId: this.machine.txId } }));
-            this.transition('committing');
+            this.transition('Committing');
         }
     }
 }
 
 class Committing extends BaseCoordinatorState {
-    getState() { return ['committing', '#2196f3']; }
-    canTransition() { return ['idle']; }
+    getUI() { return ['committing', '#2196f3']; }
+    canTransition() { return ['Idle']; }
     onEnter() { this.setTimeout(2, 'sendNext', 'c'); }
     sendNext() {
         if (this.machine.outbox.length > 0) {
@@ -102,14 +102,14 @@ class Committing extends BaseCoordinatorState {
             sendMessage(next.to, next.msg, 'green');
             this.setTimeout(2, 'sendNext', 'c');
         } else {
-            this.transition('idle');
+            this.transition('Idle');
         }
     }
 }
 
 class Aborting extends BaseCoordinatorState {
-    getState() { return ['aborting', '#f44336']; }
-    canTransition() { return ['idle']; }
+    getUI() { return ['aborting', '#f44336']; }
+    canTransition() { return ['Idle']; }
     onEnter() { this.setTimeout(2, 'sendNext', 'a'); }
     sendNext() {
         if (this.machine.outbox.length > 0) {
@@ -117,7 +117,7 @@ class Aborting extends BaseCoordinatorState {
             sendMessage(next.to, next.msg, 'red');
             this.setTimeout(2, 'sendNext', 'a');
         } else {
-            this.transition('idle');
+            this.transition('Idle');
         }
     }
 }

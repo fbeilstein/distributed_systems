@@ -15,7 +15,7 @@ class BaseAcceptorState extends State {
                     this.machine.acceptedVal = val;
                     this.machine.acceptedBallot = 0; // 0 designates Fast Round
                     sendMessage(msg.from, { type: 'ACCEPTED', ballot: 0, val }, 'green');
-                    this.transition('accepted', false);
+                    this.transition('Accepted', false);
                 } else {
                     // COLLISION! Return an explicit NACK.
                     sendMessage(msg.from, { type: 'NACK', reason: 'collision' }, 'orange');
@@ -30,7 +30,7 @@ class BaseAcceptorState extends State {
                         prevBallot: this.machine.acceptedBallot,
                         prevVal: this.machine.acceptedVal
                     }, 'green');
-                    this.transition('promised');
+                    this.transition('Promised');
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }
@@ -42,7 +42,7 @@ class BaseAcceptorState extends State {
                     this.machine.acceptedBallot = ballot;
                     this.machine.acceptedVal = val;
                     sendMessage(msg.from, { type: 'ACCEPTED', ballot, val }, 'green');
-                    this.transition('accepted');
+                    this.transition('Accepted');
                 } else {
                     sendMessage(msg.from, { type: 'NACK', ballot: this.machine.promised }, 'red');
                 }
@@ -52,26 +52,26 @@ class BaseAcceptorState extends State {
 }
 
 class Ready extends BaseAcceptorState {
-    getState() { return ['ready', '#cfd8dc']; }
-    canTransition() { return ['promised', 'accepted']; }
+    getUI() { return ['ready', '#cfd8dc']; }
+    canTransition() { return ['Promised', 'Accepted']; }
 }
 
 class Promised extends BaseAcceptorState {
-    getState() {
+    getUI() {
         let label = `P:${this.machine.promised}`;
         if (this.machine.acceptedVal !== null) label += ` (v:${this.machine.acceptedVal})`;
         return [label, '#ffe082'];
     }
-    canTransition() { return ['promised', 'accepted']; }
+    canTransition() { return ['Promised', 'Accepted']; }
 }
 
 class Accepted extends BaseAcceptorState {
-    getState() {
+    getUI() {
         const val = this.machine.acceptedVal !== null ? this.machine.acceptedVal : '-';
         const bal = this.machine.acceptedBallot === 0 ? 'FAST' : this.machine.acceptedBallot;
         return [`A:${bal}:${val}`, '#81c784'];
     }
-    canTransition() { return ['promised', 'accepted']; }
+    canTransition() { return ['Promised', 'Accepted']; }
 }
 
 class AcceptorMachine extends Machine {

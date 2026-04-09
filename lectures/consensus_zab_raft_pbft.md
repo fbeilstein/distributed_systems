@@ -62,7 +62,17 @@ When a new prospective leader emerges, it executes three phases:
 2. **Synchronization**: The leader brings followers up to speed, ensuring everyone shares the same history before new messages are accepted.
 3. **Broadcast**: The active phase. The leader receives client writes, orders them, broadcasts a proposal, waits for a quorum of acknowledgments, and commits.
 
+**ZooKeeper Transaction ID (Zxid)**
+ZAB stamps every transaction with a 64-bit **Zxid**. 
+* The higher 32 bits represent the **epoch** (the leader's term).
+* The lower 32 bits are a **monotonic counter** for transactions within that epoch.
+* *This structure makes it trivial to identify which transaction is "newer" during the Discovery and Synchronization phases.*
+
 > *ZAB's broadcast is highly efficient, requiring only two rounds of messages. It behaves like Two-Phase Commit without aborts.*
+
+---
+
+# ZAB Demo
 
 <div class="callout-box">
     <h4>What to watch</h4>
@@ -92,11 +102,11 @@ While technically sound, virtual synchrony has largely been superseded in modern
 
 # Raft: Understandable Consensus
 
-[**Raft**](https://raft.github.io/) was designed explicitly to be a more understandable alternative to Paxos, while providing the same safety and performance.
+* [**Raft**](https://raft.github.io/) was designed explicitly to be a more understandable alternative to Paxos, while providing the same safety and performance.
 
-Locally, participants store a **log** of commands. By applying identical logs in the same order, state machines arrive at identical results.
+* Locally, participants store a **log** of commands. By applying identical logs in the same order, state machines arrive at identical results.
 
-Raft simplifies consensus by making the concept of a **strong leader** a first-class citizen. Most of the time, the cluster simply accepts appends from the stable leader.
+* Raft simplifies consensus by making the concept of a **strong leader** a first-class citizen. Most of the time, the cluster simply accepts appends from the stable leader.
 
 ---
 
@@ -119,28 +129,28 @@ When a follower's randomized election timeout fires, it becomes a candidate, imp
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 70,
+  "ticks": 55,
   "trackHeight": 44,
   "stateBandOffset": 10,
   "servers": ["Node-1", "Node-2", "Node-3", "Node-4", "Node-5"],
   "states": [
-    { "server": "Node-1", "start": 0,  "end": 20, "state": "follower (timeout!)","color": "#b2dfdb" },
-    { "server": "Node-1", "start": 21, "end": 40, "state": "candidate (term 2)",   "color": "#ffb74d" },
-    { "server": "Node-1", "start": 41, "end": 70, "state": "leader (term 2)",      "color": "#90caf9" },
-    { "server": "Node-2", "start": 0,  "end": 25, "state": "follower",             "color": "#b2dfdb" },
-    { "server": "Node-2", "start": 26, "end": 70, "state": "follower (voted N1)",  "color": "#80cbc4" },
-    { "server": "Node-3", "start": 0,  "end": 27, "state": "follower",             "color": "#b2dfdb" },
-    { "server": "Node-3", "start": 28, "end": 70, "state": "follower (voted N1)",  "color": "#80cbc4" },
-    { "server": "Node-4", "start": 0,  "end": 70, "state": "follower (offline)",   "color": "#cfd8dc" },
-    { "server": "Node-5", "start": 0,  "end": 70, "state": "follower (offline)",   "color": "#cfd8dc" }
+    { "server": "Node-1", "start": 0,  "end": 15, "state": "follower (timeout!)","color": "#b2dfdb" },
+    { "server": "Node-1", "start": 16, "end": 32, "state": "candidate (term 2)",   "color": "#ffb74d" },
+    { "server": "Node-1", "start": 33, "end": 55, "state": "leader (term 2)",      "color": "#90caf9" },
+    { "server": "Node-2", "start": 0,  "end": 19, "state": "follower",             "color": "#b2dfdb" },
+    { "server": "Node-2", "start": 20, "end": 55, "state": "follower (voted N1)",  "color": "#80cbc4" },
+    { "server": "Node-3", "start": 0,  "end": 21, "state": "follower",             "color": "#b2dfdb" },
+    { "server": "Node-3", "start": 22, "end": 55, "state": "follower (voted N1)",  "color": "#80cbc4" },
+    { "server": "Node-4", "start": 0,  "end": 55, "state": "follower (offline)",   "color": "#cfd8dc" },
+    { "server": "Node-5", "start": 0,  "end": 55, "state": "follower (offline)",   "color": "#cfd8dc" }
   ],
   "messages": [
-    { "from": "Node-1", "to": "Node-2", "sendTick": 21, "recvTick": 26, "label": "RequestVote" },
-    { "from": "Node-1", "to": "Node-3", "sendTick": 21, "recvTick": 28 },
-    { "from": "Node-2", "to": "Node-1", "sendTick": 27, "recvTick": 35, "label": "VoteGranted" },
-    { "from": "Node-3", "to": "Node-1", "sendTick": 29, "recvTick": 38 },
-    { "from": "Node-1", "to": "Node-2", "sendTick": 42, "recvTick": 47, "label": "Heartbeat" },
-    { "from": "Node-1", "to": "Node-3", "sendTick": 42, "recvTick": 48 }
+    { "from": "Node-1", "to": "Node-2", "sendTick": 16, "recvTick": 20, "label": "RequestVote" },
+    { "from": "Node-1", "to": "Node-3", "sendTick": 16, "recvTick": 22 },
+    { "from": "Node-2", "to": "Node-1", "sendTick": 21, "recvTick": 27, "label": "VoteGranted" },
+    { "from": "Node-3", "to": "Node-1", "sendTick": 23, "recvTick": 30 },
+    { "from": "Node-1", "to": "Node-2", "sendTick": 34, "recvTick": 39, "label": "Heartbeat" },
+    { "from": "Node-1", "to": "Node-3", "sendTick": 34, "recvTick": 40 }
   ]
 }
 ```
@@ -168,27 +178,27 @@ Once a majority of followers acknowledge writing the entry to their logs, the le
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 65,
+  "ticks": 55,
   "trackHeight": 44,
   "stateBandOffset": 10,
   "servers": ["Client", "Leader", "Replica-1", "Replica-2", "Replica-3"],
   "states": [
-    { "server": "Leader",    "start": 0,  "end": 14, "state": "idle",                 "color": "#cfd8dc" },
-    { "server": "Leader",    "start": 15, "end": 44, "state": "replicating entry 5",  "color": "#ffb74d" },
-    { "server": "Leader",    "start": 45, "end": 65, "state": "committed entry 5",    "color": "#81c784" },
-    { "server": "Replica-1", "start": 0,  "end": 24, "state": "log length 4",         "color": "#b2dfdb" },
-    { "server": "Replica-1", "start": 25, "end": 65, "state": "log length 5 (uc)",    "color": "#80cbc4" },
-    { "server": "Replica-2", "start": 0,  "end": 26, "state": "log length 4",         "color": "#b2dfdb" },
-    { "server": "Replica-2", "start": 27, "end": 65, "state": "log length 5 (uc)",    "color": "#80cbc4" },
-    { "server": "Replica-3", "start": 0,  "end": 65, "state": "offline / delayed",    "color": "#cfd8dc" }
+    { "server": "Leader",    "start": 0,  "end": 10, "state": "idle",                 "color": "#cfd8dc" },
+    { "server": "Leader",    "start": 11, "end": 32, "state": "replicating entry 5",  "color": "#ffb74d" },
+    { "server": "Leader",    "start": 33, "end": 55, "state": "committed entry 5",    "color": "#81c784" },
+    { "server": "Replica-1", "start": 0,  "end": 18, "state": "log length 4",         "color": "#b2dfdb" },
+    { "server": "Replica-1", "start": 19, "end": 55, "state": "log length 5 (uc)",    "color": "#80cbc4" },
+    { "server": "Replica-2", "start": 0,  "end": 20, "state": "log length 4",         "color": "#b2dfdb" },
+    { "server": "Replica-2", "start": 21, "end": 55, "state": "log length 5 (uc)",    "color": "#80cbc4" },
+    { "server": "Replica-3", "start": 0,  "end": 55, "state": "offline / delayed",    "color": "#cfd8dc" }
   ],
   "messages": [
-    { "from": "Client",    "to": "Leader",    "sendTick": 5,  "recvTick": 14, "label": "x = 25" },
-    { "from": "Leader",    "to": "Replica-1", "sendTick": 16, "recvTick": 24, "label": "AppendEntries" },
-    { "from": "Leader",    "to": "Replica-2", "sendTick": 16, "recvTick": 26 },
-    { "from": "Replica-1", "to": "Leader",    "sendTick": 26, "recvTick": 35, "label": "ACK" },
-    { "from": "Replica-2", "to": "Leader",    "sendTick": 28, "recvTick": 38 },
-    { "from": "Leader",    "to": "Client",    "sendTick": 46, "recvTick": 55, "label": "OK" }
+    { "from": "Client",    "to": "Leader",    "sendTick": 3,  "recvTick": 10, "label": "x = 25" },
+    { "from": "Leader",    "to": "Replica-1", "sendTick": 12, "recvTick": 18, "label": "AppendEntries" },
+    { "from": "Leader",    "to": "Replica-2", "sendTick": 12, "recvTick": 20 },
+    { "from": "Replica-1", "to": "Leader",    "sendTick": 20, "recvTick": 28, "label": "ACK" },
+    { "from": "Replica-2", "to": "Leader",    "sendTick": 22, "recvTick": 32 },
+    { "from": "Leader",    "to": "Client",    "sendTick": 34, "recvTick": 42, "label": "OK" }
   ]
 }
 ```
@@ -204,21 +214,6 @@ When a leader sends an entry, it includes the index and term of the **immediatel
 If the logs diverge, the leader systematically decrements its local `nextIndex` for that follower and retries until they find the point where the logs match. The leader then overwrites the follower's history from that point forward.
 
 > *The leader’s log is sacred. It is never overwritten or deleted, only appended to.*
-
-<div class="callout-box">
-    <h4>What to watch</h4>
-    <p>This demo starts with a hardcoded, severe partition state: the Follower's log has entirely diverged from the Leader's in an older term. Watch the Leader's `AppendEntries` get rejected, forcing the Leader to iteratively step backwards until the logs align, at which point the follower's corrupt history is truncated and rewritten.</p>
-</div>
-
-<div style="text-align: center; margin-top: 40px; margin-bottom: 40px;">
-    <button class="demo-btn" onclick="showDemo('demos/raft-divergence/demo.json')">
-        Launch Raft Log Divergence Demo
-    </button>
-</div>
-
----
-
-# The Raft Demo
 
 Observe the entire Raft life cycle: Follower timeouts, split votes, leader election, heartbeats, and client request replication.
 
@@ -243,11 +238,12 @@ Observe the entire Raft life cycle: Follower timeouts, split votes, leader elect
 |---|---|---|
 | Leader election | Ballot-based, any node | Term-based, log-completeness check |
 | Log replication | Proposer-driven | Leader strictly append-only |
+| **Safety Constraint** | No "newer" ballot known | **Log Completeness**: Candidate must have log $\ge$ majority |
 | Membership changes | Ad-hoc per implementation | Joint-consensus protocol |
 | Understandability | Complex (many papers needed) | Single, complete paper |
 | Performance | Comparable | Comparable |
 
-> *Raft is Paxos made explicit: it trades some flexibility for clarity and a reference implementation.*
+> *Raft is Paxos made explicit: it trades some flexibility for clarity. Its **Log Completeness** property guarantees that a new leader already possesses all committed entries, so it never needs to pull data "backwards" from followers.*
 
 ---
 
@@ -267,7 +263,7 @@ Consensus in the presence of malicious actors is known as **Byzantine Fault Tole
 
 Most Byzantine consensus algorithms require $O(N^2)$ messages to complete a step. Because you cannot trust the leader, **every node must cross-validate everything with every other node** using cryptographic signatures.
 
-To tolerate $f$ Byzantine (malicious) nodes, a system requires **$3f + 1$** total nodes.
+To tolerate **$f$** Byzantine (malicious) nodes—where $f$ represents the maximum number of faulty nodes the system can tolerate—a system requires **$3f + 1$** total nodes.
 
 **Why $3f+1$?**
 Suppose $f$ nodes are malicious and $f$ nodes are just honest-but-offline (network partition). We must be able to make a decision using the remaining $N - 2f$ nodes.
@@ -281,7 +277,7 @@ Since $N$ is an integer, $N \ge 3f + 1$.
 
 # PBFT: Practical Byzantine Fault Tolerance
 
-**PBFT** operates in views, with one primary and all others as backups. If the primary goes rogue, the view changes.
+**PBFT** operates in views, with one primary and all others as backups. If the primary goes rogue or becomes unresponsive, the backups initiate a **View Change** protocol to elect the next primary in sequence.
 
 Clients issue requests to the primary. To succeed, the client must wait for $f + 1$ identical replies from different replicas (proving that at least one honest node executed it).
 
@@ -298,12 +294,22 @@ PBFT executes every request in **three phases**:
 The primary signs and broadcasts a view, sequence number, and the digest of the client’s request to all backups.
 
 **Phase 2: Prepare**
-Backups accept the pre-prepare if signatures are valid. They then broadcast a `PREPARE` to *all* other replicas. A node becomes "prepared" only when it sees matching `PREPARE` messages from **$2f$** different backups.
+Backups accept the pre-prepare if signatures are valid. They then broadcast a `PREPARE` to *all* other replicas. A node considers a request **"prepared"** once it has a valid `PRE_PREPARE` and matching `PREPARE` messages from **$2f$** different backups.
+* *This combined set of $2f + 1$ messages is known as a **Prepared Certificate**, proving the request is valid and uniquely sequenced.*
 
 **Phase 3: Commit**
 Once prepared, the node broadcasts a `COMMIT`. It waits to collect **$2f + 1$** matching `COMMIT` messages. Only then is the operation finally executed and the reply sent to the client.
 
-> *The heavy cross-validation ($N^2$ communication) guarantees that malicious nodes cannot trick subsets of the cluster into committing divergent values.*
+---
+
+# PBFT: View Change & Recovery
+
+If the backups suspect the primary is faulty (e.g., it fails to broadcast a `PRE-PREPARE` within a timeout), they broadcast a `VIEW-CHANGE` message.
+
+* Once the next primary in the sequence collects **$2f + 1$** valid `VIEW-CHANGE` messages, it broadcasts a `NEW-VIEW` message.
+* This protocol ensures that the cluster can make progress even if the leader is malicious or crashes, while guaranteeing that no two honest nodes ever commit different values for the same sequence number across view changes.
+
+> *The heavy cross-validation ($N^2$ communication) and rigorous view changes guarantee that malicious nodes cannot trick subsets of the cluster into committing divergent values.*
 
 ---
 
@@ -312,36 +318,38 @@ Once prepared, the node broadcasts a `COMMIT`. It waits to collect **$2f + 1$** 
 ```static-timeline
 {
   "zoom": 0.85,
-  "ticks": 85,
+  "ticks": 55,
   "trackHeight": 44,
   "stateBandOffset": 10,
   "servers": ["Primary", "Replica-1", "Replica-2", "Replica-3"],
   "states": [
-    { "server": "Primary",   "start": 0,  "end": 14, "state": "idle",             "color": "#cfd8dc" },
-    { "server": "Primary",   "start": 15, "end": 44, "state": "pre-prepared",     "color": "#ffb74d" },
-    { "server": "Primary",   "start": 45, "end": 64, "state": "prepared",         "color": "#64b5f6" },
-    { "server": "Primary",   "start": 65, "end": 85, "state": "committed",        "color": "#81c784" },
-    { "server": "Replica-1", "start": 0,  "end": 24, "state": "idle",             "color": "#cfd8dc" },
-    { "server": "Replica-1", "start": 25, "end": 49, "state": "pre-prepared",     "color": "#ffb74d" },
-    { "server": "Replica-1", "start": 50, "end": 69, "state": "prepared",         "color": "#64b5f6" },
-    { "server": "Replica-1", "start": 70, "end": 85, "state": "committed",        "color": "#81c784" },
-    { "server": "Replica-2", "start": 0,  "end": 26, "state": "idle",             "color": "#cfd8dc" },
-    { "server": "Replica-2", "start": 27, "end": 52, "state": "pre-prepared",     "color": "#ffb74d" },
-    { "server": "Replica-2", "start": 53, "end": 74, "state": "prepared",         "color": "#64b5f6" },
-    { "server": "Replica-2", "start": 75, "end": 85, "state": "committed",        "color": "#81c784" },
-    { "server": "Replica-3", "start": 0,  "end": 85, "state": "TRAITOR (lying)",  "color": "#e57373" }
+    { "server": "Primary",   "start": 0,  "end": 4,  "state": "idle",             "color": "#cfd8dc" },
+    { "server": "Primary",   "start": 5,  "end": 22, "state": "pre-prepared",     "color": "#ffb74d" },
+    { "server": "Primary",   "start": 23, "end": 33, "state": "prepared",         "color": "#64b5f6" },
+    { "server": "Primary",   "start": 34, "end": 55, "state": "committed",        "color": "#81c784" },
+    { "server": "Replica-1", "start": 0,  "end": 11, "state": "idle",             "color": "#cfd8dc" },
+    { "server": "Replica-1", "start": 12, "end": 24, "state": "pre-prepared",     "color": "#ffb74d" },
+    { "server": "Replica-1", "start": 25, "end": 33, "state": "prepared",         "color": "#64b5f6" },
+    { "server": "Replica-1", "start": 34, "end": 55, "state": "committed",        "color": "#81c784" },
+    { "server": "Replica-2", "start": 0,  "end": 13, "state": "idle",             "color": "#cfd8dc" },
+    { "server": "Replica-2", "start": 14, "end": 22, "state": "pre-prepared",     "color": "#ffb74d" },
+    { "server": "Replica-2", "start": 23, "end": 35, "state": "prepared",         "color": "#64b5f6" },
+    { "server": "Replica-2", "start": 36, "end": 55, "state": "committed",        "color": "#81c784" },
+    { "server": "Replica-3", "start": 0,  "end": 55, "state": "TRAITOR (lying)",  "color": "#e57373" }
   ],
   "messages": [
-    { "from": "Primary",   "to": "Replica-1", "sendTick": 15, "recvTick": 25, "label": "PRE_PREPARE" },
-    { "from": "Primary",   "to": "Replica-2", "sendTick": 15, "recvTick": 27 },
-    { "from": "Replica-1", "to": "Primary",   "sendTick": 26, "recvTick": 36, "label": "PREPARE" },
-    { "from": "Replica-1", "to": "Replica-2", "sendTick": 26, "recvTick": 38 },
-    { "from": "Replica-2", "to": "Primary",   "sendTick": 28, "recvTick": 40 },
-    { "from": "Replica-2", "to": "Replica-1", "sendTick": 28, "recvTick": 42 },
-    { "from": "Primary",   "to": "Replica-1", "sendTick": 46, "recvTick": 56, "label": "COMMIT" },
-    { "from": "Primary",   "to": "Replica-2", "sendTick": 46, "recvTick": 58 },
-    { "from": "Replica-1", "to": "Primary",   "sendTick": 51, "recvTick": 61 },
-    { "from": "Replica-2", "to": "Primary",   "sendTick": 54, "recvTick": 64 }
+    { "from": "Primary",   "to": "Replica-1", "sendTick": 5,  "recvTick": 12, "label": "PRE_PREPARE" },
+    { "from": "Primary",   "to": "Replica-2", "sendTick": 5,  "recvTick": 14 },
+    { "from": "Replica-1", "to": "Primary",   "sendTick": 13, "recvTick": 20, "label": "PREPARE" },
+    { "from": "Replica-1", "to": "Replica-2", "sendTick": 13, "recvTick": 22 },
+    { "from": "Replica-2", "to": "Primary",   "sendTick": 15, "recvTick": 22 },
+    { "from": "Replica-2", "to": "Replica-1", "sendTick": 15, "recvTick": 24 },
+    { "from": "Primary",   "to": "Replica-1", "sendTick": 24, "recvTick": 31, "label": "COMMIT" },
+    { "from": "Primary",   "to": "Replica-2", "sendTick": 24, "recvTick": 33 },
+    { "from": "Replica-1", "to": "Primary",   "sendTick": 26, "recvTick": 33 },
+    { "from": "Replica-1", "to": "Replica-2", "sendTick": 26, "recvTick": 35 },
+    { "from": "Replica-2", "to": "Primary",   "sendTick": 24, "recvTick": 31 },
+    { "from": "Replica-2", "to": "Replica-1", "sendTick": 24, "recvTick": 33 }
   ]
 }
 ```
