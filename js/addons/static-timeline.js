@@ -1,5 +1,5 @@
 import { SlideAddons } from '../slides-addons.js';
-import { Timeline } from '../timeline.js';
+import { Timeline } from '../distributed_systems/timeline.js';
 
 /**
  * Static Timeline Addon

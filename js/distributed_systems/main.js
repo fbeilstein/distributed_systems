@@ -237,7 +237,7 @@ async function init() {
 
     // Load the Automat (State/Machine) class source for sandbox injection
     try {
-        const automatResp = await fetch('./js/automat-source.js', { cache: 'no-store' });
+        const automatResp = await fetch('./automat-source.js', { cache: 'no-store' });
         if (automatResp.ok) {
             engine.automatSource = await automatResp.text();
         } else {

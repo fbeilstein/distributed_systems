@@ -236,7 +236,7 @@ function showDemo(demoName) {
     if (demoName.endsWith('.html')) {
         iframe.src = demoName;
     } else {
-        iframe.src = `index.html?code=${demoName}`;
+        iframe.src = `js/distributed_systems/index.html?code=../../${demoName}`;
     }
 
     title.textContent = `Interactive Demo: ${demoName.split('/').pop()}`;
