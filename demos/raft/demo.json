@@ -3,6 +3,7 @@
     "seed": 123,
     "clientId": 5,
     "ticks": 160,
+    "customRenderFile": "render.js",
     "names": [
         "DB-1",
         "DB-2",
