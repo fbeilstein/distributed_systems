@@ -151,7 +151,6 @@ export class Engine {
      */
     recompute(config) {
         if (config) this.config = config;
-        const prng = new PRNG(this.seed);
         const allServerIds = this.servers.map(s => s.id);
         const messages = [];
         const history = [];
@@ -192,7 +191,7 @@ export class Engine {
                     }
                     // Process outbox
                     for (const out of result.outbox) {
-                        this._addMessage(messages, out, prng);
+                        this._addMessage(messages, out);
                     }
                     serverWasUp.set(server.id, true);
                 }
@@ -204,7 +203,7 @@ export class Engine {
                         rt.currentState = { ...rt.currentState, __error__: result.error };
                     }
                     for (const out of result.outbox) {
-                        this._addMessage(messages, out, prng);
+                        this._addMessage(messages, out);
                     }
                 }
 
@@ -223,7 +222,7 @@ export class Engine {
                         rt.currentState = { ...rt.currentState, __error__: result.error };
                     }
                     for (const out of result.outbox) {
-                        this._addMessage(messages, out, prng);
+                        this._addMessage(messages, out);
                     }
                 }
 
@@ -250,7 +249,7 @@ export class Engine {
     /**
      * Add a message, applying any user overrides.
      */
-    _addMessage(messages, outgoing, prng) {
+    _addMessage(messages, outgoing) {
         // Ignore messages to non-existent servers
         if (!this.servers.find(s => s.id === outgoing.to)) return;
 

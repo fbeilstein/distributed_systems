@@ -51,14 +51,7 @@ export class StatefulRuntime {
             });
         };
         const self = this;
-        const getRandom = (min, max) => {
-            const seedBase = self.prng ? self.prng.seed : 42;
-            let h = seedBase ^ self.tick ^ (self.serverId * 0x9E3779B9) ^ (++self.randomCallCount * 0x517CC1B7);
-            h = Math.imul(h ^ (h >>> 15), 1 | h);
-            h ^= h + Math.imul(h ^ (h >>> 7), 61 | h);
-            const floatVal = ((h ^ (h >>> 14)) >>> 0) / 4294967296;
-            return Math.floor(floatVal * (max - min + 1) + min);
-        };
+        const getRandom = (min, max) => { return self.prng.nextInt(min, max); };
 
         try {
             // The wrapper returns the compiled handlers and the local scope
