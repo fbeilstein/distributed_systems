@@ -65,6 +65,7 @@
 
 ### Consensus: ZAB, Raft, PBFT (under development)
 
+* [ZAB](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/zab/demo.json)
 * [RAFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/raft/demo.json)
 * [PBFT](https://fbeilstein.github.io/distributed_systems/index.html?code=demos/pbft/demo.json)
 
