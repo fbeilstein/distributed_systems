@@ -8,6 +8,7 @@
 * Lecture 2. Failure Detection Mechanisms
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/failure_detection.md)
   - <details> <summary>Demos</summary>
+    
     * [Pings](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/failure-pings/demo.json)
     * [Heartbeats](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/failure-heartbeats/demo.json)
     * [Timeout-Free Failure Detector](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/failure-timeout-free/demo.json)
