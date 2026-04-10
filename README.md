@@ -3,9 +3,10 @@
 
 ## Lectures
 
-* Lecture 1. Introduction to Distributed Systems
+* **Lecture 1.** Introduction to Distributed Systems
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/intro_to_distributed_systems.md)
-* Lecture 2. Failure Detection Mechanisms
+
+* **Lecture 2.** Failure Detection Mechanisms
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/failure_detection.md)
   - <details> <summary>Demos</summary>
     
@@ -17,7 +18,8 @@
     * [Gossip Failure Detection](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/failure-gossip/demo.json)
     * [FUSE (failure notification service)](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/failure-fuse/demo.json)
     </details>
-* Lecture 3. Leader Election
+
+* **Lecture 3.** Leader Election
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/leader_election.md)
   - <details> <summary>Demos</summary>
     
@@ -27,19 +29,22 @@
     * [Invitation Algorithm](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/election-invitation/demo.json)
     * [Ring Algorithm](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/election-ring/demo.json)
     </details>
-* Lecture 4. Replication
+
+* **Lecture 4.** Replication
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/replication.md)
   - <details> <summary>Demos</summary>
     
     * [Reusable Infrastructure for Linearizability](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/replication-rifl/demo.json)
     </details>
-* Lecture 5. Consistency
+
+* **Lecture 5.** Consistency
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/consistency.md)
   - <details> <summary>Demos</summary>
     
     * [Vector Clocks](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/consistency-vector-clocks/demo.json)
     </details>
-* Lecture 6. Anti-Entropy and Dissemination
+
+* **Lecture 6.** Anti-Entropy and Dissemination
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/anti_entropy.md)
   - <details> <summary>Demos</summary>
     
@@ -49,7 +54,8 @@
     * [Gossip Dissemination](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/anti-entropy-gossip/demo.json)
     * [Plumtree](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/anti-entropy-plumtree/demo.json)
     </details>
-* Lecture 7. Distributed Transactions
+
+* **Lecture 7.** Distributed Transactions
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/distributed_transactions.md)
   - <details> <summary>Demos</summary>
     
@@ -57,7 +63,8 @@
     * [3 Phase Commit](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/transactions-three-phase-commit/demo.json)
     * [Consistent Hashing](https://fbeilstein.github.io/distributed_systems/demos/transactions-consistent-hashing/index.html)
     </details>
-* Lecture 8. Consensus: Paxos
+
+* **Lecture 8.** Consensus: Paxos
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/consensus_paxos.md)
   - <details> <summary>Demos</summary>
     
@@ -68,7 +75,8 @@
     * [Flexible Paxos](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/consensus-flexible-paxos/demo.json)
     * [Generalized Paxos](https://fbeilstein.github.io/distributed_systems/js/distributed_systems/index.html?code=../../demos/consensus-generalized-paxos/demo.json)
     </details>
-* Lecture 9. Consensus: ZAB, Raft, and PBFT
+
+* **Lecture 9.** Consensus: ZAB, Raft, and PBFT
   - [Lecture Slides](https://fbeilstein.github.io/distributed_systems/slides.html?file=lectures/consensus_zab_raft_pbft.md)
   - <details> <summary>Demos</summary>
     
