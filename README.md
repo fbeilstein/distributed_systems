@@ -76,7 +76,7 @@
 
 ## Guides
 
-* [How to write slides](https://fbeilstein.github.io/distributed_systems/guides/how_to_write_slides.md)
+* [How to write slides](./guides/how_to_write_slides.md)
 * [How to write demos](https://fbeilstein.github.io/distributed_systems/guides/how_to_write_demos.md)
 * [How to create static timelines](https://fbeilstein.github.io/distributed_systems/guides/how_to_write_timelines.md)
 
