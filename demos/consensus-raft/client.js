@@ -4,7 +4,7 @@ const COMMANDS = ['SET X=1', 'BUY AAPL', 'POST HELLO', 'LOG OUT']
 let cur_msg_id = 0;
 
 function onTimer(t) {
-    if (t % 30 === 0 && cur_msg_id < COMMANDS.length) {
+    if (t % 30 === 0 && cur_msg_id < COMMANDS.length && t > 25) {
         const s = loadState();
         const target = s.leaderId !== undefined ? s.leaderId : 0;
         const cmd = COMMANDS[cur_msg_id++];

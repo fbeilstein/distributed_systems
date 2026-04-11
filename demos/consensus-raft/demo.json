@@ -2,7 +2,7 @@
     "nodes": 6,
     "seed": 123,
     "clientId": 5,
-    "ticks": 160,
+    "ticks": 200,
     "customRenderFile": "render.js",
     "names": [
         "DB-1",
