@@ -37,7 +37,7 @@ The engine core lives in `js/`:
 | `nodes` | Number | 3 | Number of servers |
 | `ticks` | Number | 100 | Simulation duration |
 | `seed` | Number | 42 | PRNG seed for deterministic results |
-| `names` | String[] | `["S0","S1",...]` | Display names on the timeline tracks |
+| `demoName` | String | - | Title displayed in the UI next to "Distributed Systems Sandbox" |
 
 ### Layout
 | Key | Type | Default | Description |
@@ -61,6 +61,7 @@ The engine core lives in `js/`:
 Each entry in the `servers` array:
 | Key | Type | Description |
 | :--- | :--- | :--- |
+| `name` | String | Display name on the timeline tracks (e.g., "Coordinator") |
 | `codeFile` | String | Relative path to the behavior script for this node |
 | `color` | String | Custom color for this server's track label and line |
 
@@ -81,6 +82,7 @@ Any other keys in `demo.json` are passed through to your node scripts as the glo
 ### Complete Example
 ```json
 {
+    "demoName": "Target Monitoring",
     "nodes": 5,
     "seed": 99,
     "ticks": 160,
@@ -89,13 +91,12 @@ Any other keys in `demo.json` are passed through to your node scripts as the glo
     "trackHeight": 70,
     "phiThreshold": 13,
     "customRenderFile": "render.js",
-    "names": ["Monitor", "Target 1", "Target 2", "Target 3", "Target 4"],
     "servers": [
-        { "codeFile": "monitor.js" },
-        { "codeFile": "target.js", "color": "#ffb74d" },
-        { "codeFile": "target.js", "color": "#81c784" },
-        { "codeFile": "target.js", "color": "#64b5f6" },
-        { "codeFile": "target.js", "color": "#ba68c8" }
+        { "name": "Monitor", "codeFile": "monitor.js" },
+        { "name": "Target 1", "codeFile": "target.js", "color": "#ffb74d" },
+        { "name": "Target 2", "codeFile": "target.js", "color": "#81c784" },
+        { "name": "Target 3", "codeFile": "target.js", "color": "#64b5f6" },
+        { "name": "Target 4", "codeFile": "target.js", "color": "#ba68c8" }
     ]
 }
 ```

@@ -1,44 +1,43 @@
 {
+    "demoName": "Consensus: Fast Paxos",
     "nodes": 8,
     "seed": 42,
     "ticks": 150,
     "labelWidth": 100,
     "minLatency": 6,
     "latencyJitter": 3,
-    "names": [
-        "Proposer-A",
-        "Acc-1",
-        "Acc-2",
-        "Acc-3",
-        "Acc-4",
-        "Acc-5",
-        "Proposer-B",
-        "Client"
-    ],
     "servers": [
         {
-            "codeFile": "proposer.js"
+            "codeFile": "proposer.js",
+            "name": "Proposer-A"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acc-1"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acc-2"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acc-3"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acc-4"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acc-5"
         },
         {
-            "codeFile": "proposer.js"
+            "codeFile": "proposer.js",
+            "name": "Proposer-B"
         },
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client"
         }
     ]
 }

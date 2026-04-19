@@ -1,29 +1,29 @@
 {
+    "demoName": "Failure Detection: Swim",
     "nodes": 5,
     "seed": 33,
     "ticks": 130,
-    "names": [
-        "Monitor",
-        "Witness-1",
-        "Witness-2",
-        "Witness-3",
-        "Target"
-    ],
+    "labelWidth": 100,
     "servers": [
         {
-            "codeFile": "monitor.js"
+            "codeFile": "monitor.js",
+            "name": "Monitor"
         },
         {
-            "codeFile": "witness.js"
+            "codeFile": "witness.js",
+            "name": "Witness-1"
         },
         {
-            "codeFile": "witness.js"
+            "codeFile": "witness.js",
+            "name": "Witness-2"
         },
         {
-            "codeFile": "witness.js"
+            "codeFile": "witness.js",
+            "name": "Witness-3"
         },
         {
-            "codeFile": "target.js"
+            "codeFile": "target.js",
+            "name": "Target"
         }
     ]
 }

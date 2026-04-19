@@ -3,21 +3,7 @@
  * Modal code editor for per-server code editing, using CodeMirror 5.
  */
 
-const DEFAULT_CODE = `function onUp() {
-  // Called on server start or recovery after being down.
-  // loadState() returns {} on first boot, or last dumped state after crash.
-}
-
-function onTimer(tick) {
-  // Called every tick while server is up.
-  // Example: dumpState({ count: tick });
-}
-
-function onMessage(message) {
-  // Called when a message arrives.
-  // message = { from: serverId, payload: {...} }
-  // Example: sendMessage(0, { echo: message.payload });
-}`;
+import { DEFAULT_CODE } from './engine.js?v=10';
 
 export class CodeEditor {
     constructor(modalEl, engine, onCodeSaved) {
@@ -97,5 +83,3 @@ export class CodeEditor {
         this.onCodeSaved();
     }
 }
-
-export { DEFAULT_CODE };

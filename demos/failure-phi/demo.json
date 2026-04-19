@@ -1,4 +1,5 @@
 {
+    "demoName": "Failure Detection: Phi",
     "nodes": 5,
     "seed": 99,
     "ticks": 160,
@@ -7,32 +8,30 @@
     "trackHeight": 70,
     "phiThreshold": 13,
     "customRenderFile": "render.js",
-    "names": [
-        "Monitor",
-        "Target 1",
-        "Target 2",
-        "Target 3",
-        "Target 4"
-    ],
     "servers": [
         {
-            "codeFile": "monitor.js"
+            "codeFile": "monitor.js",
+            "name": "Monitor"
         },
         {
             "codeFile": "target.js",
-            "color": "#ffb74d"
+            "color": "#ffb74d",
+            "name": "Target 1"
         },
         {
             "codeFile": "target.js",
-            "color": "#81c784"
+            "color": "#81c784",
+            "name": "Target 2"
         },
         {
             "codeFile": "target.js",
-            "color": "#64b5f6"
+            "color": "#64b5f6",
+            "name": "Target 3"
         },
         {
             "codeFile": "target.js",
-            "color": "#ba68c8"
+            "color": "#ba68c8",
+            "name": "Target 4"
         }
     ]
 }

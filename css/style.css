@@ -450,3 +450,14 @@ body.dark-theme .state-card.crashed {
 #state-inspector {
   position: relative;
 }
+
+/* --- Demo Name --- */
+.demo-name {
+  font-weight: 400;
+  color: #777;
+  font-size: 0.9em;
+}
+
+body.dark-theme .demo-name {
+  color: #aaa;
+}

@@ -1,34 +1,33 @@
 {
+    "demoName": "Leader Election: Invitation",
     "nodes": 6,
     "seed": 99,
     "ticks": 150,
     "customRenderFile": "render.js",
-    "names": [
-        "Node-0",
-        "Node-1",
-        "Node-2",
-        "Node-3",
-        "Node-4",
-        "Node-5"
-    ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-0"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-1"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-2"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-3"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-4"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-5"
         }
     ]
 }

@@ -1,26 +1,25 @@
 {
+    "demoName": "Failure Detection: Heartbeats",
     "nodes": 4,
     "seed": 22,
     "ticks": 120,
     "labelWidth": 80,
-    "names": [
-        "Monitor",
-        "Target-1",
-        "Target-2",
-        "Target-3"
-    ],
     "servers": [
         {
-            "codeFile": "monitor.js"
+            "codeFile": "monitor.js",
+            "name": "Monitor"
         },
         {
-            "codeFile": "target.js"
+            "codeFile": "target.js",
+            "name": "Target-1"
         },
         {
-            "codeFile": "target.js"
+            "codeFile": "target.js",
+            "name": "Target-2"
         },
         {
-            "codeFile": "target.js"
+            "codeFile": "target.js",
+            "name": "Target-3"
         }
     ]
 }

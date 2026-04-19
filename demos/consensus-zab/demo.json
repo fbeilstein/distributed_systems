@@ -1,32 +1,31 @@
 {
+    "demoName": "Consensus: Zab",
     "nodes": 5,
     "seed": 42,
     "ticks": 180,
     "trackPaddingTop": 30,
     "trackHeight": 70,
     "labelWidth": 100,
-    "names": [
-        "Client",
-        "ZAB Node 1",
-        "ZAB Node 2",
-        "ZAB Node 3",
-        "ZAB Node 4"
-    ],
     "servers": [
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "ZAB Node 1"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "ZAB Node 2"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "ZAB Node 3"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "ZAB Node 4"
         }
     ]
 }

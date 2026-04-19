@@ -1,36 +1,35 @@
 {
+    "demoName": "Consensus: Multi Paxos",
     "nodes": 6,
     "seed": 141,
     "ticks": 120,
     "labelWidth": 90,
     "minLatency": 5,
     "latencyJitter": 5,
-    "names": [
-        "Proposer-A",
-        "Acceptor-1",
-        "Acceptor-2",
-        "Acceptor-3",
-        "Proposer-B",
-        "Client"
-    ],
     "servers": [
         {
-            "codeFile": "proposer.js"
+            "codeFile": "proposer.js",
+            "name": "Proposer-A"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acceptor-1"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acceptor-2"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acceptor-3"
         },
         {
-            "codeFile": "proposer.js"
+            "codeFile": "proposer.js",
+            "name": "Proposer-B"
         },
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client"
         }
     ]
 }

@@ -1,36 +1,35 @@
 {
+    "demoName": "Consensus: Egalitarian Paxos",
     "nodes": 6,
     "seed": 42,
     "ticks": 140,
     "labelWidth": 90,
     "minLatency": 5,
     "latencyJitter": 2,
-    "names": [
-        "Replica-1",
-        "Replica-2",
-        "Replica-3",
-        "Replica-4",
-        "Replica-5",
-        "Client"
-    ],
     "servers": [
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "Replica-1"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "Replica-2"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "Replica-3"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "Replica-4"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "Replica-5"
         },
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client"
         }
     ]
 }

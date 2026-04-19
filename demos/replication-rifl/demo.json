@@ -1,21 +1,20 @@
 {
+    "demoName": "Replication: Rifl",
     "nodes": 3,
     "seed": 42,
     "ticks": 120,
-    "names": [
-        "Server (RIFL)",
-        "Client 1",
-        "Client 2"
-    ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Server (RIFL)"
         },
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client 1"
         },
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client 2"
         }
     ]
 }

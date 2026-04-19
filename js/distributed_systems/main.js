@@ -4,11 +4,11 @@
  * JSON config is the primary source of truth. URL params are only fallbacks.
  */
 
-import { Engine } from './engine.js?v=10';
+import { Engine, DEFAULT_CODE } from './engine.js?v=10';
 import { Timeline } from './timeline.js?v=10';
 import { Interactions } from './interactions.js?v=10';
 import { StateInspector } from './state-inspector.js?v=10';
-import { CodeEditor, DEFAULT_CODE } from './code-editor.js?v=10';
+import { CodeEditor } from './code-editor.js?v=10';
 import { ConfigEditor } from './config-editor.js?v=10';
 
 // --- Theme Management ---
@@ -162,7 +162,7 @@ function applyConfig(engine, config, skipCodeUpdate = false) {
             const sc = config.servers[i] || {};
             const engineServer = engine.servers[i];
 
-            if (sc.name) engineServer.name = sc.name;
+            engineServer.name = sc.name || `S${engineServer.id}`;
 
             if (skipCodeUpdate) {
                 if (sc.color) engineServer.color = sc.color;
@@ -177,11 +177,14 @@ function applyConfig(engine, config, skipCodeUpdate = false) {
                 code += (sc.onTimer || 'function onTimer(tick) {}') + '\n\n';
                 code += (sc.onMessage || 'function onMessage(message) {}') + '\n\n';
             } else {
-                // If no specific code path, keep existing or default
-                if (!engineServer.code) engineServer.code = DEFAULT_CODE;
+                // If no specific code path, it implies the code configuration was removed
+                engineServer.code = DEFAULT_CODE;
+                // Also clear the reference so the exporter doesn't persist the old filename
+                delete engineServer.codeFile;
                 continue;
             }
             engineServer.code = code;
+            engineServer.codeFile = sc.codeFile;
             if (sc.color) engineServer.color = sc.color;
         }
     }
@@ -210,6 +213,17 @@ function applyConfig(engine, config, skipCodeUpdate = false) {
     }
 }
 
+// --- Toolbar Updater ---
+function updateToolbar(config, engine) {
+    const seedDisplay = document.getElementById('seed-display');
+    if (seedDisplay) seedDisplay.textContent = `Seed: ${engine.seed}`;
+
+    const demoNameDisplay = document.getElementById('demo-name-display');
+    if (demoNameDisplay) {
+        demoNameDisplay.textContent = (config && config.demoName) ? ` — ${config.demoName}` : '';
+    }
+}
+
 // --- Main init ---
 async function init() {
     // Load JSON config first (if URL provided)
@@ -226,13 +240,10 @@ async function init() {
     const numNodes = (config && config.nodes != null) ? config.nodes
         : (PARAM_NODES != null) ? PARAM_NODES : 3;
 
-    // Server names from config
-    const names = (config && Array.isArray(config.names)) ? config.names : [];
-
     // Create engine with resolved values
     const engine = new Engine(seed, maxTicks);
     for (let i = 0; i < numNodes; i++) {
-        engine.addServer(names[i] || undefined);
+        engine.addServer();
     }
 
     // Load the Automat (State/Machine) class source for sandbox injection
@@ -254,8 +265,8 @@ async function init() {
     }
 
     // Update toolbar display
-    if (seedDisplay) seedDisplay.textContent = `Seed: ${seed}`;
     if (tickDisplay) tickDisplay.textContent = 'Tick: 0';
+    updateToolbar(config, engine);
 
     // Initialize components
     const timeline = new Timeline(canvas, tooltipEl);
@@ -294,7 +305,9 @@ async function init() {
         onConfigSaved: (newConfig) => {
             config = newConfig;
             applyConfig(engine, config, true); // true = skip code update
-            seedDisplay.textContent = `Seed: ${engine.seed}`;
+
+            updateToolbar(config, engine);
+
             engine.recompute();
             timeline.resize();
             timeline.draw();
@@ -304,7 +317,8 @@ async function init() {
             config = newConfig;
             await fetchResources(config, baseUrl);
             applyConfig(engine, config, false); // false = apply code update
-            seedDisplay.textContent = `Seed: ${engine.seed}`;
+
+            updateToolbar(config, engine);
 
             if (config.customRenderCode) {
                 try {
@@ -328,7 +342,7 @@ async function init() {
             nodes: engine.servers.length,
             ticks: engine.maxTicks,
             seed: engine.seed,
-            servers: engine.servers.map(s => ({ name: s.name, codeFile: s.codeFile || 'node.js' }))
+            servers: engine.servers.map(s => ({ name: s.name }))
         }));
         if (editorConfig.servers) {
             editorConfig.servers.forEach(s => delete s.code);

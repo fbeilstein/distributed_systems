@@ -1,28 +1,27 @@
 {
+    "demoName": "Anti-Entropy: Hinted Handoff",
     "nodes": 4,
     "seed": 121,
     "ticks": 110,
     "trackHeight": 55,
     "stateBandOffset": 15,
     "labelWidth": 100,
-    "names": [
-        "Coordinator",
-        "Replica 1",
-        "Replica 2",
-        "Replica 3"
-    ],
     "servers": [
         {
-            "codeFile": "coordinator.js"
+            "codeFile": "coordinator.js",
+            "name": "Coordinator"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "Replica 1"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "Replica 2"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "Replica 3"
         }
     ]
 }

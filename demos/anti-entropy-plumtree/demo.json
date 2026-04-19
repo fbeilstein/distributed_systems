@@ -1,45 +1,44 @@
 {
+    "demoName": "Anti-Entropy: Plumtree",
     "nodes": 8,
     "seed": 404,
     "ticks": 400,
     "labelWidth": 100,
     "trackPaddingTop": 0,
     "trackHeight": 75,
-    "names": [
-        "Leaf L-L (0)",
-        "Branch L (1)",
-        "Leaf L-R (2)",
-        "Root (3)",
-        "Leaf R-L (4)",
-        "Branch R (5)",
-        "Leaf R-R (6)",
-        "Client (7)"
-    ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Leaf L-L (0)"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Branch L (1)"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Leaf L-R (2)"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Root (3)"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Leaf R-L (4)"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Branch R (5)"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Leaf R-R (6)"
         },
         {
             "codeFile": "client.js",
-            "color": "#7e57c2"
+            "color": "#7e57c2",
+            "name": "Client (7)"
         }
     ],
     "events": []

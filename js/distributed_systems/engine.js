@@ -10,6 +10,22 @@ import { StatefulRuntime } from './server-runtime.js';
 /** Default timeline length */
 export const DEFAULT_MAX_TICKS = 100;
 
+export const DEFAULT_CODE = `function onUp() {
+  // Called on server start or recovery after being down.
+  // loadState() returns {} on first boot, or last dumped state after crash.
+}
+
+function onTimer(tick) {
+  // Called every tick while server is up.
+  // Example: dumpState({ count: tick });
+}
+
+function onMessage(message) {
+  // Called when a message arrives.
+  // message = { from: senderId, sendTick: tick, arrivalTick: tick, payload: {...} }
+  // Example: sendMessage(message.from, { echo: message.payload });
+}`;
+
 /**
  * Create a new server object.
  */
@@ -17,7 +33,7 @@ export function createServer(id, name) {
     return {
         id,
         name: name || `S${id}`,
-        code: `function onUp() {}\nfunction onTimer(tick) {}\nfunction onMessage(message) {}`,
+        code: DEFAULT_CODE,
         crashIntervals: [],
     };
 }
@@ -254,11 +270,29 @@ export class Engine {
         if (!this.servers.find(s => s.id === outgoing.to)) return;
 
         // Extract payload type to differentiate simultaneous packets
-        const typeStr = outgoing.payload ? outgoing.payload.type : "";
+        let typeStr = "";
+        if (outgoing.payload !== null && outgoing.payload !== undefined) {
+            if (typeof outgoing.payload === 'object') {
+                typeStr = outgoing.payload.type !== undefined ? String(outgoing.payload.type) : "";
+            } else {
+                typeStr = String(outgoing.payload);
+            }
+        }
 
         // Check if this message already exists (duplicate send of the exact same type in the same tick)
         const existing = messages.find(
-            m => m.from === outgoing.from && m.to === outgoing.to && m.sendTick === outgoing.sendTick && (m.payload ? m.payload.type : "") === typeStr
+            m => m.from === outgoing.from && m.to === outgoing.to && m.sendTick === outgoing.sendTick &&
+                (() => {
+                    let mType = "";
+                    if (m.payload !== null && m.payload !== undefined) {
+                        if (typeof m.payload === 'object') {
+                            mType = m.payload.type !== undefined ? String(m.payload.type) : "";
+                        } else {
+                            mType = String(m.payload);
+                        }
+                    }
+                    return mType === typeStr;
+                })()
         );
         // We do NOT want to skip if the types are DIFFERENT (e.g. REPLICATE vs SYNC_DATA_CHAIN)
         if (existing) return;

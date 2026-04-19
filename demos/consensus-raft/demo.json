@@ -1,35 +1,34 @@
 {
+    "demoName": "Consensus: Raft",
     "nodes": 6,
     "seed": 123,
     "clientId": 5,
     "ticks": 200,
     "customRenderFile": "render.js",
-    "names": [
-        "DB-1",
-        "DB-2",
-        "DB-3",
-        "DB-4",
-        "DB-5",
-        "Client"
-    ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "DB-1"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "DB-2"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "DB-3"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "DB-4"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "DB-5"
         },
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client"
         }
     ]
 }

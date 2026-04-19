@@ -1,32 +1,31 @@
 {
+    "demoName": "Consensus: Generalized Paxos",
     "seed": 42,
     "ticks": 150,
     "nodes": 5,
     "minLatency": 5,
     "labelWidth": 100,
-    "names": [
-        "Client-A",
-        "Acceptor-1",
-        "Acceptor-2",
-        "Acceptor-3",
-        "Client-B"
-    ],
     "customRenderFile": "render.js",
     "servers": [
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client-A"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acceptor-1"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acceptor-2"
         },
         {
-            "codeFile": "acceptor.js"
+            "codeFile": "acceptor.js",
+            "name": "Acceptor-3"
         },
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client-B"
         }
     ]
 }

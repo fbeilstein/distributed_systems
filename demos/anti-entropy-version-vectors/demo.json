@@ -1,30 +1,29 @@
 {
+    "demoName": "Anti-Entropy: Version Vectors",
     "seed": 42,
     "ticks": 200,
     "nodes": 5,
-    "names": [
-        "Coord",
-        "A",
-        "B",
-        "C",
-        "Client"
-    ],
     "customRenderFile": "render.js",
     "servers": [
         {
-            "codeFile": "coordinator.js"
+            "codeFile": "coordinator.js",
+            "name": "Coord"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "A"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "B"
         },
         {
-            "codeFile": "replica.js"
+            "codeFile": "replica.js",
+            "name": "C"
         },
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client"
         }
     ]
 }

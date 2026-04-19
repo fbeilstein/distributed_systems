@@ -1,26 +1,25 @@
 {
+    "demoName": "Failure Detection: Gossip",
     "nodes": 4,
     "seed": 44,
     "ticks": 180,
     "customRenderFile": "render.js",
-    "names": [
-        "Node-0",
-        "Node-1",
-        "Node-2",
-        "Node-3"
-    ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-0"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-1"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-2"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-3"
         }
     ]
 }

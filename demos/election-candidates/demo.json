@@ -1,35 +1,34 @@
 {
+    "demoName": "Leader Election: Candidates",
     "nodes": 5,
     "seed": 88,
     "ticks": 150,
     "labelWidth": 100,
-    "names": [
-        "Ordinary-0",
-        "Ordinary-1",
-        "Candidate-2",
-        "Candidate-3",
-        "Candidate-4"
-    ],
     "servers": [
         {
             "codeFile": "ordinary.js",
-            "color": "#9e9e9e"
+            "color": "#9e9e9e",
+            "name": "Ordinary-0"
         },
         {
             "codeFile": "ordinary.js",
-            "color": "#9e9e9e"
+            "color": "#9e9e9e",
+            "name": "Ordinary-1"
         },
         {
             "codeFile": "candidate.js",
-            "color": "#1976d2"
+            "color": "#1976d2",
+            "name": "Candidate-2"
         },
         {
             "codeFile": "candidate.js",
-            "color": "#1976d2"
+            "color": "#1976d2",
+            "name": "Candidate-3"
         },
         {
             "codeFile": "candidate.js",
-            "color": "#1976d2"
+            "color": "#1976d2",
+            "name": "Candidate-4"
         }
     ]
 }

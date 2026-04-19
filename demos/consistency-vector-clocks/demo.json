@@ -1,4 +1,5 @@
 {
+    "demoName": "Consistency: Vector Clocks",
     "seed": 14,
     "ticks": 110,
     "trackHeight": 105,
@@ -7,20 +8,18 @@
     "hideStateLabels": true,
     "customRenderFile": "render.js",
     "trackPaddingTop": 10,
-    "names": [
-        "Node-0",
-        "Node-1",
-        "Node-2"
-    ],
     "servers": [
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-0"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-1"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Node-2"
         }
     ]
 }

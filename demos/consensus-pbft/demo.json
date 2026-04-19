@@ -1,4 +1,5 @@
 {
+    "demoName": "Consensus: Pbft",
     "nodes": 6,
     "seed": 161,
     "ticks": 360,
@@ -8,32 +9,30 @@
     "customRenderFile": "render.js",
     "trackHeight": 120,
     "trackPaddingTop": 100,
-    "names": [
-        "Client",
-        "Primary",
-        "Replica-1",
-        "Replica-2",
-        "Replica-4",
-        "Traitor"
-    ],
     "servers": [
         {
-            "codeFile": "client.js"
+            "codeFile": "client.js",
+            "name": "Client"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Primary"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Replica-1"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Replica-2"
         },
         {
-            "codeFile": "node.js"
+            "codeFile": "node.js",
+            "name": "Replica-4"
         },
         {
-            "codeFile": "traitor.js"
+            "codeFile": "traitor.js",
+            "name": "Traitor"
         }
     ]
 }
