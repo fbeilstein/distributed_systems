@@ -10,6 +10,7 @@ import { Interactions } from './interactions.js?v=10';
 import { StateInspector } from './state-inspector.js?v=10';
 import { CodeEditor } from './code-editor.js?v=10';
 import { ConfigEditor } from './config-editor.js?v=10';
+import { RenderEditor } from './render-editor.js?v=10';
 
 // --- Theme Management ---
 function applyTheme(theme) {
@@ -54,6 +55,8 @@ const addBtn = document.getElementById('btn-add-server');
 const removeBtn = document.getElementById('btn-remove-server');
 const configBtn = document.getElementById('btn-open-config');
 const configModalEl = document.getElementById('config-editor-modal');
+const renderBtn = document.getElementById('btn-open-render');
+const renderModalEl = document.getElementById('render-editor-modal');
 const seedDisplay = document.getElementById('seed-display');
 const tickDisplay = document.getElementById('tick-display');
 
@@ -307,6 +310,7 @@ async function init() {
             applyConfig(engine, config, true); // true = skip code update
 
             updateToolbar(config, engine);
+            updateRenderBtn();
 
             engine.recompute();
             timeline.resize();
@@ -319,6 +323,7 @@ async function init() {
             applyConfig(engine, config, false); // false = apply code update
 
             updateToolbar(config, engine);
+            updateRenderBtn();
 
             if (config.customRenderCode) {
                 try {
@@ -335,8 +340,33 @@ async function init() {
         }
     });
 
+    // --- Render Code Editor ---
+    const renderEditor = new RenderEditor(renderModalEl, (newCode) => {
+        if (!config) config = {};
+        config.customRenderCode = newCode;
+        try {
+            timeline.customRender = new Function('ctx', 'timeline', 'engine', newCode);
+        } catch (e) {
+            console.error('Failed to parse customRenderCode:', e);
+        }
+        engine.recompute();
+        timeline.resize();
+        timeline.draw();
+        stateInspector.update(timeline.scrubberTick);
+    });
+
+    // Show/hide render button based on whether render code exists
+    function updateRenderBtn() {
+        renderBtn.style.display = (config && (config.customRenderCode || config.customRenderFile)) ? '' : 'none';
+    }
+    updateRenderBtn();
+
+    renderBtn.addEventListener('click', () => {
+        renderEditor.open(config ? config.customRenderCode || '' : '');
+    });
+
     configBtn.addEventListener('click', () => {
-        // Strip raw 'code' strings from the config we show in the editor
+        // Strip raw 'code' and 'customRenderCode' from the config we show in the editor
         // to keep it focused on filenames and parameters as requested.
         const editorConfig = JSON.parse(JSON.stringify(config || {
             nodes: engine.servers.length,
@@ -347,6 +377,7 @@ async function init() {
         if (editorConfig.servers) {
             editorConfig.servers.forEach(s => delete s.code);
         }
+        delete editorConfig.customRenderCode;
         configEditor.open(editorConfig);
     });
 

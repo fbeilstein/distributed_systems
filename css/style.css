@@ -113,6 +113,17 @@ body {
   transform: rotate(30deg);
 }
 
+#btn-open-render {
+  font-size: 14px !important;
+  line-height: 1;
+  padding: 4px 8px !important;
+}
+
+#btn-open-render:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
 /* --- Modal Actions --- */
 .modal-actions {
   display: flex;
