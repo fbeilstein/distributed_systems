@@ -306,11 +306,30 @@ async function init() {
 
     const configEditor = new ConfigEditor(configModalEl, engine, {
         onConfigSaved: (newConfig) => {
+            // Restore stripped code properties if the file reference didn't change
+            if (config) {
+                if (newConfig.customRenderFile === config.customRenderFile) {
+                    newConfig.customRenderCode = config.customRenderCode;
+                }
+                if (newConfig.servers && config.servers) {
+                    for (let i = 0; i < Math.min(newConfig.servers.length, config.servers.length); i++) {
+                        if (newConfig.servers[i].codeFile === config.servers[i].codeFile) {
+                            newConfig.servers[i].code = config.servers[i].code;
+                        }
+                    }
+                }
+            }
+
             config = newConfig;
             applyConfig(engine, config, true); // true = skip code update
 
             updateToolbar(config, engine);
             updateRenderBtn();
+
+            // Clear custom render if it was removed
+            if (!config.customRenderCode && !config.customRenderFile) {
+                timeline.customRender = null;
+            }
 
             engine.recompute();
             timeline.resize();
@@ -331,6 +350,8 @@ async function init() {
                 } catch (e) {
                     console.error('Failed to parse customRenderCode:', e);
                 }
+            } else {
+                timeline.customRender = null;
             }
 
             engine.recompute();
