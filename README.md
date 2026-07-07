@@ -93,7 +93,7 @@
 
 ## Guides
 
-* [How to write slides](./engine/guides/how_to_write_slides.md)
-* [How to write demos](./engine/guides/how_to_write_demos.md)
-* [How to create static timelines](./engine/guides/how_to_write_timelines.md)
+* [How to write slides](https://github.com/fbeilstein/presentation_engine/blob/master/guides/how_to_write_slides.md)
+* [How to write demos](https://github.com/fbeilstein/presentation_engine/blob/master/guides/how_to_write_demos.md)
+* [How to create static timelines](https://github.com/fbeilstein/presentation_engine/blob/master/guides/how_to_write_timelines.md)
 
