@@ -1,4 +1,14 @@
-# Introduction to Distributed Systems
+:::titlepage
+[[title]]
+Introduction to Distributed Systems
+[[right]]
+Tymchyshyn V.B.
+:::
+
+---
+
+# Introduction
+
 Understanding Concurrency, Time, and Failures
 
 ---

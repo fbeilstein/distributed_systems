@@ -1,4 +1,13 @@
-# Anti-Entropy & Dissemination
+:::titlepage
+[[title]]
+Anti-Entropy & Dissemination
+[[right]]
+Tymchyshyn V.B.
+:::
+
+---
+
+# Introduction
 
 Most of the communication patterns we’ve explored so far operate as either **peer-to-peer** (between two nodes) or **one-to-many** (a coordinator to a fixed replica set). 
 
@@ -40,7 +49,7 @@ To rapidly broadcast updates to all nodes in a massive cluster, systems generall
 
 *(A timeline comparing standard Notification Broadcast to **Cooperative Broadcast**. Notice how the Cooperative approach rapidly infects the cluster infinitely faster by empowering receiving nodes to share the network bandwidth burden!)*
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -65,7 +74,7 @@ To rapidly broadcast updates to all nodes in a massive cluster, systems generall
     {"from": "Node 2", "to": "Node 4", "sendTick": 17, "recvTick": 27}
   ]
 }
-```
+:::
 *(By Tick 27, all nodes are correctly infected. If the single Source had to actively sequential-broadcast to all four nodes by itself, the total network latency and bandwidth bottleneck would skyrocket linearly!)*
 
 ---
@@ -131,7 +140,7 @@ To actively detect exactly which bytes differ between the network responses, dat
 
 *(A timeline explicitly demonstrating the safety of Blocking Read Repair. The Client queries the Coordinator ($R=3$). Node B is lagging entirely out of sync with `v0`. The Coordinator logically stalls the Client, repairs Node B to `v1`, and ONLY returns the final answer tight after the cluster is healed!)*
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -163,7 +172,7 @@ To actively detect exactly which bytes differ between the network responses, dat
     {"from": "Coordinator", "to": "Client", "sendTick": 39, "recvTick": 45}
   ]
 }
-```
+:::
 
 *(Notice how the Coordinator definitively stops at Tick 22! It detects the `v0` discrepancy from Node B, halts the entire client response, drops a Repair packet to Node B at tick 24, and waits for the ACK at tick 37 before finally responding to the Client. This guarantees true Monotonicity.)*
 
@@ -172,7 +181,7 @@ To actively detect exactly which bytes differ between the network responses, dat
 # Digest Reads
 
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 1.0,
   "float": "right",
@@ -197,7 +206,7 @@ To actively detect exactly which bytes differ between the network responses, dat
     {"from": "Node 3", "to": "Coordinator", "sendTick": 6, "recvTick": 9}
   ]
 }
-```
+:::
 
 
 While Read Repair guarantees consistency, there is a fundamental network problem: **reading full payloads of data from every single node in the Quorum takes far too long.**
@@ -228,7 +237,7 @@ Because robust databases routinely layer more than just one solitary Anti-Entrop
 A timeline highlighting the massive bandwidth savings of a Digest Read on a Happy Path. The Coordinator securely routes the heavy full-data read strictly to Node 1, while explicitly requesting lightweight hashes from Nodes 2 and 3. Because `Hash(v1)` beautifully matches the payload from Node 1, the system successfully bypasses transferring duplicate payloads!
 </i></small>
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -257,7 +266,7 @@ A timeline highlighting the massive bandwidth savings of a Digest Read on a Happ
     {"from": "Coordinator", "to": "Client", "sendTick": 37, "recvTick": 45}
   ]
 }
-```
+:::
 
 <small><i>
 Node 2 and Node 3 cleanly return their tiny 32-byte `Hash(v1)` payloads significantly faster than Node 1 can optimally stream the heavy `Data v1`. The Coordinator successfully validates the hashes at tick 35, saving bandwidth and routing the data to the client at tick 37 without triggering secondary full-reads!
@@ -294,7 +303,7 @@ This is because the data inside the hint log of the Coordinator is structurally 
 
 # Sloppy Quorums
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 1.0,
   "float": "right",
@@ -322,7 +331,7 @@ This is because the data inside the hint log of the Coordinator is structurally 
     {"from": "Node D", "to": "Node B", "sendTick": 13, "recvTick": 17}
   ]
 }
-```
+:::
 
 Some databases, such as Riak, pair Hinted Handoffs directly with **Sloppy Quorums** to prioritize extreme availability. 
 
@@ -345,7 +354,7 @@ However, if another client executes a read querying the isolated `Nodes B and C`
 
 *(A timeline highlighting the exact flow of a Sloppy Quorum Hint. The Coordinator originally targets A, B, and C. Node B is dead. Rather than failing the write, the Coordinator strictly recruits Node D to temporarily hold Node B's hint!)*
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -379,7 +388,7 @@ However, if another client executes a read querying the isolated `Nodes B and C`
     {"from": "Node B", "to": "Node D", "sendTick": 44, "recvTick": 49}
   ]
 }
-```
+:::
 *(Notice how the Coordinator successfully saves the state in Node D. The moment Node B reboots at tick 33, Node D routes the Hint directly to Node B, decisively healing the dataset and cleaning up its own temporary logs!)*
 
 ---
@@ -620,7 +629,7 @@ The active view is updated depending on node state changes and requests from pee
 ### Scenario 1: Target Node has Room
 *(Node A requests a connection to Node C to replace a dead peer. Node C's active view is not full, so it immediately accepts on the first handshake.)*
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 1.0,
   "ticks": 25,
@@ -639,14 +648,14 @@ The active view is updated depending on node state changes and requests from pee
     {"from": "Node C", "to": "Node A", "sendTick": 14, "recvTick": 21, "payload": "ACCEPT"}
   ]
 }
-```
+:::
 
 ---
 
 ### Scenario 2: Target Node is Full
 *(Node A's Active View is **empty** and it MUST connect to C to survive. Even though Node C declines the initial packet because its queue is legally full, Node A effectively overrides the rejection, forcing Node C to surgically evict one of its existing peers!)*
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 1.0,
   "ticks": 45,
@@ -670,7 +679,7 @@ The active view is updated depending on node state changes and requests from pee
     {"from": "Node C", "to": "Node A", "sendTick": 35, "recvTick": 41, "payload": "ACCEPT (Forced)"}
   ]
 }
-```
+:::
 
 This robust handshake allows bootstrapping or recovering nodes to quickly become effective cluster members at the cost of cycling some connections.
 * **Convergence:** HyParView scores very highly on how quickly its peer sampling service converges to a stable overlay during severe topology reorganizations!

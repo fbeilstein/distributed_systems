@@ -1,4 +1,14 @@
-# Consensus: Paxos Algorithm
+:::titlepage
+[[title]]
+Consensus: Paxos Algorithm
+[[right]]
+Tymchyshyn V.B.
+:::
+
+---
+
+# Introduction
+
 ## Reaching agreement in the face of failures
 
 ---
@@ -118,7 +128,7 @@ When an acceptor receives a `PREPARE(N)`, it responds based on its current state
 
 # Phase 1 — Prepare Timeline
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -146,7 +156,7 @@ When an acceptor receives a `PREPARE(N)`, it responds based on its current state
     { "from": "Acceptor-3", "to": "Proposer",   "sendTick": 20, "recvTick": 26}
   ]
 }
-```
+:::
 
 Once the proposer collects **PROMISE** from a majority, it may proceed to Phase 2.
 
@@ -171,7 +181,7 @@ An acceptor can respond to more than one `PREPARE` as long as each later one has
 
 # Phase 2 — Accept Timeline
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -204,7 +214,7 @@ An acceptor can respond to more than one `PREPARE` as long as each later one has
     { "from": "Acceptor-3", "to": "Learner",    "sendTick": 20, "recvTick": 27}
   ]
 }
-```
+:::
 
 Once a quorum of `ACCEPTED` responses arrive, **consensus is reached**. The decided value is broadcast to learners.
 
@@ -252,7 +262,7 @@ To tolerate **f** failed processes, the protocol requires **2f + 1** total accep
 
 # Quorum Intersection Illustrated
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -270,7 +280,7 @@ To tolerate **f** failed processes, the protocol requires **2f + 1** total accep
     { "server": "Node-5",     "start": 0,  "end": 56, "state": "in B's quorum",      "color": "#ffb74d" }
   ]
 }
-```
+:::
 
 Node-3 cannot simultaneously promise two different proposers — this guarantees that at most one value can ever be decided.
 
@@ -288,7 +298,7 @@ If the proposer crashes before it collects a quorum of PROMISE responses, nothin
 
 **Resolution**: Simply ignored. A new proposer will start a fresh Paxos round with a higher ballot number. The failed round leaves no trace.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -320,7 +330,7 @@ If the proposer crashes before it collects a quorum of PROMISE responses, nothin
     { "from": "Acceptor-3", "to": "Proposer-2", "sendTick": 30, "recvTick": 35 }
   ]
 }
-```
+:::
 
 ---
 
@@ -328,7 +338,7 @@ If the proposer crashes before it collects a quorum of PROMISE responses, nothin
 
 The proposer committed value `'X'` to Acceptor-1, then crashed before reaching the others. A new proposer sees that `'X'` was already accepted by Acceptor-1 and **must adopt it**.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -360,7 +370,7 @@ The proposer committed value `'X'` to Acceptor-1, then crashed before reaching t
     { "from": "Acceptor-3", "to": "Proposer-2", "sendTick": 31, "recvTick": 38}
   ]
 }
-```
+:::
 
 > **Note**: all of this can happen without the original proposer knowing. If the client is connected only to Proposer-1, it may never learn the result of the Paxos round.
 
@@ -371,7 +381,7 @@ The proposer committed value `'X'` to Acceptor-1, then crashed before reaching t
 
 Two proposers repeatedly outbid each other, preventing either from completing. Neither can collect a majority before the other bumps the ballot.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 48,
@@ -422,7 +432,7 @@ Two proposers repeatedly outbid each other, preventing either from completing. N
     { "from": "Acceptor-1", "to": "Proposer-1", "sendTick": 38, "recvTick": 41}
   ]
 }
-```
+:::
 
 **Resolution**: **Random exponential backoff** — the proposer that lost the ballot waits a random amount of time before retrying, giving the other time to complete.
 
@@ -468,7 +478,7 @@ Some Multi-Paxos implementations use **leases**:
 
 # Multi-Paxos Timeline
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 54,
@@ -529,7 +539,7 @@ Some Multi-Paxos implementations use **leases**:
     { "from": "Acceptor-3", "to": "Leader",     "sendTick": 47, "recvTick": 51 }
   ]
 }
-```
+:::
 
 ✂️ indicates rounds where the Prepare phase was **skipped** entirely.
 
@@ -537,7 +547,7 @@ Some Multi-Paxos implementations use **leases**:
 
 # Leader steal
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -611,7 +621,7 @@ Some Multi-Paxos implementations use **leases**:
     { "from": "Proposer-A", "to": "Acceptor-3", "sendTick": 48, "recvTick": 53 }
   ]
 }
-```
+:::
 
 ---
 
@@ -646,7 +656,7 @@ Two types of rounds exist:
 
 # Fast Paxos Timeline
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -696,7 +706,7 @@ Two types of rounds exist:
     { "from": "Coordinator", "to": "Acceptor-3", "sendTick": 25, "recvTick": 32 }
   ]
 }
-```
+:::
 
 > **Quorum increase required**: to survive collisions, Fast Paxos needs **3f + 1** total acceptors (vs. **2f + 1** in classic) and a fast quorum of **2f + 1** (vs. **f + 1**).
 
@@ -753,7 +763,7 @@ Commands are executed **after all their dependencies** (and their dependencies' 
 
 Notice how <strong>R1</strong> receives unanimous agreement that <code>X</code> has no dependencies, allowing it to commit instantly on the Fast Path. Shortly after, <strong>R5</strong> tries to fast-track <code>Y</code>. However, its own local state says <code>Y</code> has no dependencies, while its peers reply that <code>Y</code> depends on <code>X</code>. Because these dependencies mismatch, R5 is mathematically forced into the Slow Path to safely lock in the order.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.9,
   "ticks": 30,
@@ -800,7 +810,7 @@ Notice how <strong>R1</strong> receives unanimous agreement that <code>X</code> 
     { "from": "R4", "to": "R5 (Cmd Y)", "sendTick": 18, "recvTick": 22 }
   ]
 }
-```
+:::
 
 
 ---
@@ -854,7 +864,7 @@ Launch Flexible Paxos Demo
 
 # Flexible Paxos Timeline
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 45,
@@ -901,7 +911,7 @@ Launch Flexible Paxos Demo
     { "from": "Node-2", "to": "Leader", "sendTick": 29, "recvTick": 33 }
   ]
 }
-```
+:::
 
 > *Nodes 1 and 2 are the intersection — they participated in both phases, ensuring a new leader in Phase 1 will always overlap with at least one node that saw the committed value.*
 

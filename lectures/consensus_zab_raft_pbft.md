@@ -1,4 +1,14 @@
-# Consensus: ZAB, Raft, and PBFT
+:::titlepage
+[[title]]
+Consensus: ZAB, Raft, and PBFT
+[[right]]
+Tymchyshyn V.B.
+:::
+
+---
+
+# Introduction
+
 ## From Crash Failures to Byzantine Adversaries
 
 ---
@@ -126,7 +136,7 @@ Leaders are elected for a **term** (a monotonically increasing integer). If a le
 
 When a follower's randomized election timeout fires, it becomes a candidate, implicitly starting a new term.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 55,
@@ -153,7 +163,7 @@ When a follower's randomized election timeout fires, it becomes a candidate, imp
     { "from": "Node-1", "to": "Node-3", "sendTick": 34, "recvTick": 40 }
   ]
 }
-```
+:::
 
 Once elected, the leader continually sends periodic empty `AppendEntries` messages (heartbeats) to suppress further elections.
 
@@ -175,7 +185,7 @@ To replicate data, the leader appends the command to its log and sends `AppendEn
 
 Once a majority of followers acknowledge writing the entry to their logs, the leader considers the entry **committed**, applies it to its state machine, and replies to the client.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 55,
@@ -201,7 +211,7 @@ Once a majority of followers acknowledge writing the entry to their logs, the le
     { "from": "Leader",    "to": "Client",    "sendTick": 34, "recvTick": 42, "label": "OK" }
   ]
 }
-```
+:::
 
 ---
 
@@ -315,7 +325,7 @@ If the backups suspect the primary is faulty (e.g., it fails to broadcast a `PRE
 
 # PBFT Timeline
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 55,
@@ -352,7 +362,7 @@ If the backups suspect the primary is faulty (e.g., it fails to broadcast a `PRE
     { "from": "Replica-2", "to": "Replica-1", "sendTick": 24, "recvTick": 33 }
   ]
 }
-```
+:::
 
 ---
 
@@ -423,7 +433,7 @@ After understanding **Paxos** and **Raft**, we can now explore how global-scale 
 
 ### System Architecture: The Sequencer/Scheduler Split
 
-```static-diagram
+:::static-diagram
 {
   "width": 600,
   "height": 280,
@@ -464,13 +474,13 @@ After understanding **Paxos** and **Raft**, we can now explore how global-scale 
     { "x": 400, "y": 45, "width": 150, "height": 195, "label": "Partition 2", "dashed": true }
   ]
 }
-```
+:::
 
 ---
 
 # Calvin Phase Trace
 
-```static-timeline
+:::static-timeline
 {
   "ticks": 56,
   "zoom": 0.85,
@@ -499,7 +509,7 @@ After understanding **Paxos** and **Raft**, we can now explore how global-scale 
     { "from": "Scheduler", "to": "Worker 2", "sendTick": 42, "recvTick": 50 }
   ]
 }
-```
+:::
 
 ---
 
@@ -519,7 +529,7 @@ TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval
 
 # System Hierarchy: The Universe View
 
-```static-diagram
+:::static-diagram
 {
   "width": 600,
   "height": 340,
@@ -558,7 +568,7 @@ TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval
     { "x": 440, "y": 70, "width": 120, "height": 220, "label": "Zone: US-West-2", "dashed": true }
   ]
 }
-```
+:::
 
 ---
 
@@ -576,7 +586,7 @@ TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval
 
 </small>
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.8,
   "ticks": 56,
@@ -636,7 +646,7 @@ TrueTime explicitly represents clock uncertainty. `TT.now()` returns an interval
     { "from": "Shard-C (row C13)", "to": "Coordinator", "sendTick": 51, "recvTick": 52 }
   ]
 }
-```
+:::
 
 ---
 

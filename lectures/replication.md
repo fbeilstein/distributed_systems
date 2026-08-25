@@ -1,4 +1,14 @@
-# Replication
+:::titlepage
+[[title]]
+Replication
+[[right]]
+Tymchyshyn V.B.
+:::
+
+---
+
+# Introduction
+
 
 **Consistency** is structurally required to understand modern consensus and atomic commitment algorithms. 
 
@@ -94,7 +104,7 @@ We technically identify every mathematical operation by its strict **invocation*
 
 # Concurrency Timelines
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 55,
@@ -106,7 +116,7 @@ We technically identify every mathematical operation by its strict **invocation*
     { "server": "D", "start": 10, "end": 15, "state": "operation", "color": "#ff8a65" }
   ]
 }
-```
+:::
 
 * **(A) precedes (B)** logically because A completes before B invokes.
 * **(A) is concurrent with (C)** because their execution boundaries partially overlap.
@@ -180,7 +190,7 @@ Even with just a *single* copy of the data, there is no universally simple answe
 
 </small>
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.9,
   "ticks": 53,
@@ -199,7 +209,7 @@ Even with just a *single* copy of the data, there is no universally simple answe
     { "server": "case 4", "start": 30, "end": 34, "state": "read(x)", "color": "#81c784" }
   ]
 }
-```
+:::
 <small>
 
 Even with just a *single* copy of the data, there is no universally simple answer to what `P2` should see. 
@@ -309,7 +319,7 @@ However, there is still inherent *indeterminism* in linearizability: if two oper
 
 Assume a shared register starts at **`x = 0`**. 
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 55,
@@ -324,7 +334,7 @@ Assume a shared register starts at **`x = 0`**.
     { "server": "R3", "start": 45, "end": 50, "state": "read()", "color": "#81c784" }
   ]
 }
-```
+:::
 
 <small>
 
@@ -356,7 +366,7 @@ A visible value must solidly remain stable until the very next value legally bec
 
 </small>
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 55,
@@ -370,7 +380,7 @@ A visible value must solidly remain stable until the very next value legally bec
     { "server": "R2", "start": 40, "end": 45, "state": "read()", "color": "#81c784" }
   ]
 }
-```
+:::
 
 <small>
 
@@ -409,7 +419,7 @@ When building linearization properties at the code level, distinguishing between
 
 A classic pitfall when relying on simple read-modify-write checks without true atomic verification is the **ABA Problem**.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 55,
@@ -432,7 +442,7 @@ A classic pitfall when relying on simple read-modify-write checks without true a
     { "from": "Register", "to": "Thread 2", "sendTick": 45, "recvTick": 45 }
   ]
 }
-```
+:::
 
 <small>
 

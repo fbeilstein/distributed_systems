@@ -1,4 +1,14 @@
-# Failure Detection
+:::titlepage
+[[title]]
+Failure Detection
+[[right]]
+Tymchyshyn V.B.
+:::
+
+---
+
+# Introduction
+
 ## Identifying faulty processes in distributed systems
 
 ---

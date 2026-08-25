@@ -1,4 +1,14 @@
-# Sequential Consistency
+:::titlepage
+[[title]]
+Sequential Consistency
+[[right]]
+Tymchyshyn V.B.
+:::
+
+---
+
+# Introduction
+
 
 Because achieving pure physical Linearizability is often violently expensive in high-performance distributed systems, engineers frequently relax the model while still maintaining incredibly strong mathematical correctness.
 
@@ -24,7 +34,7 @@ Observe the following asynchronous timeline: $W_1$ and $W_2$ overlap, meaning th
 
 However, under strict Sequential Consistency, both $R_1$ and $R_2$ legally must observe the resultant states occurring in the **exact same logical execution order**—even though $R_2$'s reads are arbitrarily delayed!
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -40,7 +50,7 @@ However, under strict Sequential Consistency, both $R_1$ and $R_2$ legally must 
     { "server": "R2", "start": 50, "end": 57, "state": "read(x)->2", "color": "#81c784" }
   ]
 }
-```
+:::
 
 ---
 
@@ -71,7 +81,7 @@ Imagine an online forum: $W_1$ aggressively posts a question. $W_2$ sees the que
 
 If a system lacks Causal Consistency, $R_2$ might physically receive the packets out-of-order, experiencing a bizarre timeline where the sarcastic answer graphically formally loads *before* the original question ever technically exists!
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -87,7 +97,7 @@ If a system lacks Causal Consistency, $R_2$ might physically receive the packets
     { "server": "R2", "start": 45, "end": 55, "state": "read()->1", "color": "#e57373" }
   ]
 }
-```
+:::
 
 ---
 
@@ -97,7 +107,7 @@ To definitively avoid this structural anomaly, we must natively bundle a **Logic
 
 Even if the latter write ($W_2$) physically traverses the network much faster than the former write ($W_1$), the local receptor algorithm *will maliciously buffer it* and aggressively refuse to make it physically visible until all of its explicit logical dependencies actually physically arrive.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 56,
@@ -113,7 +123,7 @@ Even if the latter write ($W_2$) physically traverses the network much faster th
     { "server": "R2", "start": 45, "end": 55, "state": "read()->2", "color": "#81c784" }
   ]
 }
-```
+:::
 *(By explicitly packaging logical timestamps $t_1$ and $t_2$, $R_2$ successfully buffers the anomaly and natively reconstructs the physical causal timeline!)*
 
 ---
@@ -254,7 +264,7 @@ In a massive decentralized cluster, a client might unexpectedly round-robin conn
 
 *(A timeline where the Client breaks **Read-Own-Writes** and **Monotonic Reads** by bouncing between asynchronously replicating storage nodes.)*
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -277,7 +287,7 @@ In a massive decentralized cluster, a client might unexpectedly round-robin conn
     {"from": "Replica B", "to": "Client", "sendTick": 35, "recvTick": 42}
   ]
 }
-```
+:::
 *(The Client successfully writes $v1$ to Replica A, receiving a green ACK. But due to load balancer round-robin logic, its subsequent read hits Replica B a few ticks before the background-sync arrives! The Client reads a stale $v0$, shattering the Read-Own-Writes illusion!)*
 
 ---
@@ -329,7 +339,7 @@ This is simply the **Pigeonhole Principle** in action: if the Read Node Set and 
 
 *(A timeline mapping $N=5$. Client A targets $W=3$ [Nodes 1, 2, 3]. Client B then targets $R=3$ [Nodes 2, 4, 5]. Node 2 is the geometric intersection guaranteeing the latest data extraction!)*
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -360,7 +370,7 @@ This is simply the **Pigeonhole Principle** in action: if the Read Node Set and 
     {"from": "5", "to": "Client B", "sendTick": 40, "recvTick": 54}
   ]
 }
-```
+:::
 
 ---
 
@@ -412,7 +422,7 @@ Since subsequent reads are not permanently required to contact the exact same ph
 
 *(A timeline where $N=3, W=2, R=2$. Client A attempts a Write but completely crashes after only updating Node 1! The write fails and rolls back for Client A. However, Client B now suffers a terrifying anomaly: a sequence of perfectly valid $R=2$ reads forcefully causes it to mathematically move backwards in time!)*
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -441,7 +451,7 @@ Since subsequent reads are not permanently required to contact the exact same ph
     {"from": "3", "to": "Client B", "sendTick": 47, "recvTick": 54}
   ]
 }
-```
+:::
 *(Client B queries Node 1 & 2 $\rightarrow$ Returns the isolated `v1` and updates its state. Then Client B queries Node 2 & 3 $\rightarrow$ Both return `v0`. Monotonicity is broken!)*
 
 ---
@@ -514,7 +524,7 @@ We can reliably implement a distributed counter that only goes up:
 * Each server is *only* allowed to modify its own dedicated value in the vector array. 
 * When updates propagate, the `merge(state1, state2)` function simply compares the arrays and extracts the *maximum* value for each server index.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -547,7 +557,7 @@ We can reliably implement a distributed counter that only goes up:
     {"from": "Node C", "to": "User", "sendTick": 49, "recvTick": 52}
   ]
 }
-```
+:::
 *(A User clicks "Like" on Node A, and then later hits Node B. Node A and B independently increment their internal vectors without any locking. Instead of a centralized aggregator, they organically gossip their vectors completely **peer-to-peer** to everyone! By tick 32, every single node in the cluster has independently geometrically merged its way to the identical `[1, 1, 0]` conclusion! When the User finally queries Node C, the database adds the array values and returns `2`.)*
 
 ---

@@ -1,4 +1,14 @@
-# Distributed Transactions
+:::titlepage
+[[title]]
+Distributed Transactions
+[[right]]
+Tymchyshyn V.B.
+:::
+
+---
+
+# Introduction
+
 ## Achieving Atomicity Across Distributed Systems
 
 ---
@@ -55,7 +65,7 @@ A history is **serializable** if its final result is functionally equivalent to 
 Tx 1 completes entirely before Tx 2 begins --- Trivially Serializable.
 </small>
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -67,13 +77,13 @@ Tx 1 completes entirely before Tx 2 begins --- Trivially Serializable.
     { "server": "Tx 2", "start": 30, "end": 55, "state": "read A, read B, compute sum", "color": "#81c784" }
   ]
 }
-```
+:::
 
 <small>
 When Tx 1 and Tx 2 overlap in time, their database operations interleave. This concurrent execution is <b>only serializable if</b> the final state of the database is exactly the same as the sequential execution Tx 1 → Tx 2 or Tx 2 → Tx 1.
 </small>
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -85,7 +95,7 @@ When Tx 1 and Tx 2 overlap in time, their database operations interleave. This c
     { "server": "Tx 2", "start": 18, "end": 52, "state": "read A, read B (overlapping)", "color": "#ef5350" }
   ]
 }
-```
+:::
 
 ---
 
@@ -154,7 +164,7 @@ The coordinator can be:
 
 </div>
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -188,7 +198,7 @@ The coordinator can be:
     {"from": "Coordinator", "to": "DB-3", "sendTick": 23, "recvTick": 27}
   ]
 }
-```
+:::
 
 ---
 
@@ -198,7 +208,7 @@ The coordinator can be:
 **Phase 2 — Commit or Abort**
 
 - If **any** cohort votes abort → coordinator sends `ABORT` to all.
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -232,7 +242,7 @@ The coordinator can be:
     {"from": "Coordinator", "to": "DB-3", "sendTick": 23, "recvTick": 27, "label": "ABORT"}
   ]
 }
-```
+:::
 
 - During each step, coordinator and cohorts **write results to durable storage** to enable crash recovery.
 
@@ -268,7 +278,7 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
 
 </div>
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -297,7 +307,7 @@ The sandbox below shows a coordinator running two sequential 2PC rounds. Notice 
     {"from": "Coordinator",  "to": "DB-2 (crash)", "sendTick": 42, "recvTick": 45, "label": "ABORT"}
   ]
 }
-```
+:::
 
 > This strict requirement—that **all participating nodes must be alive to commit a transaction**—hurts **availability**: Spanner and CockroachDB mitigate this by running 2PC over **Paxos groups** rather than individual nodes, so the protocol survives individual node failures within a group.
 
@@ -526,7 +536,7 @@ Under SI, all reads within a transaction see a **consistent snapshot** taken at 
 
 # Read Skew (prevented by SI)
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 58,
@@ -554,7 +564,7 @@ Under SI, all reads within a transaction see a **consistent snapshot** taken at 
     { "from": "DB", "to": "Reader", "sendTick": 46, "recvTick": 49, "label": "B=120" }
   ]
 }
-```
+:::
 
 *(T1 reads A=100, then T2 transfers 20 dollars from A to B and commits. Finally, T1 reads B=120. T1 sees a total of 220, violating the invariant that the total must be 200. SI prevents this by ensuring T1 only sees the state at its start time.)*
 
@@ -564,7 +574,7 @@ Under SI, all reads within a transaction see a **consistent snapshot** taken at 
 
 SI does **not** prevent **write skew**: a situation where each transaction individually respects invariants, but their combined effect does not.
 
-```static-timeline
+:::static-timeline
 {
   "zoom": 0.85,
   "ticks": 50,
@@ -589,7 +599,7 @@ SI does **not** prevent **write skew**: a situation where each transaction indiv
     { "from": "D2", "to": "Doctors Status", "sendTick": 34, "recvTick": 39 }
   ]
 }
-```
+:::
 
 *(**Invariant**: At least one doctor is on call at any time. Both transactions read a valid snapshot seeing the other doctor 'On Call', so they can go home. But after they write 'Off', the combined result is [Off, Off] — zero doctors are on call, a violation of the global invariant. This is **Write Skew**.)*
 

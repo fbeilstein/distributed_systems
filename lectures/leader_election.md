@@ -1,4 +1,14 @@
-# Leader Election
+:::titlepage
+[[title]]
+Leader Election
+[[right]]
+Tymchyshyn V.B.
+:::
+
+---
+
+# Introduction
+
 ## Coordinating state in distributed environments
 
 ---
